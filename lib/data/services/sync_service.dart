@@ -128,7 +128,7 @@ class SyncService {
       }
 
       // 4. Clear existing data and insert new
-      await _db.clearAll();
+      await _db.resetToDefault();
 
       // 5. Extract unique entities
       final authorNames = allNovels
@@ -231,7 +231,7 @@ class SyncService {
       }
 
       // 2. Clear existing data
-      await _db.clearAll();
+      await _db.resetToDefault();
 
       // 3. Extract unique entities
       final authorNames = allNovels
@@ -337,7 +337,7 @@ class SyncService {
       }
 
       // 3. Clear existing data and insert new
-      await _db.clearAll();
+      await _db.resetToDefault();
 
       // 4. Extract unique entities
       final authorNames = allNovels

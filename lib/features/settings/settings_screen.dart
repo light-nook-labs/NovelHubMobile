@@ -43,9 +43,9 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const Divider(height: 1),
                 ListTile(
-                  leading: const Icon(Icons.delete_sweep, color: Colors.red),
-                  title: const Text('清除数据'),
-                  subtitle: const Text('删除本地所有小说数据'),
+                  leading: const Icon(Icons.restore, color: AppColors.primary),
+                  title: const Text('重置数据'),
+                  subtitle: const Text('重置为默认数据库'),
                   onTap: () => _showClearDialog(context, ref),
                 ),
                 const Divider(height: 1),
@@ -179,30 +179,30 @@ class SettingsScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('确认清除'),
-        content: const Text('将删除本地所有小说数据，确定继续？'),
+        title: const Text('重置数据'),
+        content: const Text('将重置为默认数据库（8,362 本小说），确定继续？'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
             child: const Text('取消'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
             onPressed: () async {
               Navigator.pop(dialogContext);
               final db = ref.read(databaseProvider);
-              await db.clearAll();
+              await db.resetToDefault();
               if (context.mounted) {
                 Future.microtask(() {
                   ref.invalidate(statisticsProvider);
                   ref.invalidate(lastSyncInfoProvider);
                 });
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('数据已清除')),
+                  const SnackBar(content: Text('已重置为默认数据库')),
                 );
               }
             },
-            child: const Text('确认清除'),
+            child: const Text('确认重置'),
           ),
         ],
       ),

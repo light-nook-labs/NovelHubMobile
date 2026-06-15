@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'dart:io';
@@ -368,25 +369,46 @@ class AppDatabase extends _$AppDatabase {
     return {'novels': novelCount, 'authors': authorCount, 'tags': tagCount};
   }
 
-  // ===== Clear all data =====
+  // ===== Reset to bundled database =====
 
-  Future<void> clearAll() async {
-    await transaction(() async {
-      await delete(novelTags).go();
-      await delete(novels).go();
-      await delete(authors).go();
-      await delete(tags).go();
-      await delete(contests).go();
-    });
+  Future<void> resetToDefault() async {
+    final dbFolder = await getApplicationDocumentsDirectory();
+    final dbPath = p.join(dbFolder.path, 'novel_hub.sqlite');
+    
+    // Delete existing database
+    final file = File(dbPath);
+    if (await file.exists()) {
+      await file.delete();
+    }
+    
+    // Copy bundled database
+    await _copyBundledDatabase(dbPath);
   }
 }
 
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, 'novel_hub.sqlite'));
+    final dbPath = p.join(dbFolder.path, 'novel_hub.sqlite');
+    final file = File(dbPath);
+    
+    // If database doesn't exist, copy from bundled asset
+    if (!await file.exists()) {
+      await _copyBundledDatabase(dbPath);
+    }
+    
     return NativeDatabase.createInBackground(file);
   });
+}
+
+Future<void> _copyBundledDatabase(String targetPath) async {
+  // Load bundled database from assets
+  final data = await rootBundle.load('assets/db/novel_hub.sqlite');
+  final bytes = data.buffer.asUint8List();
+  
+  // Write to target path
+  final file = File(targetPath);
+  await file.writeAsBytes(bytes, flush: true);
 }
 
 class NovelTagPair {
