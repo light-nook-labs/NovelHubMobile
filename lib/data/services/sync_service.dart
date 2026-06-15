@@ -46,7 +46,8 @@ class ReleaseInfo {
 class SyncService {
   static const _owner = 'light-nook-labs';
   static const _repo = 'novel_hub';
-  static const _apiUrl = 'https://api.github.com/repos/$_owner/$_repo/releases/latest';
+  static const _apiUrl =
+      'https://api.github.com/repos/$_owner/$_repo/releases/latest';
   static const _lastSyncKey = 'last_sync_version';
   static const _lastSyncTimeKey = 'last_sync_time';
 
@@ -60,19 +61,17 @@ class SyncService {
     try {
       final response = await _dio.get(
         _apiUrl,
-        options: Options(
-          headers: {'Accept': 'application/vnd.github.v3+json'},
-        ),
+        options: Options(headers: {'Accept': 'application/vnd.github.v3+json'}),
       );
-      
+
       final release = ReleaseInfo.fromJson(response.data);
       final prefs = await SharedPreferences.getInstance();
       final lastVersion = prefs.getString(_lastSyncKey);
-      
+
       if (lastVersion == release.tagName) {
         return null; // Already up to date
       }
-      
+
       return release;
     } catch (e) {
       return null;
@@ -80,15 +79,17 @@ class SyncService {
   }
 
   /// Download and sync data from a release.
-  Future<SyncResult> syncFromRelease(ReleaseInfo release,
-      {Function(double)? onProgress}) async {
+  Future<SyncResult> syncFromRelease(
+    ReleaseInfo release, {
+    Function(double)? onProgress,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     try {
       // 1. Download tar.gz
       final tempDir = await getTemporaryDirectory();
       final archivePath = p.join(tempDir.path, 'release.tar.gz');
-      
+
       await _dio.download(
         release.downloadUrl,
         archivePath,
@@ -102,9 +103,13 @@ class SyncService {
       // 2. Extract and parse JSONL files
       final archiveFile = File(archivePath);
       final bytes = archiveFile.readAsBytesSync();
-      final archive = TarDecoder().decodeBytes(GZipDecoder().decodeBytes(bytes));
-      
-      final jsonlFiles = archive.where((f) => f.name.endsWith('.jsonl')).toList();
+      final archive = TarDecoder().decodeBytes(
+        GZipDecoder().decodeBytes(bytes),
+      );
+
+      final jsonlFiles = archive
+          .where((f) => f.name.endsWith('.jsonl'))
+          .toList();
       if (jsonlFiles.isEmpty) {
         return SyncResult.error('No JSONL files found in archive');
       }
@@ -116,7 +121,7 @@ class SyncService {
         final content = String.fromCharCodes(file.content as List<int>);
         final novels = JsonlParser.parseContent(content);
         allNovels.addAll(novels);
-        
+
         if (onProgress != null) {
           onProgress(0.5 + (i / jsonlFiles.length) * 0.3); // 50-80% for parsing
         }
@@ -124,16 +129,25 @@ class SyncService {
 
       // 4. Clear existing data and insert new
       await _db.clearAll();
-      
+
       // 5. Extract unique entities
-      final authorNames = allNovels.map((n) => n.author).where((n) => n.isNotEmpty).toSet().toList();
+      final authorNames = allNovels
+          .map((n) => n.author)
+          .where((n) => n.isNotEmpty)
+          .toSet()
+          .toList();
       final tagNames = allNovels.expand((n) => n.tags).toSet().toList();
-      final contestNames = allNovels.map((n) => n.contest).where((n) => n != null).cast<String>().toSet().toList();
+      final contestNames = allNovels
+          .map((n) => n.contest)
+          .where((n) => n != null)
+          .cast<String>()
+          .toSet()
+          .toList();
 
       // 6. Create authors, tags, contests
       final authorMap = await _db.createAuthorsBatch(authorNames);
       final tagMap = await _db.createTagsBatch(tagNames);
-      
+
       final contestMap = <String, int>{};
       for (final name in contestNames) {
         final id = await _db.getOrCreateContest(name);
@@ -143,19 +157,21 @@ class SyncService {
       // 7. Upsert novels in batches
       const batchSize = 500;
       final novelTagPairs = <NovelTagPair>[];
-      
+
       for (var i = 0; i < allNovels.length; i += batchSize) {
         final end = (i + batchSize).clamp(0, allNovels.length);
         final batch = allNovels.sublist(i, end);
-        
+
         final companions = batch.map((novel) {
           final authorId = authorMap[novel.author];
-          final contestId = novel.contest != null ? contestMap[novel.contest] : null;
+          final contestId = novel.contest != null
+              ? contestMap[novel.contest]
+              : null;
           return JsonlParser.toCompanion(novel, authorId, contestId);
         }).toList();
-        
+
         await _db.upsertNovelsBatch(companions);
-        
+
         // Collect tag pairs
         for (final novel in batch) {
           for (final tagName in novel.tags) {
@@ -165,9 +181,11 @@ class SyncService {
             }
           }
         }
-        
+
         if (onProgress != null) {
-          onProgress(0.8 + (end / allNovels.length) * 0.15); // 80-95% for insertion
+          onProgress(
+            0.8 + (end / allNovels.length) * 0.15,
+          ); // 80-95% for insertion
         }
       }
 
@@ -201,9 +219,9 @@ class SyncService {
     final prefs = await SharedPreferences.getInstance();
     final version = prefs.getString(_lastSyncKey);
     final timeStr = prefs.getString(_lastSyncTimeKey);
-    
+
     if (version == null) return null;
-    
+
     return SyncInfo(
       version: version,
       syncedAt: timeStr != null ? DateTime.tryParse(timeStr) : null,
@@ -233,14 +251,13 @@ class SyncResult {
     required int novelCount,
     required int authorCount,
     required int tagCount,
-  }) =>
-      SyncResult(
-        success: true,
-        version: version,
-        novelCount: novelCount,
-        authorCount: authorCount,
-        tagCount: tagCount,
-      );
+  }) => SyncResult(
+    success: true,
+    version: version,
+    novelCount: novelCount,
+    authorCount: authorCount,
+    tagCount: tagCount,
+  );
 
   factory SyncResult.error(String error) =>
       SyncResult(success: false, error: error);

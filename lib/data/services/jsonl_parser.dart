@@ -104,7 +104,11 @@ class JsonlParser {
   }
 
   /// Convert NovelData to NovelsCompanion for database insertion.
-  static NovelsCompanion toCompanion(NovelData data, int? authorId, int? contestId) {
+  static NovelsCompanion toCompanion(
+    NovelData data,
+    int? authorId,
+    int? contestId,
+  ) {
     return NovelsCompanion(
       id: Value(data.nid),
       title: Value(data.title),

@@ -5,8 +5,7 @@ class EnumMapping {
   final Map<String, int> _zhToValue;
   final Map<int, String> _valueToZh;
 
-  const EnumMapping(this.name, this._zhToValue)
-      : _valueToZh = const {};
+  const EnumMapping(this.name, this._zhToValue) : _valueToZh = const {};
 
   EnumMapping._(this.name, this._zhToValue, this._valueToZh);
 
@@ -40,8 +39,4 @@ final statusMapping = EnumMapping.create('status', {
 });
 
 /// Ptype mappings: 短篇, 中篇, 长篇
-final ptypeMapping = EnumMapping.create('ptype', {
-  '短篇': 1,
-  '中篇': 2,
-  '长篇': 3,
-});
+final ptypeMapping = EnumMapping.create('ptype', {'短篇': 1, '中篇': 2, '长篇': 3});
