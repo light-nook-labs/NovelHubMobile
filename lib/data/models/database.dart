@@ -1,9 +1,8 @@
-import 'dart:io';
-
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'dart:io';
 
 part 'database.g.dart';
 
@@ -23,7 +22,7 @@ class Contests extends Table {
 }
 
 class Novels extends Table {
-  IntColumn get id => integer()(); // nid from JSONL (sfacg novel id)
+  IntColumn get id => integer()();
   TextColumn get title => text().withLength(min: 1, max: 500)();
   IntColumn get genre => integer().withDefault(const Constant(1))();
   IntColumn get status => integer().withDefault(const Constant(1))();
@@ -43,9 +42,6 @@ class Novels extends Table {
 
   @override
   Set<Column> get primaryKey => {id};
-
-  @override
-  List<Set<Column>> get uniqueKeys => [];
 }
 
 class NovelTags extends Table {
@@ -62,13 +58,6 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   int get schemaVersion => 1;
-
-  @override
-  MigrationStrategy get migration => MigrationStrategy(
-    onCreate: (Migrator m) async {
-      await m.createAll();
-    },
-  );
 
   // ===== Author operations =====
 
@@ -87,7 +76,6 @@ class AppDatabase extends _$AppDatabase {
         map[name] = id;
       }
     }
-    // Fetch existing authors for names that were ignored
     for (final name in names) {
       if (!map.containsKey(name)) {
         final query = select(authors)..where((t) => t.name.equals(name));
@@ -103,9 +91,10 @@ class AppDatabase extends _$AppDatabase {
   // ===== Tag operations =====
 
   Future<int> createTag(String name) async {
-    return into(
-      tags,
-    ).insert(TagsCompanion.insert(name: name), mode: InsertMode.insertOrIgnore);
+    return into(tags).insert(
+      TagsCompanion.insert(name: name),
+      mode: InsertMode.insertOrIgnore,
+    );
   }
 
   Future<Map<String, int>> createTagsBatch(List<String> names) async {
@@ -168,9 +157,10 @@ class AppDatabase extends _$AppDatabase {
     await batch((batch) {
       batch.insertAll(
         novelTags,
-        pairs.map(
-          (p) => NovelTagsCompanion.insert(novelId: p.novelId, tagId: p.tagId),
-        ),
+        pairs.map((p) => NovelTagsCompanion.insert(
+              novelId: p.novelId,
+              tagId: p.tagId,
+            )),
         mode: InsertMode.insertOrIgnore,
       );
     });
@@ -190,25 +180,10 @@ class AppDatabase extends _$AppDatabase {
     return query.getSingleOrNull();
   }
 
-  Future<List<Novel>> getNovelsByGenre(
-    int genre, {
-    int limit = 50,
-    int offset = 0,
-  }) async {
+  Future<List<Novel>> getNovelsByGenre(int genre,
+      {int limit = 50, int offset = 0}) async {
     final query = select(novels)
       ..where((t) => t.genre.equals(genre))
-      ..orderBy([(t) => OrderingTerm.desc(t.lastUpdate)])
-      ..limit(limit, offset: offset);
-    return query.get();
-  }
-
-  Future<List<Novel>> getNovelsByStatus(
-    int status, {
-    int limit = 50,
-    int offset = 0,
-  }) async {
-    final query = select(novels)
-      ..where((t) => t.status.equals(status))
       ..orderBy([(t) => OrderingTerm.desc(t.lastUpdate)])
       ..limit(limit, offset: offset);
     return query.get();
@@ -221,53 +196,44 @@ class AppDatabase extends _$AppDatabase {
     return query.get();
   }
 
-  Future<List<Novel>> getNovelsSorted(
-    String field, {
-    bool descending = true,
-    int limit = 50,
-    int offset = 0,
-  }) async {
+  Future<List<Novel>> getNovelsSorted(String field,
+      {bool descending = true, int limit = 50, int offset = 0}) async {
     final query = select(novels);
 
     switch (field) {
       case 'click_num':
         query.orderBy([
           (t) => OrderingTerm(
-            expression: t.clickNum,
-            mode: descending ? OrderingMode.desc : OrderingMode.asc,
-          ),
+              expression: t.clickNum,
+              mode: descending ? OrderingMode.desc : OrderingMode.asc),
         ]);
         break;
       case 'word_num':
         query.orderBy([
           (t) => OrderingTerm(
-            expression: t.wordNum,
-            mode: descending ? OrderingMode.desc : OrderingMode.asc,
-          ),
+              expression: t.wordNum,
+              mode: descending ? OrderingMode.desc : OrderingMode.asc),
         ]);
         break;
       case 'praise_num':
         query.orderBy([
           (t) => OrderingTerm(
-            expression: t.praiseNum,
-            mode: descending ? OrderingMode.desc : OrderingMode.asc,
-          ),
+              expression: t.praiseNum,
+              mode: descending ? OrderingMode.desc : OrderingMode.asc),
         ]);
         break;
       case 'like_num':
         query.orderBy([
           (t) => OrderingTerm(
-            expression: t.likeNum,
-            mode: descending ? OrderingMode.desc : OrderingMode.asc,
-          ),
+              expression: t.likeNum,
+              mode: descending ? OrderingMode.desc : OrderingMode.asc),
         ]);
         break;
       case 'review_num':
         query.orderBy([
           (t) => OrderingTerm(
-            expression: t.reviewNum,
-            mode: descending ? OrderingMode.desc : OrderingMode.asc,
-          ),
+              expression: t.reviewNum,
+              mode: descending ? OrderingMode.desc : OrderingMode.asc),
         ]);
         break;
       default:
@@ -324,13 +290,6 @@ class AppDatabase extends _$AppDatabase {
     return query.get();
   }
 
-  Future<int> getAuthorNovelCount(int authorId) async {
-    final query = select(novels)
-      ..where((t) => t.authorId.equals(authorId));
-    final results = await query.get();
-    return results.length;
-  }
-
   // ===== Tag queries =====
 
   Future<List<Tag>> getAllTags({int limit = 100, int offset = 0}) async {
@@ -357,13 +316,6 @@ class AppDatabase extends _$AppDatabase {
     return results.map((row) => row.readTable(novels)).toList();
   }
 
-  Future<int> getTagNovelCount(int tagId) async {
-    final query = select(novelTags)
-      ..where((t) => t.tagId.equals(tagId));
-    final results = await query.get();
-    return results.length;
-  }
-
   // ===== Contest queries =====
 
   Future<List<Contest>> getAllContests(
@@ -386,13 +338,6 @@ class AppDatabase extends _$AppDatabase {
       ..orderBy([(t) => OrderingTerm.desc(t.lastUpdate)])
       ..limit(limit, offset: offset);
     return query.get();
-  }
-
-  Future<int> getContestNovelCount(int contestId) async {
-    final query = select(novels)
-      ..where((t) => t.contestId.equals(contestId));
-    final results = await query.get();
-    return results.length;
   }
 
   // ===== Banner novels =====

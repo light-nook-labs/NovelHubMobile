@@ -207,8 +207,8 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   void _loadTestData(BuildContext context, WidgetRef ref) async {
-    // For testing: load from a single JSONL file
-    const testPath = '/tmp/jsonl/meta_01.jsonl';
+    // For testing: load from last JSONL file (real data, nid >= 700000)
+    const testPath = '/tmp/jsonl/meta_13.jsonl';
     final file = File(testPath);
     if (!file.existsSync()) {
       if (context.mounted) {
