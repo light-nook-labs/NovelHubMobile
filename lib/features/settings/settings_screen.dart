@@ -129,6 +129,8 @@ class SettingsScreen extends ConsumerWidget {
   void _startSync(BuildContext context, WidgetRef ref) async {
     final syncService = ref.read(syncServiceProvider);
 
+    if (!context.mounted) return;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -138,65 +140,66 @@ class SettingsScreen extends ConsumerWidget {
     try {
       final release = await syncService.checkForUpdate();
       if (release == null) {
-        if (context.mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('数据已是最新')));
-        }
+        if (!context.mounted) return;
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('数据已是最新')),
+        );
         return;
       }
 
       final result = await syncService.syncFromRelease(release);
 
-      if (context.mounted) {
-        Navigator.pop(context);
+      if (!context.mounted) return;
+      Navigator.pop(context);
 
-        if (result.success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('同步成功: ${result.novelCount} 本小说')),
-          );
+      if (result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('同步成功: ${result.novelCount} 本小说')),
+        );
+        Future.microtask(() {
           ref.invalidate(lastSyncInfoProvider);
           ref.invalidate(statisticsProvider);
-        } else {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('同步失败: ${result.error}')));
-        }
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('同步失败: ${result.error}')),
+        );
       }
     } catch (e) {
-      if (context.mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('错误: $e')));
-      }
+      if (!context.mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('错误: $e')),
+      );
     }
   }
 
   void _showClearDialog(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('确认清除'),
         content: const Text('将删除本地所有小说数据，确定继续？'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('取消'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               final db = ref.read(databaseProvider);
               await db.clearAll();
-              ref.invalidate(statisticsProvider);
-              ref.invalidate(lastSyncInfoProvider);
               if (context.mounted) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(const SnackBar(content: Text('数据已清除')));
+                Future.microtask(() {
+                  ref.invalidate(statisticsProvider);
+                  ref.invalidate(lastSyncInfoProvider);
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('数据已清除')),
+                );
               }
             },
             child: const Text('确认清除'),
@@ -214,13 +217,15 @@ class SettingsScreen extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('测试文件不存在: /tmp/jsonl/meta_01.jsonl'),
+            content: Text('测试文件不存在: /tmp/jsonl/meta_13.jsonl'),
           ),
         );
       }
       return;
     }
 
+    if (!context.mounted) return;
+    
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -231,30 +236,32 @@ class SettingsScreen extends ConsumerWidget {
       final syncService = ref.read(syncServiceProvider);
       final result = await syncService.loadFromJsonlFile(testPath);
 
-      if (context.mounted) {
-        Navigator.pop(context);
+      if (!context.mounted) return;
+      
+      Navigator.pop(context);
 
-        if (result.success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('加载成功: ${result.novelCount} 本小说'),
-            ),
-          );
+      if (result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('加载成功: ${result.novelCount} 本小说'),
+          ),
+        );
+        // Delay invalidation to next frame to avoid lifecycle issues
+        Future.microtask(() {
           ref.invalidate(lastSyncInfoProvider);
           ref.invalidate(statisticsProvider);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('加载失败: ${result.error}')),
-          );
-        }
-      }
-    } catch (e) {
-      if (context.mounted) {
-        Navigator.pop(context);
+        });
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('错误: $e')),
+          SnackBar(content: Text('加载失败: ${result.error}')),
         );
       }
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('错误: $e')),
+      );
     }
   }
 }
