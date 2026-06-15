@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -45,6 +47,13 @@ class SettingsScreen extends ConsumerWidget {
                   title: const Text('清除数据'),
                   subtitle: const Text('删除本地所有小说数据'),
                   onTap: () => _showClearDialog(context, ref),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.science, color: AppColors.secondary),
+                  title: const Text('加载测试数据'),
+                  subtitle: const Text('从本地 release.tar.gz 加载'),
+                  onTap: () => _loadTestData(context, ref),
                 ),
               ],
             ),
@@ -195,6 +204,58 @@ class SettingsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  void _loadTestData(BuildContext context, WidgetRef ref) async {
+    // For testing: load from /tmp/release.tar.gz
+    const testPath = '/tmp/release.tar.gz';
+    final file = File(testPath);
+    if (!file.existsSync()) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('测试文件不存在: /tmp/release.tar.gz'),
+          ),
+        );
+      }
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const _SyncProgressDialog(),
+    );
+
+    try {
+      final syncService = ref.read(syncServiceProvider);
+      final result = await syncService.loadFromLocalFile(testPath);
+
+      if (context.mounted) {
+        Navigator.pop(context);
+
+        if (result.success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('加载成功: ${result.novelCount} 本小说'),
+            ),
+          );
+          ref.invalidate(lastSyncInfoProvider);
+          ref.invalidate(statisticsProvider);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('加载失败: ${result.error}')),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('错误: $e')),
+        );
+      }
+    }
   }
 }
 

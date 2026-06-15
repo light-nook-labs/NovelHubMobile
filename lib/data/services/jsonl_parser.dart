@@ -5,7 +5,13 @@ import 'package:drift/drift.dart';
 import '../models/database.dart';
 import '../../shared/utils/mappings.dart';
 
+/// Cover URL prefix (from novel_hub/site_config.toml)
+const _coverPrefix = 'https://rs.sfacg.com/web/novel/images/NovelCover/Big/';
+const _defaultCover = 'defaultNew.jpg';
+
 /// Represents a parsed novel from JSONL before database insertion.
+///
+/// Field names match novel_hub/utils/models.py Meta model.
 class NovelData {
   final int nid;
   final String title;
@@ -22,7 +28,7 @@ class NovelData {
   final int? reviewNum;
   final String? contest;
   final List<String> tags;
-  final String? cover;
+  final String? cover; // Compressed suffix or null
   final DateTime? lastUpdate;
 
   const NovelData({
@@ -50,9 +56,9 @@ class NovelData {
       nid: json['nid'] as int,
       title: json['title'] as String,
       author: json['author'] as String? ?? '',
-      genre: genreMapping.getValue(json['genre'] as String? ?? '奇幻'),
-      status: statusMapping.getValue(json['status'] as String? ?? '连载中'),
-      ptype: ptypeMapping.getValue(json['ptype'] as String? ?? '长篇'),
+      genre: genreMapping.getValue(json['genre'] as String? ?? '其他'),
+      status: statusMapping.getValue(json['status'] as String? ?? '其他'),
+      ptype: ptypeMapping.getValue(json['ptype'] as String? ?? '其他'),
       hasBanner: json['has_banner'] as bool? ?? false,
       wordNum: json['word_num'] as int?,
       clickNum: json['click_num'] as int?,
@@ -62,9 +68,23 @@ class NovelData {
       reviewNum: json['review_num'] as int?,
       contest: json['contest'] as String?,
       tags: (json['tags'] as List<dynamic>?)?.cast<String>() ?? [],
-      cover: json['cover'] as String?,
+      cover: _compressCover(json['cover'] as String?),
       lastUpdate: _parseDateTime(json['last_update'] as String?),
     );
+  }
+
+  /// Compress cover URL to suffix, default cover → null.
+  /// Matches novel_hub/utils/loader.py compress_cover().
+  static String? _compressCover(String? url) {
+    if (url == null || url.isEmpty) return null;
+    String suffix;
+    if (url.startsWith(_coverPrefix)) {
+      suffix = url.substring(_coverPrefix.length);
+    } else {
+      suffix = url;
+    }
+    if (suffix == _defaultCover) return null;
+    return suffix;
   }
 
   static DateTime? _parseDateTime(String? value) {

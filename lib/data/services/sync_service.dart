@@ -214,6 +214,125 @@ class SyncService {
     }
   }
 
+  /// Load data from a local release.tar.gz file (for testing).
+  Future<SyncResult> loadFromLocalFile(String filePath,
+      {Function(double)? onProgress}) async {
+    try {
+      final archiveFile = File(filePath);
+      if (!archiveFile.existsSync()) {
+        return SyncResult.error('File not found: $filePath');
+      }
+
+      // 1. Read and extract archive
+      final bytes = archiveFile.readAsBytesSync();
+      final archive = TarDecoder().decodeBytes(
+        GZipDecoder().decodeBytes(bytes),
+      );
+
+      final jsonlFiles = archive
+          .where((f) => f.name.endsWith('.jsonl'))
+          .toList();
+      if (jsonlFiles.isEmpty) {
+        return SyncResult.error('No JSONL files found in archive');
+      }
+
+      // 2. Parse all novels
+      final allNovels = <NovelData>[];
+      for (var i = 0; i < jsonlFiles.length; i++) {
+        final file = jsonlFiles[i];
+        final content = String.fromCharCodes(file.content as List<int>);
+        final novels = JsonlParser.parseContent(content);
+        allNovels.addAll(novels);
+
+        if (onProgress != null) {
+          onProgress((i / jsonlFiles.length) * 0.5);
+        }
+      }
+
+      // 3. Clear existing data and insert new
+      await _db.clearAll();
+
+      // 4. Extract unique entities
+      final authorNames = allNovels
+          .map((n) => n.author)
+          .where((n) => n.isNotEmpty)
+          .toSet()
+          .toList();
+      final tagNames = allNovels.expand((n) => n.tags).toSet().toList();
+      final contestNames = allNovels
+          .map((n) => n.contest)
+          .where((n) => n != null)
+          .cast<String>()
+          .toSet()
+          .toList();
+
+      // 5. Create authors, tags, contests
+      final authorMap = await _db.createAuthorsBatch(authorNames);
+      final tagMap = await _db.createTagsBatch(tagNames);
+
+      final contestMap = <String, int>{};
+      for (final name in contestNames) {
+        final id = await _db.getOrCreateContest(name);
+        if (id != null) contestMap[name] = id;
+      }
+
+      // 6. Upsert novels in batches
+      const batchSize = 500;
+      final novelTagPairs = <NovelTagPair>[];
+
+      for (var i = 0; i < allNovels.length; i += batchSize) {
+        final end = (i + batchSize).clamp(0, allNovels.length);
+        final batch = allNovels.sublist(i, end);
+
+        final companions = batch.map((novel) {
+          final authorId = authorMap[novel.author];
+          final contestId =
+              novel.contest != null ? contestMap[novel.contest] : null;
+          return JsonlParser.toCompanion(novel, authorId, contestId);
+        }).toList();
+
+        await _db.upsertNovelsBatch(companions);
+
+        for (final novel in batch) {
+          for (final tagName in novel.tags) {
+            final tagId = tagMap[tagName];
+            if (tagId != null) {
+              novelTagPairs.add(
+                NovelTagPair(novelId: novel.nid, tagId: tagId),
+              );
+            }
+          }
+        }
+
+        if (onProgress != null) {
+          onProgress(0.5 + (end / allNovels.length) * 0.4);
+        }
+      }
+
+      // 7. Insert novel-tag relationships
+      await _db.addNovelTagsBatch(novelTagPairs);
+
+      // 8. Save sync state
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_lastSyncKey, 'local-test');
+      await prefs.setString(
+          _lastSyncTimeKey, DateTime.now().toIso8601String());
+
+      if (onProgress != null) {
+        onProgress(1.0);
+      }
+
+      return SyncResult.success(
+        version: 'local-test',
+        novelCount: allNovels.length,
+        authorCount: authorNames.length,
+        tagCount: tagNames.length,
+      );
+    } catch (e) {
+      return SyncResult.error(e.toString());
+    }
+  }
+
   /// Get last sync info.
   Future<SyncInfo?> getLastSyncInfo() async {
     final prefs = await SharedPreferences.getInstance();
