@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../features/home/home_screen.dart';
 import '../features/novels/novels_screen.dart';
 import '../features/novels/novel_detail_screen.dart';
+import '../features/rankings/rankings_screen.dart';
 import '../features/search/search_screen.dart';
 import '../features/settings/settings_screen.dart';
 
@@ -27,6 +28,11 @@ final router = GoRouter(
           path: '/novels',
           pageBuilder: (context, state) =>
               const NoTransitionPage(child: NovelsScreen()),
+        ),
+        GoRoute(
+          path: '/rankings',
+          pageBuilder: (context, state) =>
+              const NoTransitionPage(child: RankingsScreen()),
         ),
         GoRoute(
           path: '/search',
@@ -75,6 +81,11 @@ class MainShell extends StatelessWidget {
             label: '小说',
           ),
           NavigationDestination(
+            icon: Icon(Icons.leaderboard_outlined),
+            selectedIcon: Icon(Icons.leaderboard),
+            label: '排行',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.search_outlined),
             selectedIcon: Icon(Icons.search),
             label: '搜索',
@@ -92,8 +103,9 @@ class MainShell extends StatelessWidget {
   int _getSelectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
     if (location.startsWith('/novels')) return 1;
-    if (location.startsWith('/search')) return 2;
-    if (location.startsWith('/settings')) return 3;
+    if (location.startsWith('/rankings')) return 2;
+    if (location.startsWith('/search')) return 3;
+    if (location.startsWith('/settings')) return 4;
     return 0;
   }
 
@@ -104,8 +116,10 @@ class MainShell extends StatelessWidget {
       case 1:
         context.go('/novels');
       case 2:
-        context.go('/search');
+        context.go('/rankings');
       case 3:
+        context.go('/search');
+      case 4:
         context.go('/settings');
     }
   }
