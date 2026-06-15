@@ -17,7 +17,13 @@ class AuthorsScreen extends ConsumerWidget {
     final authorsAsync = ref.watch(authorsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('作者')),
+      appBar: AppBar(
+        title: const Text('作者'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
       body: authorsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
@@ -62,9 +68,13 @@ class AuthorDetailScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: authorAsync.when(
-          loading: () => const Text('作者'),
-          error: (_, __) => const Text('作者'),
+          loading: () => const Text('作者详情'),
+          error: (_, __) => const Text('作者详情'),
           data: (author) => Text(author?.name ?? '未知'),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
         ),
       ),
       body: novelsAsync.when(

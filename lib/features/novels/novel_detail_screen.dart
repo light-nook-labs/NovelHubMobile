@@ -19,6 +19,13 @@ class NovelDetailScreen extends ConsumerWidget {
     final authorAsync = ref.watch(novelAuthorProvider(novelId));
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('小说详情'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
       body: novelAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
@@ -38,221 +45,384 @@ class NovelDetailScreen extends ConsumerWidget {
     AsyncValue<List<Tag>> tagsAsync,
     AsyncValue<Author?> authorAsync,
   ) {
-    return CustomScrollView(
-      slivers: [
-        // App bar with cover
-        SliverAppBar(
-          expandedHeight: 300,
-          pinned: true,
-          flexibleSpace: FlexibleSpaceBar(
-            title: Text(
-              novel.title,
-              style: const TextStyle(
-                shadows: [Shadow(blurRadius: 8, color: Colors.black54)],
-              ),
-            ),
-            background: _buildCoverBackground(novel),
-          ),
-        ),
-        // Novel info
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Author
-                authorAsync.when(
-                  loading: () => const SizedBox(),
-                  error: (_, __) => const SizedBox(),
-                  data: (author) {
-                    if (author == null) return const SizedBox();
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.person,
-                            size: 18,
-                            color: AppColors.primary,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            author.name,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-                // Status and genre
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Breadcrumb
+          _Breadcrumb(novelTitle: novel.title),
+          const SizedBox(height: 16),
+
+          // Main: cover + info
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Cover - 使用图片自身宽高比
+              _CoverImage(cover: novel.cover),
+              const SizedBox(width: 16),
+
+              // Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _InfoChip(
-                      icon: Icons.signal_cellular_alt,
-                      label: statusMapping.getZh(novel.status),
-                      color: _getStatusColor(novel.status),
+                    // Title
+                    Text(
+                      novel.title,
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                    _InfoChip(
-                      icon: Icons.category,
-                      label: genreMapping.getZh(novel.genre),
-                      color: AppColors.primary,
+                    Text(
+                      '#${novel.id}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey,
+                      ),
                     ),
-                    _InfoChip(
-                      icon: Icons.description,
-                      label: ptypeMapping.getZh(novel.ptype),
-                      color: AppColors.secondary,
+                    const SizedBox(height: 8),
+
+                    // Author
+                    authorAsync.when(
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
+                      data: (author) {
+                        if (author == null) return const SizedBox.shrink();
+                        return GestureDetector(
+                          onTap: () {
+                            // Navigate to author detail
+                          },
+                          child: Text(
+                            author.name,
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Badges
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        if (novel.hasBanner)
+                          _Badge(
+                            label: '背投',
+                            color: AppColors.accent,
+                          ),
+                        _StatusBadge(status: novel.status),
+                        _GenreBadge(genre: novel.genre),
+                        _PtypeBadge(ptype: novel.ptype),
+                      ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                // Stats grid
-                _buildStatsGrid(context, novel),
-                const SizedBox(height: 16),
-                // Tags
-                tagsAsync.when(
-                  loading: () => const SizedBox(),
-                  error: (_, __) => const SizedBox(),
-                  data: (tags) {
-                    if (tags.isEmpty) return const SizedBox();
-                    return Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: tags
-                          .map(
-                            (tag) => Chip(
-                              label: Text(tag.name),
-                              backgroundColor: AppColors.primary.withValues(
-                                alpha: 0.1,
-                              ),
-                            ),
-                          )
-                          .toList(),
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-                // Last update
-                if (novel.lastUpdate != null)
-                  Row(
-                    children: [
-                      const Icon(Icons.update, size: 16, color: Colors.grey),
-                      const SizedBox(width: 8),
-                      Text(
-                        '最后更新: ${_formatDateTime(novel.lastUpdate!)}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ),
-      ],
+          const SizedBox(height: 16),
+
+          // Tags
+          tagsAsync.when(
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+            data: (tags) {
+              if (tags.isEmpty) return const SizedBox.shrink();
+              return Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: tags.map((tag) => _TagChip(name: tag.name)).toList(),
+              );
+            },
+          ),
+          const SizedBox(height: 20),
+
+          // Stats grid (2 cols)
+          _StatsGrid(novel: novel),
+          const SizedBox(height: 16),
+
+          // Dates
+          _DatesSection(novel: novel),
+        ],
+      ),
     );
   }
+}
 
-  Widget _buildCoverBackground(Novel novel) {
-    if (novel.cover == null || novel.cover!.isEmpty) {
+class _CoverImage extends StatelessWidget {
+  final String? cover;
+
+  const _CoverImage({required this.cover});
+
+  @override
+  Widget build(BuildContext context) {
+    if (cover == null || cover!.isEmpty) {
       return Container(
-        color: AppColors.primary.withValues(alpha: 0.2),
+        width: 120,
+        height: 160,
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
         child: const Center(
-          child: Icon(Icons.book, size: 80, color: AppColors.primary),
+          child: Icon(Icons.book, size: 48, color: AppColors.primary),
         ),
       );
     }
 
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        CachedNetworkImage(
-          imageUrl: novel.cover!,
-          fit: BoxFit.cover,
-          errorWidget: (_, __, ___) => Container(
-            color: AppColors.primary.withValues(alpha: 0.2),
-            child: const Center(
-              child: Icon(Icons.book, size: 80, color: AppColors.primary),
-            ),
+    final url = cover!.startsWith('http')
+        ? cover!
+        : 'https://rs.sfacg.com/web/novel/images/NovelCover/Big/$cover';
+
+    return CachedNetworkImage(
+      imageUrl: url,
+      // 不设置固定宽高，让图片使用自身尺寸
+      // 使用 maxWidth/maxHeight 限制最大尺寸，防止过度缩放
+      maxHeightDiskCache: 600,
+      maxWidthDiskCache: 450,
+      imageBuilder: (context, imageProvider) {
+        return Container(
+          constraints: const BoxConstraints(
+            maxWidth: 120,
+            maxHeight: 200,
           ),
-        ),
-        // Gradient overlay
-        const DecoratedBox(
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Colors.transparent, Colors.black54],
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+            image: DecorationImage(
+              image: imageProvider,
+              fit: BoxFit.cover, // 保持宽高比，裁剪以填充
             ),
           ),
+        );
+      },
+      placeholder: (context, url) => Container(
+        width: 120,
+        height: 160,
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
         ),
-      ],
+        child: const Center(child: CircularProgressIndicator()),
+      ),
+      errorWidget: (context, url, error) => Container(
+        width: 120,
+        height: 160,
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Center(
+          child: Icon(Icons.broken_image, size: 48),
+        ),
+      ),
     );
-  }
-
-  Widget _buildStatsGrid(BuildContext context, Novel novel) {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 3,
-      childAspectRatio: 2,
-      mainAxisSpacing: 8,
-      crossAxisSpacing: 8,
-      children: [
-        _StatItem(icon: Icons.touch_app, label: '点击', value: novel.clickNum),
-        _StatItem(icon: Icons.text_fields, label: '字数', value: novel.wordNum),
-        _StatItem(icon: Icons.thumb_up, label: '点赞', value: novel.likeNum),
-        _StatItem(icon: Icons.favorite, label: '收藏', value: novel.praiseNum),
-        _StatItem(icon: Icons.rate_review, label: '书评', value: novel.reviewNum),
-        _StatItem(icon: Icons.comment, label: '评论', value: novel.commentNum),
-      ],
-    );
-  }
-
-  Color _getStatusColor(int status) {
-    return switch (status) {
-      1 => AppColors.ongoing,
-      2 => AppColors.completed,
-      3 => AppColors.stopped,
-      _ => Colors.grey,
-    };
-  }
-
-  String _formatDateTime(DateTime dt) {
-    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
   }
 }
 
-class _InfoChip extends StatelessWidget {
-  final IconData icon;
+class _Breadcrumb extends StatelessWidget {
+  final String novelTitle;
+
+  const _Breadcrumb({required this.novelTitle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        GestureDetector(
+          onTap: () => Navigator.of(context).pop(),
+          child: Text(
+            '首页',
+            style: TextStyle(
+              color: Colors.grey[500],
+              fontSize: 13,
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Text('/', style: TextStyle(color: Colors.grey[400])),
+        ),
+        Expanded(
+          child: Text(
+            novelTitle,
+            style: TextStyle(
+              color: Theme.of(context).textTheme.bodyLarge?.color,
+              fontSize: 13,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Badge extends StatelessWidget {
   final String label;
   final Color color;
 
-  const _InfoChip({
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
+  const _Badge({required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(4),
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
-          Text(label, style: TextStyle(color: color, fontSize: 12)),
-        ],
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+        ),
       ),
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  final int status;
+
+  const _StatusBadge({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (status) {
+      2 => AppColors.completed,   // 已完结
+      3 => AppColors.ongoing,     // 连载中
+      4 => AppColors.stopped,     // 断更
+      5 => AppColors.stopped,     // 断更A
+      6 => AppColors.completed,   // 完结A
+      _ => Colors.grey,
+    };
+
+    return _Badge(
+      label: statusMapping.getZh(status),
+      color: color,
+    );
+  }
+}
+
+class _GenreBadge extends StatelessWidget {
+  final int genre;
+
+  const _GenreBadge({required this.genre});
+
+  @override
+  Widget build(BuildContext context) {
+    return _Badge(
+      label: genreMapping.getZh(genre),
+      color: AppColors.primary,
+    );
+  }
+}
+
+class _PtypeBadge extends StatelessWidget {
+  final int ptype;
+
+  const _PtypeBadge({required this.ptype});
+
+  @override
+  Widget build(BuildContext context) {
+    return _Badge(
+      label: ptypeMapping.getZh(ptype),
+      color: AppColors.secondary,
+    );
+  }
+}
+
+class _TagChip extends StatelessWidget {
+  final String name;
+
+  const _TagChip({required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        name,
+        style: TextStyle(
+          color: AppColors.primary,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
+}
+
+class _StatsGrid extends StatelessWidget {
+  final Novel novel;
+
+  const _StatsGrid({required this.novel});
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      childAspectRatio: 2.5,
+      mainAxisSpacing: 8,
+      crossAxisSpacing: 8,
+      children: [
+        _StatItem(
+          icon: Icons.text_fields,
+          label: '字数',
+          value: novel.wordNum,
+          color: AppColors.primary,
+        ),
+        _StatItem(
+          icon: Icons.touch_app,
+          label: '点击',
+          value: novel.clickNum,
+          color: AppColors.accent,
+        ),
+        _StatItem(
+          icon: Icons.favorite,
+          label: '收藏',
+          value: novel.likeNum,
+          color: Colors.pink,
+        ),
+        _StatItem(
+          icon: Icons.thumb_up,
+          label: '点赞',
+          value: novel.praiseNum,
+          color: AppColors.primary,
+        ),
+        _StatItem(
+          icon: Icons.rate_review,
+          label: '长评',
+          value: novel.reviewNum,
+          color: Colors.teal,
+        ),
+        _StatItem(
+          icon: Icons.comment,
+          label: '短评',
+          value: novel.commentNum,
+          color: Colors.brown,
+        ),
+      ],
     );
   }
 }
@@ -261,31 +431,55 @@ class _StatItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final int? value;
+  final Color color;
 
   const _StatItem({
     required this.icon,
     required this.label,
     required this.value,
+    required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Row(
         children: [
-          Text(
-            _formatNumber(value ?? 0),
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(icon, size: 16, color: color),
           ),
-          Text(label, style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey,
+                    fontSize: 11,
+                  ),
+                ),
+                Text(
+                  _formatNumber(value ?? 0),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -295,5 +489,76 @@ class _StatItem extends StatelessWidget {
     if (num >= 100000000) return '${(num / 100000000).toStringAsFixed(1)}亿';
     if (num >= 10000) return '${(num / 10000).toStringAsFixed(1)}万';
     return num.toString();
+  }
+}
+
+class _DatesSection extends StatelessWidget {
+  final Novel novel;
+
+  const _DatesSection({required this.novel});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          _DateRow(
+            icon: Icons.update,
+            label: '最后更新',
+            date: novel.lastUpdate,
+          ),
+          const SizedBox(height: 8),
+          _DateRow(
+            icon: Icons.sync,
+            label: '同步时间',
+            date: novel.dbUpdate,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DateRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final DateTime? date;
+
+  const _DateRow({
+    required this.icon,
+    required this.label,
+    required this.date,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: Colors.grey),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Colors.grey,
+          ),
+        ),
+        const Spacer(),
+        Text(
+          date != null ? _formatDate(date!) : '未知',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatDate(DateTime dt) {
+    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
   }
 }

@@ -17,7 +17,13 @@ class TagsScreen extends ConsumerWidget {
     final tagsAsync = ref.watch(tagsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('标签')),
+      appBar: AppBar(
+        title: const Text('标签'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
       body: tagsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
@@ -58,9 +64,13 @@ class TagDetailScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: tagAsync.when(
-          loading: () => const Text('标签'),
-          error: (_, __) => const Text('标签'),
+          loading: () => const Text('标签详情'),
+          error: (_, __) => const Text('标签详情'),
           data: (tag) => Text(tag?.name ?? '未知'),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
         ),
       ),
       body: novelsAsync.when(

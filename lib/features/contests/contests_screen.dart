@@ -17,7 +17,13 @@ class ContestsScreen extends ConsumerWidget {
     final contestsAsync = ref.watch(contestsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('比赛')),
+      appBar: AppBar(
+        title: const Text('比赛'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
       body: contestsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
@@ -60,9 +66,13 @@ class ContestDetailScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: contestAsync.when(
-          loading: () => const Text('比赛'),
-          error: (_, __) => const Text('比赛'),
+          loading: () => const Text('比赛详情'),
+          error: (_, __) => const Text('比赛详情'),
           data: (contest) => Text(contest?.name ?? '未知'),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
         ),
       ),
       body: novelsAsync.when(
