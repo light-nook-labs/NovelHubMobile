@@ -1,0 +1,61 @@
+name: novel_hub_mobile
+description: "Novel Hub - Offline-first novel metadata browser"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  
+  # State Management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+  
+  # Database
+  drift: ^2.23.1
+  sqlite3_flutter_libs: ^0.5.28
+  path_provider: ^2.1.5
+  path: ^1.9.1
+  
+  # Network
+  dio: ^5.7.0
+  
+  # Routing
+  go_router: ^14.8.1
+  
+  # Archive
+  archive: ^4.0.7
+  
+  # Utilities
+  shared_preferences: ^2.3.4
+  intl: ^0.19.0
+  collection: ^1.19.1
+  json_annotation: ^4.9.0
+  
+  # UI
+  cached_network_image: ^3.4.1
+  flutter_staggered_grid_view: ^0.7.0
+  pull_to_refresh: ^2.0.0
+  shimmer: ^3.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  
+  # Code Generation
+  build_runner: ^2.4.15
+  drift_dev: ^2.23.1
+  riverpod_generator: ^2.6.2
+  json_serializable: ^6.9.4
+  
+  # Lint
+  custom_lint: ^0.7.5
+  riverpod_lint: ^2.6.3
+
+flutter:
+  uses-material-design: true
