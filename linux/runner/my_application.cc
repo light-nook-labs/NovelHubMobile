@@ -52,7 +52,7 @@ static void my_application_activate(GApplication* application) {
     gtk_window_set_title(window, "novel_hub_mobile");
   }
 
-  gtk_window_set_default_size(window, 390, 844);  // iPhone 14 size for mobile testing
+  gtk_window_set_default_size(window, 390, 720);  // Mobile size for testing
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(
