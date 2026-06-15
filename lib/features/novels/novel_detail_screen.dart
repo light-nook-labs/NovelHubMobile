@@ -54,15 +54,11 @@ class NovelDetailScreen extends ConsumerWidget {
           _Breadcrumb(novelTitle: novel.title),
           const SizedBox(height: 16),
 
-          // Main: cover + info
+          // Main: info + cover
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Cover - 使用图片自身宽高比
-              _CoverImage(cover: novel.cover),
-              const SizedBox(width: 16),
-
-              // Info
+              // Info (left)
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -119,25 +115,29 @@ class NovelDetailScreen extends ConsumerWidget {
                         _PtypeBadge(ptype: novel.ptype),
                       ],
                     ),
+                    const SizedBox(height: 8),
+
+                    // Tags (directly below badges)
+                    tagsAsync.when(
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
+                      data: (tags) {
+                        if (tags.isEmpty) return const SizedBox.shrink();
+                        return Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: tags.map((tag) => _TagChip(name: tag.name)).toList(),
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
+              const SizedBox(width: 16),
 
-          // Tags
-          tagsAsync.when(
-            loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
-            data: (tags) {
-              if (tags.isEmpty) return const SizedBox.shrink();
-              return Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: tags.map((tag) => _TagChip(name: tag.name)).toList(),
-              );
-            },
+              // Cover (right)
+              _CoverImage(cover: novel.cover),
+            ],
           ),
           const SizedBox(height: 20),
 
