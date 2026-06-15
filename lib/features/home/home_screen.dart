@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../data/repositories/providers.dart';
+import '../../data/models/database.dart';
 import '../../shared/widgets/novel_card.dart';
 import '../../app/theme.dart';
+
+part 'home_screen.g.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -13,6 +18,7 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final stats = ref.watch(statisticsProvider);
     final syncInfo = ref.watch(lastSyncInfoProvider);
+    final bannerNovels = ref.watch(bannerNovelsProvider);
     final latestNovels = ref.watch(novelsProvider(limit: 10));
 
     return Scaffold(
@@ -29,11 +35,23 @@ class HomeScreen extends ConsumerWidget {
         onRefresh: () async {
           ref.invalidate(statisticsProvider);
           ref.invalidate(lastSyncInfoProvider);
+          ref.invalidate(bannerNovelsProvider);
           ref.invalidate(novelsProvider);
         },
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // Banner Showcase
+            bannerNovels.when(
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+              data: (novels) {
+                if (novels.isEmpty) return const SizedBox.shrink();
+                return _BannerShowcase(novels: novels);
+              },
+            ),
+            const SizedBox(height: 16),
+
             // Statistics Card
             Card(
               child: Padding(
@@ -41,10 +59,8 @@ class HomeScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '数据库统计',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
+                    Text('数据库统计',
+                        style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 16),
                     stats.when(
                       loading: () =>
@@ -77,34 +93,48 @@ class HomeScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
 
-            // Sync Status Card
+            // Quick Navigation
             Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('同步状态', style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(height: 8),
-                    syncInfo.when(
-                      loading: () => const CircularProgressIndicator(),
-                      error: (err, stack) => Text('Error: $err'),
-                      data: (info) {
-                        if (info == null) {
-                          return const Text('尚未同步数据');
-                        }
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('版本: ${info.version}'),
-                            if (info.syncedAt != null)
-                              Text('同步时间: ${_formatDateTime(info.syncedAt!)}'),
-                          ],
-                        );
-                      },
-                    ),
-                  ],
-                ),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.book, color: AppColors.primary),
+                    title: const Text('浏览小说'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.go('/novels'),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading:
+                        const Icon(Icons.person, color: AppColors.primary),
+                    title: const Text('作者'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/authors'),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.tag, color: AppColors.primary),
+                    title: const Text('标签'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/tags'),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.emoji_events,
+                        color: AppColors.secondary),
+                    title: const Text('比赛'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/contests'),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading:
+                        const Icon(Icons.search, color: AppColors.primary),
+                    title: const Text('搜索'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.go('/search'),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),
@@ -113,7 +143,8 @@ class HomeScreen extends ConsumerWidget {
             Text('最新小说', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 12),
             latestNovels.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
               error: (err, stack) => Text('Error: $err'),
               data: (novels) {
                 if (novels.isEmpty) {
@@ -123,11 +154,8 @@ class HomeScreen extends ConsumerWidget {
                       child: Center(
                         child: Column(
                           children: [
-                            Icon(
-                              Icons.cloud_download,
-                              size: 48,
-                              color: AppColors.primary,
-                            ),
+                            Icon(Icons.cloud_download,
+                                size: 48, color: AppColors.primary),
                             SizedBox(height: 16),
                             Text('暂无数据，点击同步按钮下载'),
                           ],
@@ -156,36 +184,42 @@ class HomeScreen extends ConsumerWidget {
                 );
               },
             ),
-            const SizedBox(height: 16),
 
-            // Quick Actions
+            // Sync Status
             Card(
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.book, color: AppColors.primary),
-                    title: const Text('浏览小说'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.go('/novels'),
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.search, color: AppColors.primary),
-                    title: const Text('搜索'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.go('/search'),
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.settings,
-                      color: AppColors.primary,
+              margin: const EdgeInsets.only(top: 16),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('同步状态',
+                        style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    syncInfo.when(
+                      loading: () => const CircularProgressIndicator(),
+                      error: (err, stack) => Text('Error: $err'),
+                      data: (info) {
+                        if (info == null) {
+                          return const Text('尚未同步数据');
+                        }
+                        return Row(
+                          children: [
+                            const Icon(Icons.check_circle,
+                                color: AppColors.ongoing, size: 16),
+                            const SizedBox(width: 8),
+                            Text('版本: ${info.version}'),
+                            if (info.syncedAt != null) ...[
+                              const Spacer(),
+                              Text(_formatDateTime(info.syncedAt!),
+                                  style: Theme.of(context).textTheme.bodySmall),
+                            ],
+                          ],
+                        );
+                      },
                     ),
-                    title: const Text('设置'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.go('/settings'),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
@@ -195,8 +229,7 @@ class HomeScreen extends ConsumerWidget {
   }
 
   String _formatDateTime(DateTime dt) {
-    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} '
-        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    return '${dt.month}/${dt.day} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
   }
 
   void _showSyncDialog(BuildContext context, WidgetRef ref) {
@@ -236,9 +269,9 @@ class HomeScreen extends ConsumerWidget {
       if (release == null) {
         if (context.mounted) {
           Navigator.pop(context);
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('数据已是最新')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('数据已是最新')),
+          );
         }
         return;
       }
@@ -254,21 +287,108 @@ class HomeScreen extends ConsumerWidget {
           );
           ref.invalidate(statisticsProvider);
           ref.invalidate(lastSyncInfoProvider);
+          ref.invalidate(bannerNovelsProvider);
           ref.invalidate(novelsProvider);
         } else {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('同步失败: ${result.error}')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('同步失败: ${result.error}')),
+          );
         }
       }
     } catch (e) {
       if (context.mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('错误: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('错误: $e')),
+        );
       }
     }
+  }
+}
+
+class _BannerShowcase extends StatelessWidget {
+  final List<Novel> novels;
+
+  const _BannerShowcase({required this.novels});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 180,
+      child: PageView.builder(
+        controller: PageController(viewportFraction: 0.9),
+        itemCount: novels.length,
+        itemBuilder: (context, index) {
+          final novel = novels[index];
+          return GestureDetector(
+            onTap: () => context.push('/novel/${novel.id}'),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: AppColors.primary.withValues(alpha: 0.1),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (novel.cover != null && novel.cover!.isNotEmpty)
+                    CachedNetworkImage(
+                      imageUrl: novel.cover!,
+                      fit: BoxFit.cover,
+                      errorWidget: (_, __, ___) => const Center(
+                        child: Icon(Icons.book,
+                            size: 48, color: AppColors.primary),
+                      ),
+                    ),
+                  Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Colors.black87],
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 12,
+                    left: 12,
+                    right: 12,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text('推荐',
+                              style:
+                                  TextStyle(color: Colors.white, fontSize: 10)),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          novel.title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 }
 
@@ -312,4 +432,10 @@ class _SyncProgressDialog extends StatelessWidget {
       ),
     );
   }
+}
+
+@riverpod
+Future<List<Novel>> bannerNovels(BannerNovelsRef ref) async {
+  final db = ref.watch(databaseProvider);
+  return db.getBannerNovels();
 }

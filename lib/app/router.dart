@@ -5,6 +5,9 @@ import '../features/home/home_screen.dart';
 import '../features/novels/novels_screen.dart';
 import '../features/novels/novel_detail_screen.dart';
 import '../features/rankings/rankings_screen.dart';
+import '../features/authors/authors_screen.dart';
+import '../features/tags/tags_screen.dart';
+import '../features/contests/contests_screen.dart';
 import '../features/search/search_screen.dart';
 import '../features/settings/settings_screen.dart';
 
@@ -46,12 +49,52 @@ final router = GoRouter(
         ),
       ],
     ),
+    // Detail screens (full screen)
     GoRoute(
       path: '/novel/:id',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
         final id = int.parse(state.pathParameters['id']!);
         return NovelDetailScreen(novelId: id);
+      },
+    ),
+    GoRoute(
+      path: '/authors',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const AuthorsScreen(),
+    ),
+    GoRoute(
+      path: '/author/:id',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        final id = int.parse(state.pathParameters['id']!);
+        return AuthorDetailScreen(authorId: id);
+      },
+    ),
+    GoRoute(
+      path: '/tags',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const TagsScreen(),
+    ),
+    GoRoute(
+      path: '/tag/:id',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        final id = int.parse(state.pathParameters['id']!);
+        return TagDetailScreen(tagId: id);
+      },
+    ),
+    GoRoute(
+      path: '/contests',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const ContestsScreen(),
+    ),
+    GoRoute(
+      path: '/contest/:id',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        final id = int.parse(state.pathParameters['id']!);
+        return ContestDetailScreen(contestId: id);
       },
     ),
   ],

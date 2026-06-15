@@ -301,6 +301,110 @@ class AppDatabase extends _$AppDatabase {
     return query.getSingleOrNull();
   }
 
+  // ===== Author queries =====
+
+  Future<List<Author>> getAllAuthors({int limit = 100, int offset = 0}) async {
+    final query = select(authors)
+      ..orderBy([(t) => OrderingTerm.asc(t.name)])
+      ..limit(limit, offset: offset);
+    return query.get();
+  }
+
+  Future<Author?> getAuthor(int id) async {
+    final query = select(authors)..where((t) => t.id.equals(id));
+    return query.getSingleOrNull();
+  }
+
+  Future<List<Novel>> getNovelsByAuthor(int authorId,
+      {int limit = 50, int offset = 0}) async {
+    final query = select(novels)
+      ..where((t) => t.authorId.equals(authorId))
+      ..orderBy([(t) => OrderingTerm.desc(t.lastUpdate)])
+      ..limit(limit, offset: offset);
+    return query.get();
+  }
+
+  Future<int> getAuthorNovelCount(int authorId) async {
+    final query = select(novels)
+      ..where((t) => t.authorId.equals(authorId));
+    final results = await query.get();
+    return results.length;
+  }
+
+  // ===== Tag queries =====
+
+  Future<List<Tag>> getAllTags({int limit = 100, int offset = 0}) async {
+    final query = select(tags)
+      ..orderBy([(t) => OrderingTerm.asc(t.name)])
+      ..limit(limit, offset: offset);
+    return query.get();
+  }
+
+  Future<Tag?> getTag(int id) async {
+    final query = select(tags)..where((t) => t.id.equals(id));
+    return query.getSingleOrNull();
+  }
+
+  Future<List<Novel>> getNovelsByTag(int tagId,
+      {int limit = 50, int offset = 0}) async {
+    final query = select(novelTags).join([
+      innerJoin(novels, novels.id.equalsExp(novelTags.novelId)),
+    ])
+      ..where(novelTags.tagId.equals(tagId))
+      ..orderBy([OrderingTerm.desc(novels.lastUpdate)])
+      ..limit(limit, offset: offset);
+    final results = await query.get();
+    return results.map((row) => row.readTable(novels)).toList();
+  }
+
+  Future<int> getTagNovelCount(int tagId) async {
+    final query = select(novelTags)
+      ..where((t) => t.tagId.equals(tagId));
+    final results = await query.get();
+    return results.length;
+  }
+
+  // ===== Contest queries =====
+
+  Future<List<Contest>> getAllContests(
+      {int limit = 100, int offset = 0}) async {
+    final query = select(contests)
+      ..orderBy([(t) => OrderingTerm.asc(t.name)])
+      ..limit(limit, offset: offset);
+    return query.get();
+  }
+
+  Future<Contest?> getContest(int id) async {
+    final query = select(contests)..where((t) => t.id.equals(id));
+    return query.getSingleOrNull();
+  }
+
+  Future<List<Novel>> getNovelsByContest(int contestId,
+      {int limit = 50, int offset = 0}) async {
+    final query = select(novels)
+      ..where((t) => t.contestId.equals(contestId))
+      ..orderBy([(t) => OrderingTerm.desc(t.lastUpdate)])
+      ..limit(limit, offset: offset);
+    return query.get();
+  }
+
+  Future<int> getContestNovelCount(int contestId) async {
+    final query = select(novels)
+      ..where((t) => t.contestId.equals(contestId));
+    final results = await query.get();
+    return results.length;
+  }
+
+  // ===== Banner novels =====
+
+  Future<List<Novel>> getBannerNovels({int limit = 12}) async {
+    final query = select(novels)
+      ..where((t) => t.hasBanner.equals(true))
+      ..orderBy([(t) => OrderingTerm.desc(t.clickNum)])
+      ..limit(limit);
+    return query.get();
+  }
+
   // ===== Statistics =====
 
   Future<Map<String, int>> getStatistics() async {
