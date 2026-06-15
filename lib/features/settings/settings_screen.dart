@@ -52,7 +52,7 @@ class SettingsScreen extends ConsumerWidget {
                 ListTile(
                   leading: const Icon(Icons.science, color: AppColors.secondary),
                   title: const Text('加载测试数据'),
-                  subtitle: const Text('从本地 release.tar.gz 加载'),
+                  subtitle: const Text('从本地 JSONL 文件加载'),
                   onTap: () => _loadTestData(context, ref),
                 ),
               ],
@@ -207,14 +207,14 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   void _loadTestData(BuildContext context, WidgetRef ref) async {
-    // For testing: load from /tmp/release.tar.gz
-    const testPath = '/tmp/release.tar.gz';
+    // For testing: load from a single JSONL file
+    const testPath = '/tmp/jsonl/meta_01.jsonl';
     final file = File(testPath);
     if (!file.existsSync()) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('测试文件不存在: /tmp/release.tar.gz'),
+            content: Text('测试文件不存在: /tmp/jsonl/meta_01.jsonl'),
           ),
         );
       }
@@ -229,7 +229,7 @@ class SettingsScreen extends ConsumerWidget {
 
     try {
       final syncService = ref.read(syncServiceProvider);
-      final result = await syncService.loadFromLocalFile(testPath);
+      final result = await syncService.loadFromJsonlFile(testPath);
 
       if (context.mounted) {
         Navigator.pop(context);
