@@ -1,7 +1,7 @@
 name: novel_hub_mobile
-description: "Novel Hub - Offline-first novel metadata browser"
+description: "Novel Hub - Offline-first novel metadata browser for sfacg.com novels"
 publish_to: 'none'
-version: 1.0.0+1
+version: 0.1.0+1
 
 environment:
   sdk: ^3.11.4
@@ -65,3 +65,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/db/novel_hub.sqlite
+    - assets/chunks/

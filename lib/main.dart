@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 
 import 'app/router.dart';
 import 'app/theme.dart';
 import 'app/theme_provider.dart';
+import 'data/services/chunked_sync_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize chunks - copy bundled cold chunk to app documents
+  final dio = Dio();
+  final syncService = ChunkedSyncService(dio);
+  await syncService.copyBundledChunks();
+  
   runApp(const ProviderScope(child: MyApp()));
 }
 

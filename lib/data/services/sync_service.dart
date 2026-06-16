@@ -36,7 +36,7 @@ class ReleaseInfo {
       tagName: json['tag_name'] as String,
       name: json['name'] as String,
       body: json['body'] as String? ?? '',
-      publishedAt: DateTime.parse(json['published_at'] as String),
+      publishedAt: DateTime.tryParse(json['published_at'] as String? ?? '') ?? DateTime.now(),
       downloadUrl: releaseAsset?['browser_download_url'] as String? ?? '',
     );
   }

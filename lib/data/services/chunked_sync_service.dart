@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -51,6 +52,24 @@ class ChunkedSyncService {
   final Dio _dio;
 
   ChunkedSyncService(this._dio);
+
+  /// Copy bundled chunks from assets to app documents directory
+  Future<void> copyBundledChunks() async {
+    final chunkDir = await _getChunkDir();
+    
+    // Copy cold chunk from assets
+    final coldPath = p.join(chunkDir, 'cold_chunk.sqlite');
+    if (!await File(coldPath).exists()) {
+      try {
+        // Load from Flutter assets
+        final data = await rootBundle.load('assets/chunks/cold_chunk.sqlite');
+        final bytes = data.buffer.asUint8List();
+        await File(coldPath).writeAsBytes(bytes);
+      } catch (e) {
+        // If asset doesn't exist, that's okay - cold chunk is optional
+      }
+    }
+  }
 
   /// Get the local path for chunk storage
   Future<String> _getChunkDir() async {
