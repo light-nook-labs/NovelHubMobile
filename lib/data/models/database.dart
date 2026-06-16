@@ -179,6 +179,29 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  Future<int> cleanDirtyTags() async {
+    // Find tags that look like lists (contain brackets, quotes, etc.)
+    final dirtyQuery = select(tags)
+      ..where((t) =>
+          t.name.like('%[%') |
+          t.name.like('%]%') |
+          t.name.like('%"%"') |
+          t.name.like("%'%'"));
+    final dirtyTags = await dirtyQuery.get();
+
+    if (dirtyTags.isEmpty) return 0;
+
+    final dirtyIds = dirtyTags.map((t) => t.id).toList();
+
+    // Delete from novel_tags first
+    await (delete(novelTags)..where((t) => t.tagId.isIn(dirtyIds))).go();
+
+    // Delete the tags
+    await (delete(tags)..where((t) => t.id.isIn(dirtyIds))).go();
+
+    return dirtyTags.length;
+  }
+
   // ===== Query operations =====
 
   Future<List<Novel>> getAllNovels({int limit = 50, int offset = 0}) async {
