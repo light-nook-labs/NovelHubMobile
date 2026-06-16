@@ -57,16 +57,18 @@ class ChunkedSyncService {
   Future<void> copyBundledChunks() async {
     final chunkDir = await _getChunkDir();
     
-    // Copy cold chunk from assets
-    final coldPath = p.join(chunkDir, 'cold_chunk.sqlite');
-    if (!await File(coldPath).exists()) {
-      try {
-        // Load from Flutter assets
-        final data = await rootBundle.load('assets/chunks/cold_chunk.sqlite');
-        final bytes = data.buffer.asUint8List();
-        await File(coldPath).writeAsBytes(bytes);
-      } catch (e) {
-        // If asset doesn't exist, that's okay - cold chunk is optional
+    // Copy all chunks from assets
+    for (final chunkName in _chunks) {
+      final chunkPath = p.join(chunkDir, '${chunkName}_chunk.sqlite');
+      if (!await File(chunkPath).exists()) {
+        try {
+          // Load from Flutter assets
+          final data = await rootBundle.load('assets/chunks/${chunkName}_chunk.sqlite');
+          final bytes = data.buffer.asUint8List();
+          await File(chunkPath).writeAsBytes(bytes);
+        } catch (e) {
+          // If asset doesn't exist, that's okay
+        }
       }
     }
   }
