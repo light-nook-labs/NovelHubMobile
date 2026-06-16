@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -68,12 +69,36 @@ class NovelDetailScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Title
-                    Text(
-                      novel.title,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    // Title with copy button
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            novel.title,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            Clipboard.setData(
+                                ClipboardData(text: novel.title));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('已复制标题'),
+                                duration: Duration(seconds: 1),
+                              ),
+                            );
+                          },
+                          child: Icon(
+                            Icons.copy,
+                            size: 18,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
                     ),
                     Text(
                       '#${novel.id}',
