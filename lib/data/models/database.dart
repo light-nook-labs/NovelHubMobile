@@ -498,7 +498,44 @@ class AppDatabase extends _$AppDatabase {
     final tagResult = await tagQuery.getSingle();
     final tagCount = tagResult.read(tagCountQuery) ?? 0;
 
-    return {'novels': novelCount, 'authors': authorCount, 'tags': tagCount};
+    final contestCountQuery = countAll();
+    final contestQuery = select(contests).addColumns([contestCountQuery]);
+    final contestResult = await contestQuery.getSingle();
+    final contestCount = contestResult.read(contestCountQuery) ?? 0;
+
+    // Count novels by genre (excluding 其他=1)
+    final genreCountQuery = countAll();
+    final genreQuery = selectOnly(novels)
+      ..where(novels.genre.isBiggerThanValue(1))
+      ..addColumns([genreCountQuery]);
+    final genreResult = await genreQuery.getSingle();
+    final genreCount = genreResult.read(genreCountQuery) ?? 0;
+
+    // Count novels by status (excluding 其他=1)
+    final statusCountQuery = countAll();
+    final statusQuery = selectOnly(novels)
+      ..where(novels.status.isBiggerThanValue(1))
+      ..addColumns([statusCountQuery]);
+    final statusResult = await statusQuery.getSingle();
+    final statusCount = statusResult.read(statusCountQuery) ?? 0;
+
+    // Count novels by ptype (excluding 其他=1)
+    final ptypeCountQuery = countAll();
+    final ptypeQuery = selectOnly(novels)
+      ..where(novels.ptype.isBiggerThanValue(1))
+      ..addColumns([ptypeCountQuery]);
+    final ptypeResult = await ptypeQuery.getSingle();
+    final ptypeCount = ptypeResult.read(ptypeCountQuery) ?? 0;
+
+    return {
+      'novels': novelCount,
+      'authors': authorCount,
+      'tags': tagCount,
+      'contests': contestCount,
+      'genres': genreCount,
+      'statuses': statusCount,
+      'ptypes': ptypeCount,
+    };
   }
 
   // ===== Novel rankings =====
