@@ -22,8 +22,10 @@ Mobile app for [Novel Hub](https://github.com/light-nook-labs/novel_hub) — off
 | Tag list + detail | ✅ | ✅ | 3-column grid with novel count |
 | Contest list + detail | ✅ | ✅ | 2-column grid with novel count |
 | Genre/Status/Ptype browse | ✅ | ✅ | List pages + filtered novels |
-| Dark mode | ✅ | ✅ | |
+| Dark mode | ✅ | ✅ | Manual theme switching |
 | Load more | ✅ | ✅ | 48 per page, back-to-top button |
+| Word count filter | ✅ | ✅ | Range-based filter with breakpoints |
+| Hide "Other" option | ✅ | ✅ | Configurable in settings |
 
 ## Tech Stack
 
@@ -33,6 +35,7 @@ Mobile app for [Novel Hub](https://github.com/light-nook-labs/novel_hub) — off
 - **HTTP**: dio
 - **Routing**: go_router
 - **Image**: cached_network_image
+- **Storage**: shared_preferences
 - **Window**: window_manager (desktop testing)
 
 ## Key Commands
@@ -49,20 +52,21 @@ flutter build linux --debug                          # Build for testing
 ## Navigation Structure
 
 **Bottom Nav (5 tabs):**
-- 首页 (Home) - `/`
-- 小说 (Novels) - `/novels`
-- 背投 (Banners) - `/banners`
-- 排行 (Rankings) - `/rankings`
-- 设置 (Settings) - `/settings`
+- Home - `/`
+- Novels - `/novels`
+- Banners - `/banners`
+- Rankings - `/rankings`
+- Settings - `/settings`
 
 **Header Nav:**
 - Search bar in AppBar → opens full screen search page
 
 **Novels Screen Header Tabs:**
-- 全部/其他/免费/签约/VIP (ptype filter)
+- All/Free/Signed/VIP (ptype filter)
+- "Other" tab: hidden by default, shown last with smaller font when enabled
 
 **Rankings Screen Header Tabs:**
-- 点击/字数/收藏/点赞/长评/短评
+- Clicks/Words/Likes/Praises/Reviews/Comments
 
 **Full Screen Pages (no bottom nav):**
 - Novel detail - `/novel/:id`
@@ -91,7 +95,7 @@ Matching novel_hub web defaults:
 
 From `novel_hub/utils/mappings.py` (index 1 = OTHER/fallback):
 
-### Genre (小说分类)
+### Genre (Novel Genre)
 | Value | Chinese |
 |-------|---------|
 | 1 | 其他 |
@@ -105,7 +109,7 @@ From `novel_hub/utils/mappings.py` (index 1 = OTHER/fallback):
 | 9 | 同人 |
 | 10 | 悬疑 |
 
-### Status (状态)
+### Status (Novel Status)
 | Value | Chinese |
 |-------|---------|
 | 1 | 其他 |
@@ -116,7 +120,7 @@ From `novel_hub/utils/mappings.py` (index 1 = OTHER/fallback):
 | 6 | 完结A |
 | 7 | 下架 |
 
-### Ptype (类型)
+### Ptype (Novel Type)
 | Value | Chinese |
 |-------|---------|
 | 1 | 其他 |
@@ -209,7 +213,9 @@ lib/
 ├── main.dart
 ├── app/
 │   ├── router.dart         # go_router config
-│   └── theme.dart          # light/dark themes
+│   ├── theme.dart          # light/dark themes
+│   ├── theme_provider.dart # theme mode state
+│   └── settings_provider.dart # settings state
 ├── data/
 │   ├── models/
 │   │   └── database.dart   # drift tables + queries
@@ -228,7 +234,7 @@ lib/
 │   ├── browse/             # enum list screens
 │   ├── rankings/           # 6 tabs, rank-style list
 │   ├── search/             # full screen search
-│   └── settings/           # sync, reset
+│   └── settings/           # sync, reset, theme, stats
 └── shared/
     ├── widgets/
     │   ├── novel_card.dart

@@ -1,253 +1,259 @@
-# 路由文档
+# Routes Documentation
 
-## 路由总览
+## Route Overview
 
-| 路径 | 页面 | 说明 |
-|------|------|------|
-| `/` | 首页 | Hero 轮播 + 快捷入口 |
-| `/novels` | 小说列表 | 4 列网格，支持筛选 |
-| `/novels-by-genre` | 按分类筛选 | ?genre=魔幻 |
-| `/novels-by-status` | 按状态筛选 | ?status=连载中 |
-| `/banners` | 背投列表 | 专用背投标签页 |
-| `/rankings` | 排行榜 | 6 个维度标签页 |
-| `/search` | 搜索 | 全文搜索 |
-| `/settings` | 设置 | 同步、重置 |
-| `/novel/:id` | 小说详情 | 封面 + 信息 + 来源 |
-| `/authors` | 作者列表 | 按总点击排序 |
-| `/author/:id` | 作者详情 | 作者作品列表 |
-| `/tags` | 标签列表 | 3 列网格 |
-| `/tag/:id` | 标签详情 | 标签下作品列表 |
-| `/contests` | 比赛列表 | 2 列网格 |
-| `/contest/:id` | 比赛详情 | 比赛相关作品 |
-| `/genres` | 分类列表 | 所有小说分类 |
-| `/statuses` | 状态列表 | 所有小说状态 |
-| `/ptypes` | 类型列表 | 所有小说类型 |
+| Path | Page | Description |
+|------|------|-------------|
+| `/` | Home | Hero carousel + quick nav |
+| `/novels` | Novel List | 4-column grid, filter support |
+| `/novels-by-genre` | Filter by Genre | ?genre=魔幻 |
+| `/novels-by-status` | Filter by Status | ?status=连载中 |
+| `/banners` | Banner List | Dedicated banner tab |
+| `/rankings` | Rankings | 6 dimension tabs |
+| `/search` | Search | Full text search |
+| `/settings` | Settings | Sync, reset, theme |
+| `/novel/:id` | Novel Detail | Cover + info + source |
+| `/authors` | Author List | Sorted by total clicks |
+| `/author/:id` | Author Detail | Author's works list |
+| `/tags` | Tag List | 3-column grid |
+| `/tag/:id` | Tag Detail | Tag's works list |
+| `/contests` | Contest List | 2-column grid |
+| `/contest/:id` | Contest Detail | Contest related works |
+| `/genres` | Genre List | All novel genres |
+| `/statuses` | Status List | All novel statuses |
+| `/ptypes` | Ptype List | All novel types |
 
-## 底部导航
+## Bottom Navigation
 
-| 索引 | 标签 | 路径 | 图标 |
-|------|------|------|------|
-| 0 | 首页 | `/` | home |
-| 1 | 小说 | `/novels` | book |
-| 2 | 背投 | `/banners` | image |
-| 3 | 排行 | `/rankings` | trending_up |
-| 4 | 设置 | `/settings` | settings |
+| Index | Label | Path | Icon |
+|-------|-------|------|------|
+| 0 | Home | `/` | home |
+| 1 | Novels | `/novels` | book |
+| 2 | Banners | `/banners` | image |
+| 3 | Rankings | `/rankings` | trending_up |
+| 4 | Settings | `/settings` | settings |
 
-## 页面详细说明
+## Page Details
 
-### 首页 `/`
+### Home `/`
 
-**功能：**
-- Hero 轮播展示热门背投（前 5 张）
-- 快捷入口：小说、作者、标签、比赛、搜索
-- 最近更新小说列表
+**Features:**
+- Hero carousel showing top 5 banner novels
+- Quick nav: Novels, Authors, Tags, Contests, Search
+- Latest novels list
 
-**数据：**
-- 轮播：`has_banner = true` 的小说，按 `click_num` 排序
-- 最近更新：按 `last_update` 排序，取前 10
-
----
-
-### 小说列表 `/novels`
-
-**功能：**
-- 4 列网格展示小说封面
-- Header Tabs 切换类型：全部/其他/免费/签约/VIP
-- 下拉刷新 + 上拉加载更多（每页 48 条）
-- 点击进入小说详情
-
-**筛选参数：**
-- `ptype`: 小说类型（可选）
-
-**数据：**
-- 按 `click_num` DESC 排序
-- 分页加载，每页 48 条
+**Data:**
+- Carousel: `has_banner = true` novels, sorted by `click_num`
+- Latest: sorted by `last_update`, top 10
 
 ---
 
-### 小说详情 `/novel/:id`
+### Novel List `/novels`
 
-**功能：**
-- 左侧：小说信息（标题、作者、状态、分类、类型）
-- 右侧：封面图片
-- 下方：章节列表（如有）
-- 底部：来源引用（带原图预览）
+**Features:**
+- 4-column grid showing novel covers
+- Header tabs for ptype: All/Free/Signed/VIP
+- Pull refresh + load more (48 per page)
+- Click to enter novel detail
 
-**数据：**
-- 小说基本信息
-- 关联的背投图片
-- 来源文档信息
+**Filter Parameters:**
+- `ptype`: Novel type (optional)
 
----
-
-### 排行榜 `/rankings`
-
-**功能：**
-- 6 个标签页：点击/字数/收藏/点赞/长评/短评
-- 每个标签页：排行列表（序号 + 封面 + 标题 + 标签 + 数值）
-- 支持加载更多（每页 48 条）
-- 返回顶部按钮
-
-**数据：**
-- 按对应维度降序排列
-- 默认显示点击排行
+**Data:**
+- Sorted by `click_num` DESC
+- Paginated, 48 per page
 
 ---
 
-### 搜索 `/search`
+### Novel Detail `/novel/:id`
 
-**功能：**
-- 搜索框实时搜索（防抖 300ms）
-- 搜索结果：小说列表 + 作者列表 + 标签列表
-- 支持标题、作者名、标签名搜索
+**Features:**
+- Left: Novel info (title, author, status, genre, ptype)
+- Right: Cover image
+- Bottom: Chapter list (if available)
+- Footer: Source reference (with image preview)
 
-**数据：**
-- 全文搜索（标题、作者、标签）
-- 结果按相关性排序
-
----
-
-### 作者列表 `/authors`
-
-**功能：**
-- 列表展示：作者名 + 代表作 + 背投/作品数
-- 按总点击量降序排列
-- 支持加载更多（每页 48 条）
-- 返回顶部按钮
-
-**数据：**
-- 总点击量 = 该作者所有作品点击量之和
-- 代表作 = 点击量最高的作品
+**Data:**
+- Novel basic info
+- Associated banner image
+- Source document info
 
 ---
 
-### 作者详情 `/author/:id`
+### Rankings `/rankings`
 
-**功能：**
-- 作者信息展示
-- 作品列表（排行风格：序号 + 封面 + 标题 + 标签 + 点击量）
-- 支持加载更多（每页 48 条）
-- 返回顶部按钮
+**Features:**
+- 6 tabs: Clicks/Words/Likes/Praises/Reviews/Comments
+- Each tab: Rank list (rank + cover + title + badges + value)
+- Load more support (48 per page)
+- Back to top button
 
----
-
-### 标签列表 `/tags`
-
-**功能：**
-- 3 列网格展示标签
-- 每个标签显示名称
-- 支持加载更多（每页 48 条）
-- 返回顶部按钮
+**Data:**
+- Sorted by corresponding dimension DESC
+- Default shows click ranking
 
 ---
 
-### 标签详情 `/tag/:id`
+### Search `/search`
 
-**功能：**
-- 标签名称展示
-- 作品列表（排行风格：序号 + 封面 + 标题 + 标签 + 点击量）
-- 支持筛选（点击量/字数/收藏/点赞/更新时间）
-- 支持加载更多（每页 48 条）
-- 返回顶部按钮
+**Features:**
+- Real-time search (debounce 300ms)
+- Results: Novel list + Author list + Tag list
+- Support title, author name, tag name search
 
----
-
-### 比赛列表 `/contests`
-
-**功能：**
-- 2 列网格展示比赛
-- 每个比赛显示名称
-- 支持加载更多（每页 48 条）
-- 返回顶部按钮
+**Data:**
+- Full text search (title, author, tags)
+- Results sorted by relevance
 
 ---
 
-### 比赛详情 `/contest/:id`
+### Author List `/authors`
 
-**功能：**
-- 比赛名称展示
-- 相关作品列表
-- 支持加载更多
+**Features:**
+- List display: Author name + top novel + banner/novel count
+- Sorted by total clicks DESC
+- Load more support (48 per page)
+- Back to top button
 
----
-
-### 背投列表 `/banners`
-
-**功能：**
-- 展示所有带背投的小说
-- 按点击量排序
-- 支持加载更多
+**Data:**
+- Total clicks = sum of all author's novels
+- Top novel = highest click count
 
 ---
 
-### 分类列表 `/genres`
+### Author Detail `/author/:id`
 
-**功能：**
-- 展示所有小说分类（魔幻、玄幻、古风等）
-- 点击进入该分类的小说列表
-
----
-
-### 状态列表 `/statuses`
-
-**功能：**
-- 展示所有小说状态（连载中、已完结等）
-- 点击进入该状态的小说列表
+**Features:**
+- Author info display
+- Works list (rank style: rank + cover + title + badges + clicks)
+- Load more support (48 per page)
+- Back to top button
 
 ---
 
-### 类型列表 `/ptypes`
+### Tag List `/tags`
 
-**功能：**
-- 展示所有小说类型（免费、签约、VIP）
-- 点击进入该类型的小说列表
-
----
-
-### 设置 `/settings`
-
-**功能：**
-- 同步数据：从 GitHub Releases 下载最新数据
-- 重置数据：恢复到初始状态
-- 关于：版本信息
+**Features:**
+- 3-column grid showing tags
+- Each tag shows name and novel count
+- Load more support (48 per page)
+- Back to top button
 
 ---
 
-## 查询参数
+### Tag Detail `/tag/:id`
 
-### 小说列表筛选
-
-| 参数 | 类型 | 说明 | 示例 |
-|------|------|------|------|
-| `ptype` | string | 小说类型 | `/novels?ptype=免费` |
-
-### 分类/状态/类型筛选
-
-| 参数 | 类型 | 说明 | 示例 |
-|------|------|------|------|
-| `genre` | string | 小说分类 | `/novels-by-genre?genre=魔幻` |
-| `status` | string | 小说状态 | `/novels-by-status?status=连载中` |
+**Features:**
+- Tag name display
+- Works list (rank style: rank + cover + title + badges + clicks)
+- Filter support (clicks/words/likes/praises/update time)
+- Load more support (48 per page)
+- Back to top button
 
 ---
 
-## 路由守卫
+### Contest List `/contests`
 
-### 客户隔离
-
-- 所有数据查询自动应用租户隔离
-- 不同租户数据完全隔离
-
-### 登录状态
-
-- 当前版本无需登录
-- 未来可扩展登录功能
+**Features:**
+- 2-column grid showing contests
+- Each contest shows name and novel count
+- Load more support (48 per page)
+- Back to top button
 
 ---
 
-## 路由历史
+### Contest Detail `/contest/:id`
+
+**Features:**
+- Contest name display
+- Related works list
+- Load more support
+
+---
+
+### Banner List `/banners`
+
+**Features:**
+- Display all banner novels
+- Sorted by clicks
+- Load more support
+
+---
+
+### Genre List `/genres`
+
+**Features:**
+- Display all novel genres (魔幻, 玄幻, 古风, etc.)
+- Click to enter genre's novel list
+- Show novel count for each genre
+
+---
+
+### Status List `/statuses`
+
+**Features:**
+- Display all novel statuses (连载中, 已完结, etc.)
+- Click to enter status's novel list
+- Show novel count for each status
+
+---
+
+### Ptype List `/ptypes`
+
+**Features:**
+- Display all novel types (免费, 签约, VIP)
+- Click to enter type's novel list
+- Show novel count for each type
+
+---
+
+### Settings `/settings`
+
+**Features:**
+- Theme mode: System/Light/Dark
+- Hide "Other" option toggle
+- Sync data from GitHub Releases
+- Reset data to default
+- Data statistics
+- Project info and links
+
+---
+
+## Query Parameters
+
+### Novel List Filter
+
+| Parameter | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `ptype` | string | Novel type | `/novels?ptype=免费` |
+
+### Genre/Status/Type Filter
+
+| Parameter | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `genre` | string | Novel genre | `/novels-by-genre?genre=魔幻` |
+| `status` | string | Novel status | `/novels-by-status?status=连载中` |
+
+---
+
+## Route Guards
+
+### Tenant Isolation
+
+- All data queries automatically apply tenant isolation
+- Different tenant data completely isolated
+
+### Login State
+
+- Current version does not require login
+- Can be extended for login functionality in future
+
+---
+
+## Route History
 
 ### v0.1 (2026-06-14)
 
-- 初始路由配置
-- 基础页面路由
-- 底部导航
+- Initial route configuration
+- Basic page routes
+- Bottom navigation
