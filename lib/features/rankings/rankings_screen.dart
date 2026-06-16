@@ -12,12 +12,12 @@ import '../../app/theme.dart';
 part 'rankings_screen.g.dart';
 
 enum RankingType {
-  click('点击榜', Icons.touch_app, 'click_num'),
-  word('字数榜', Icons.text_fields, 'word_num'),
-  like('收藏榜', Icons.favorite, 'like_num'),
-  praise('点赞榜', Icons.thumb_up, 'praise_num'),
-  review('长评榜', Icons.rate_review, 'review_num'),
-  comment('短评榜', Icons.comment, 'comment_num');
+  click('点击', Icons.touch_app, 'click_num'),
+  word('字数', Icons.text_fields, 'word_num'),
+  like('收藏', Icons.favorite, 'like_num'),
+  praise('点赞', Icons.thumb_up, 'praise_num'),
+  review('长评', Icons.rate_review, 'review_num'),
+  comment('短评', Icons.comment, 'comment_num');
 
   final String label;
   final IconData icon;
@@ -172,10 +172,10 @@ class _RankingList extends ConsumerWidget {
                           children: [
                             TextSpan(
                               text: novel.title,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
-                                color: Colors.black,
+                                color: Theme.of(context).textTheme.bodyLarge?.color,
                                 height: 1.3,
                               ),
                             ),
