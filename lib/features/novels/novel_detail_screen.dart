@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/repositories/providers.dart';
 import '../../data/models/database.dart';
 import '../../shared/utils/mappings.dart';
 import '../../app/theme.dart';
+
+const _sfacgUrlPattern = 'https://book.sfacg.com/Novel/{nid}/';
 
 class NovelDetailScreen extends ConsumerWidget {
   final int novelId;
@@ -138,7 +141,13 @@ class NovelDetailScreen extends ConsumerWidget {
               const SizedBox(width: 16),
 
               // Cover (right)
-              _CoverImage(cover: novel.cover),
+              Column(
+                children: [
+                  _CoverImage(cover: novel.cover),
+                  const SizedBox(height: 8),
+                  _ViewOnSfacgButton(novelId: novel.id),
+                ],
+              ),
             ],
           ),
           const SizedBox(height: 20),
@@ -212,6 +221,39 @@ class _CoverImage extends StatelessWidget {
             child: const Center(
               child: Icon(Icons.broken_image, size: 48),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ViewOnSfacgButton extends StatelessWidget {
+  final int novelId;
+
+  const _ViewOnSfacgButton({required this.novelId});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 120,
+      child: ElevatedButton.icon(
+        onPressed: () async {
+          final url = Uri.parse(
+            _sfacgUrlPattern.replaceAll('{nid}', novelId.toString()),
+          );
+          if (await canLaunchUrl(url)) {
+            await launchUrl(url, mode: LaunchMode.externalApplication);
+          }
+        },
+        icon: const Icon(Icons.open_in_new, size: 14),
+        label: const Text('在SFACG查看', style: TextStyle(fontSize: 11)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(6),
           ),
         ),
       ),
