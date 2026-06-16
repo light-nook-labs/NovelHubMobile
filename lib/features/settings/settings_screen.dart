@@ -2,9 +2,12 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:file_picker/file_picker.dart';
 
 import '../../data/repositories/providers.dart';
+import '../../data/services/chunked_sync_service.dart';
 import '../../app/theme.dart';
 import '../../app/theme_provider.dart';
 import '../../app/settings_provider.dart';
@@ -14,7 +17,6 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final syncInfo = ref.watch(lastSyncInfoProvider);
     final stats = ref.watch(statisticsProvider);
     final themeMode = ref.watch(themeModeNotifierProvider);
     final hideOther = ref.watch(hideOtherNotifierProvider);
@@ -68,16 +70,20 @@ class SettingsScreen extends ConsumerWidget {
                     color: AppColors.primary,
                   ),
                   title: const Text('同步数据'),
-                  subtitle: syncInfo.when(
-                    loading: () => const Text('加载中...'),
-                    error: (_, __) => const Text('未同步'),
-                    data: (info) {
-                      if (info == null) return const Text('未同步');
-                      return Text('版本: ${info.version}');
-                    },
-                  ),
+                  subtitle: const Text('从 GitHub 下载最新数据'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _startSync(context, ref),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(
+                    Icons.upload_file,
+                    color: AppColors.primary,
+                  ),
+                  title: const Text('导入数据库'),
+                  subtitle: const Text('从本地文件导入 SQLite 数据库'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _importDatabase(context, ref),
                 ),
                 const Divider(height: 1),
                 ListTile(
@@ -85,16 +91,6 @@ class SettingsScreen extends ConsumerWidget {
                   title: const Text('重置数据'),
                   subtitle: const Text('重置为默认数据库'),
                   onTap: () => _showClearDialog(context, ref),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(
-                    Icons.science,
-                    color: AppColors.secondary,
-                  ),
-                  title: const Text('加载测试数据'),
-                  subtitle: const Text('从本地 JSONL 文件加载'),
-                  onTap: () => _loadTestData(context, ref),
                 ),
               ],
             ),
@@ -176,7 +172,7 @@ class SettingsScreen extends ConsumerWidget {
                 const ListTile(
                   leading: Icon(Icons.tag, color: AppColors.primary),
                   title: Text('版本'),
-                  subtitle: Text('1.0.0'),
+                  subtitle: Text('0.1.0'),
                 ),
                 const Divider(height: 1),
                 ListTile(
@@ -221,7 +217,8 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   void _startSync(BuildContext context, WidgetRef ref) async {
-    final syncService = ref.read(syncServiceProvider);
+    final dio = Dio();
+    final syncService = ChunkedSyncService(dio);
 
     if (!context.mounted) return;
 
@@ -232,8 +229,10 @@ class SettingsScreen extends ConsumerWidget {
     );
 
     try {
-      final release = await syncService.checkForUpdate();
-      if (release == null) {
+      // Check for updates
+      final chunksToUpdate = await syncService.checkForUpdates();
+
+      if (chunksToUpdate.isEmpty) {
         if (!context.mounted) return;
         Navigator.pop(context);
         ScaffoldMessenger.of(
@@ -242,24 +241,36 @@ class SettingsScreen extends ConsumerWidget {
         return;
       }
 
-      final result = await syncService.syncFromRelease(release);
+      // Download each chunk
+      for (final chunk in chunksToUpdate) {
+        final result = await syncService.downloadChunk(
+          chunk,
+          onProgress: (progress) {
+            // Update progress dialog
+          },
+        );
+
+        if (!result.success) {
+          if (!context.mounted) return;
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('同步失败: ${result.error}')),
+          );
+          return;
+        }
+      }
 
       if (!context.mounted) return;
       Navigator.pop(context);
 
-      if (result.success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('同步成功: ${result.novelCount} 本小说')),
-        );
-        Future.microtask(() {
-          ref.invalidate(lastSyncInfoProvider);
-          ref.invalidate(statisticsProvider);
-        });
-      } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('同步失败: ${result.error}')));
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('同步成功: ${chunksToUpdate.length} 个数据块')),
+      );
+
+      // Refresh statistics
+      Future.microtask(() {
+        ref.invalidate(statisticsProvider);
+      });
     } catch (e) {
       if (!context.mounted) return;
       Navigator.pop(context);
@@ -269,12 +280,67 @@ class SettingsScreen extends ConsumerWidget {
     }
   }
 
+  void _importDatabase(BuildContext context, WidgetRef ref) async {
+    try {
+      // Pick SQLite file
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['sqlite', 'db'],
+      );
+
+      if (result == null || result.files.isEmpty) return;
+
+      final file = File(result.files.first.path!);
+      if (!await file.exists()) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('文件不存在')),
+          );
+        }
+        return;
+      }
+
+      if (!context.mounted) return;
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const _SyncProgressDialog(),
+      );
+
+      // Copy file to chunks directory
+      final dio = Dio();
+      final syncService = ChunkedSyncService(dio);
+      final chunkPath = await syncService.getChunkPath('hot');
+
+      await file.copy(chunkPath);
+
+      if (!context.mounted) return;
+      Navigator.pop(context);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('导入成功')),
+      );
+
+      // Refresh statistics
+      Future.microtask(() {
+        ref.invalidate(statisticsProvider);
+      });
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('导入失败: $e')));
+    }
+  }
+
   void _showClearDialog(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('重置数据'),
-        content: const Text('将重置为默认数据库（8,362 本小说），确定继续？'),
+        content: const Text('将重置为默认数据库，确定继续？'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
@@ -284,12 +350,24 @@ class SettingsScreen extends ConsumerWidget {
             style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
             onPressed: () async {
               Navigator.pop(dialogContext);
-              final db = ref.read(databaseProvider);
-              await db.resetToDefault();
+
+              // Delete all chunks
+              final dio = Dio();
+              final syncService = ChunkedSyncService(dio);
+              for (final chunkName in ['cold', 'warm', 'hot']) {
+                final path = await syncService.getChunkPath(chunkName);
+                final file = File(path);
+                if (await file.exists()) {
+                  await file.delete();
+                }
+              }
+
+              // Copy bundled chunks
+              await syncService.copyBundledChunks();
+
               if (context.mounted) {
                 Future.microtask(() {
                   ref.invalidate(statisticsProvider);
-                  ref.invalidate(lastSyncInfoProvider);
                 });
                 ScaffoldMessenger.of(
                   context,
@@ -301,56 +379,6 @@ class SettingsScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
-
-  void _loadTestData(BuildContext context, WidgetRef ref) async {
-    const testPath = '/tmp/jsonl/meta_13.jsonl';
-    final file = File(testPath);
-    if (!file.existsSync()) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('测试文件不存在: /tmp/jsonl/meta_13.jsonl')),
-        );
-      }
-      return;
-    }
-
-    if (!context.mounted) return;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const _SyncProgressDialog(),
-    );
-
-    try {
-      final syncService = ref.read(syncServiceProvider);
-      final result = await syncService.loadFromJsonlFile(testPath);
-
-      if (!context.mounted) return;
-
-      Navigator.pop(context);
-
-      if (result.success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('加载成功: ${result.novelCount} 本小说')),
-        );
-        Future.microtask(() {
-          ref.invalidate(lastSyncInfoProvider);
-          ref.invalidate(statisticsProvider);
-        });
-      } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('加载失败: ${result.error}')));
-      }
-    } catch (e) {
-      if (!context.mounted) return;
-      Navigator.pop(context);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('错误: $e')));
-    }
   }
 }
 
@@ -378,7 +406,10 @@ class _ThemeModeTile extends StatelessWidget {
   final ThemeMode currentMode;
   final ValueChanged<ThemeMode> onChanged;
 
-  const _ThemeModeTile({required this.currentMode, required this.onChanged});
+  const _ThemeModeTile({
+    required this.currentMode,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
