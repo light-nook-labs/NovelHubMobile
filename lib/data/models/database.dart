@@ -274,6 +274,13 @@ class AppDatabase extends _$AppDatabase {
               mode: descending ? OrderingMode.desc : OrderingMode.asc),
         ]);
         break;
+      case 'comment_num':
+        query.orderBy([
+          (t) => OrderingTerm(
+              expression: t.commentNum,
+              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+        ]);
+        break;
       default:
         query.orderBy([(t) => OrderingTerm.desc(t.lastUpdate)]);
     }
