@@ -22,7 +22,7 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen> {
   int? _selectedGenre;
   int? _selectedStatus;
   int? _selectedPtype;
-  String _sortBy = 'click_num';  // Default: click_num desc (matching novel_hub)
+  String _sortBy = 'click_num';
   bool _descending = true;
 
   @override
@@ -36,6 +36,9 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen> {
         descending: _descending,
       ),
     );
+
+    final hasFilters =
+        _selectedGenre != null || _selectedStatus != null || _selectedPtype != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -63,261 +66,363 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen> {
             ),
           ),
         ),
-      ),
-      body: Column(
-        children: [
-          // Filters (matching web design)
-          _buildFilters(),
-          // Novel grid
-          Expanded(
-            child: novelsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('Error: $err')),
-              data: (novels) {
-                if (novels.isEmpty) {
-                  return const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.book, size: 48, color: Colors.grey),
-                        SizedBox(height: 16),
-                        Text('暂无数据'),
-                      ],
-                    ),
-                  );
-                }
-                return _buildNovelGrid(novels);
-              },
+        actions: [
+          IconButton(
+            icon: Icon(
+              Icons.tune,
+              color: hasFilters ? AppColors.primary : null,
             ),
+            onPressed: () => _showFilterBottomSheet(context),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildFilters() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-        border: Border(
-          bottom: BorderSide(
-            color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
-          ),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Genre filters
-          _buildFilterRow(
-            label: '分类',
-            items: genreMapping.allZh.map((zh) {
-              final value = genreMapping.getValue(zh);
-              return FilterItem(label: zh, value: value);
-            }).toList(),
-            selectedValue: _selectedGenre,
-            onChanged: (value) => setState(() => _selectedGenre = value),
-          ),
-          const SizedBox(height: 8),
-
-          // Status filters
-          _buildFilterRow(
-            label: '状态',
-            items: statusMapping.allZh.map((zh) {
-              final value = statusMapping.getValue(zh);
-              return FilterItem(label: zh, value: value);
-            }).toList(),
-            selectedValue: _selectedStatus,
-            onChanged: (value) => setState(() => _selectedStatus = value),
-          ),
-          const SizedBox(height: 8),
-
-          // Ptype filters
-          _buildFilterRow(
-            label: '类型',
-            items: ptypeMapping.allZh.map((zh) {
-              final value = ptypeMapping.getValue(zh);
-              return FilterItem(label: zh, value: value);
-            }).toList(),
-            selectedValue: _selectedPtype,
-            onChanged: (value) => setState(() => _selectedPtype = value),
-          ),
-          const SizedBox(height: 8),
-
-          // Sort options
-          _buildSortRow(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterRow({
-    required String label,
-    required List<FilterItem> items,
-    required int? selectedValue,
-    required ValueChanged<int?> onChanged,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 40,
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              _FilterChip(
-                label: '全部',
-                isSelected: selectedValue == null,
-                onTap: () => onChanged(null),
+      body: novelsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(child: Text('Error: $err')),
+        data: (novels) {
+          if (novels.isEmpty) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.book, size: 48, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text('暂无数据'),
+                ],
               ),
-              ...items.map((item) => _FilterChip(
-                label: item.label,
-                isSelected: selectedValue == item.value,
-                onTap: () => onChanged(item.value),
-              )),
-            ],
-          ),
-        ),
-      ],
+            );
+          }
+          return _buildNovelGrid(novels);
+        },
+      ),
     );
   }
 
-  Widget _buildSortRow() {
-    final sortOptions = [
-      {'key': 'last_update', 'label': '更新时间'},
-      {'key': 'click_num', 'label': '点击量'},
-      {'key': 'word_num', 'label': '字数'},
-      {'key': 'like_num', 'label': '收藏'},
-      {'key': 'praise_num', 'label': '点赞'},
-    ];
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(
-          width: 40,
-          child: Text(
-            '排序',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: sortOptions.map((option) {
-              final key = option['key']!;
-              final label = option['label']!;
-              return _FilterChip(
-                label: label,
-                isSelected: _sortBy == key,
-                onTap: () {
-                  setState(() {
-                    if (_sortBy == key) {
-                      _descending = !_descending;
-                    } else {
-                      _sortBy = key;
-                      _descending = true;
-                    }
-                  });
-                },
-              );
-            }).toList(),
-          ),
-        ),
-      ],
+  void _showFilterBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => _FilterBottomSheet(
+        selectedGenre: _selectedGenre,
+        selectedStatus: _selectedStatus,
+        selectedPtype: _selectedPtype,
+        sortBy: _sortBy,
+        descending: _descending,
+        onApply: (genre, status, ptype, sortBy, descending) {
+          setState(() {
+            _selectedGenre = genre;
+            _selectedStatus = status;
+            _selectedPtype = ptype;
+            _sortBy = sortBy;
+            _descending = descending;
+          });
+        },
+      ),
     );
   }
 
   Widget _buildNovelGrid(List<Novel> novels) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // 4 columns on mobile (matching web: grid-cols-4)
-        final crossAxisCount = 4;
-        return GridView.builder(
-          padding: const EdgeInsets.all(12),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            childAspectRatio: 0.55, // Adjusted for 4:5 cover + title
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-          ),
-          itemCount: novels.length,
-          itemBuilder: (context, index) {
-            final novel = novels[index];
-            return NovelCard(
-              novel: novel,
-              onTap: () => context.push('/novel/${novel.id}'),
-            );
-          },
+    return GridView.builder(
+      padding: const EdgeInsets.all(12),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        childAspectRatio: 0.55,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+      ),
+      itemCount: novels.length,
+      itemBuilder: (context, index) {
+        final novel = novels[index];
+        return NovelCard(
+          novel: novel,
+          onTap: () => context.push('/novel/${novel.id}'),
         );
       },
     );
   }
 }
 
-class FilterItem {
-  final String label;
-  final int value;
+class _FilterBottomSheet extends StatefulWidget {
+  final int? selectedGenre;
+  final int? selectedStatus;
+  final int? selectedPtype;
+  final String sortBy;
+  final bool descending;
+  final Function(int?, int?, int?, String, bool) onApply;
 
-  const FilterItem({required this.label, required this.value});
-}
-
-class _FilterChip extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _FilterChip({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
+  const _FilterBottomSheet({
+    required this.selectedGenre,
+    required this.selectedStatus,
+    required this.selectedPtype,
+    required this.sortBy,
+    required this.descending,
+    required this.onApply,
   });
 
   @override
+  State<_FilterBottomSheet> createState() => _FilterBottomSheetState();
+}
+
+class _FilterBottomSheetState extends State<_FilterBottomSheet> {
+  late int? _genre;
+  late int? _status;
+  late int? _ptype;
+  late String _sortBy;
+  late bool _descending;
+
+  @override
+  void initState() {
+    super.initState();
+    _genre = widget.selectedGenre;
+    _status = widget.selectedStatus;
+    _ptype = widget.selectedPtype;
+    _sortBy = widget.sortBy;
+    _descending = widget.descending;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.7,
+      minChildSize: 0.5,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (context, scrollController) {
+        return Column(
+          children: [
+            // Handle bar
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    '筛选与排序',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _genre = null;
+                        _status = null;
+                        _ptype = null;
+                        _sortBy = 'click_num';
+                        _descending = true;
+                      });
+                    },
+                    child: const Text('重置'),
+                  ),
+                ],
+              ),
+            ),
+            // Filter options
+            Expanded(
+              child: ListView(
+                controller: scrollController,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  _buildSection(
+                    title: '分类',
+                    options: genreMapping.allZh.map((zh) {
+                      final value = genreMapping.getValue(zh);
+                      return _Option(label: zh, value: value);
+                    }).toList(),
+                    selectedValue: _genre,
+                    onChanged: (v) => setState(() => _genre = v),
+                  ),
+                  const SizedBox(height: 24),
+                  _buildSection(
+                    title: '状态',
+                    options: statusMapping.allZh.map((zh) {
+                      final value = statusMapping.getValue(zh);
+                      return _Option(label: zh, value: value);
+                    }).toList(),
+                    selectedValue: _status,
+                    onChanged: (v) => setState(() => _status = v),
+                  ),
+                  const SizedBox(height: 24),
+                  _buildSection(
+                    title: '类型',
+                    options: ptypeMapping.allZh.map((zh) {
+                      final value = ptypeMapping.getValue(zh);
+                      return _Option(label: zh, value: value);
+                    }).toList(),
+                    selectedValue: _ptype,
+                    onChanged: (v) => setState(() => _ptype = v),
+                  ),
+                  const SizedBox(height: 24),
+                  _buildSortSection(),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+            // Apply button
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () {
+                    widget.onApply(
+                      _genre,
+                      _status,
+                      _ptype,
+                      _sortBy,
+                      _descending,
+                    );
+                    Navigator.pop(context);
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Text('应用'),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildSection({
+    required String title,
+    required List<_Option> options,
+    required int? selectedValue,
+    required ValueChanged<int?> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _buildChip(
+              label: '全部',
+              isSelected: selectedValue == null,
+              onTap: () => onChanged(null),
+            ),
+            ...options.map((option) => _buildChip(
+              label: option.label,
+              isSelected: selectedValue == option.value,
+              onTap: () => onChanged(option.value),
+            )),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSortSection() {
+    final sortOptions = [
+      {'key': 'click_num', 'label': '点击量'},
+      {'key': 'word_num', 'label': '字数'},
+      {'key': 'like_num', 'label': '收藏'},
+      {'key': 'praise_num', 'label': '点赞'},
+      {'key': 'last_update', 'label': '更新时间'},
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              '排序',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () {
+                setState(() => _descending = !_descending);
+              },
+              icon: Icon(
+                _descending ? Icons.arrow_downward : Icons.arrow_upward,
+                size: 16,
+              ),
+              label: Text(_descending ? '降序' : '升序'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: sortOptions.map((option) {
+            final key = option['key']!;
+            final label = option['label']!;
+            return _buildChip(
+              label: label,
+              isSelected: _sortBy == key,
+              onTap: () => setState(() => _sortBy = key),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChip({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.2)
-              : Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(
-            color: isSelected
-                ? AppColors.primary.withValues(alpha: 0.5)
-                : Theme.of(context).dividerColor.withValues(alpha: 0.3),
-          ),
+              ? AppColors.primary
+              : Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 13,
+            color: isSelected ? Colors.white : null,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected ? AppColors.primary : null,
           ),
         ),
       ),
     );
   }
+}
+
+class _Option {
+  final String label;
+  final int value;
+
+  const _Option({required this.label, required this.value});
 }
 
 @riverpod
