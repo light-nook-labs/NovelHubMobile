@@ -52,9 +52,17 @@ static void my_application_activate(GApplication* application) {
     gtk_window_set_title(window, "novel_hub_mobile");
   }
 
-  gtk_window_set_default_size(window, 390, 400);  // Mobile size for testing
-  gtk_window_set_resizable(window, FALSE);  // Disable resizing
-  gtk_window_set_position(window, GTK_WIN_POS_CENTER);  // Center on screen
+  // Get screen height and set window to mobile width, full height
+  GdkRectangle workarea;
+  gdk_monitor_get_workarea(gdk_display_get_monitor_at_window(gdk_display_get_default(), GDK_WINDOW(window)), &workarea);
+  
+  // Mobile width (390) or screen width if smaller
+  int window_width = 390 < workarea.width ? 390 : workarea.width;
+  // Use 90% of screen height to leave room for taskbar
+  int window_height = (int)(workarea.height * 0.9);
+  
+  gtk_window_set_default_size(window, window_width, window_height);
+  gtk_window_set_position(window, GTK_WIN_POS_CENTER);
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(
