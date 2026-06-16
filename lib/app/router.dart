@@ -163,41 +163,39 @@ class MainShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: child,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _getSelectedIndex(context),
-        onDestinationSelected: (index) => _onItemTapped(context, index),
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.home_outlined),
-            selectedIcon: const Icon(Icons.home),
-            label: '首页',
-            tooltip: '',
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.book_outlined),
-            selectedIcon: const Icon(Icons.book),
-            label: '小说',
-            tooltip: '',
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.star_outline),
-            selectedIcon: const Icon(Icons.star),
-            label: '背投',
-            tooltip: '',
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.leaderboard_outlined),
-            selectedIcon: const Icon(Icons.leaderboard),
-            label: '排行',
-            tooltip: '',
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.settings_outlined),
-            selectedIcon: const Icon(Icons.settings),
-            label: '设置',
-            tooltip: '',
-          ),
-        ],
+      bottomNavigationBar: TooltipVisibility(
+        visible: false,
+        child: NavigationBar(
+          selectedIndex: _getSelectedIndex(context),
+          onDestinationSelected: (index) => _onItemTapped(context, index),
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home),
+              label: '首页',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.book_outlined),
+              selectedIcon: Icon(Icons.book),
+              label: '小说',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.star_outline),
+              selectedIcon: Icon(Icons.star),
+              label: '背投',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.leaderboard_outlined),
+              selectedIcon: Icon(Icons.leaderboard),
+              label: '排行',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(Icons.settings),
+              label: '设置',
+            ),
+          ],
+        ),
       ),
     );
   }
