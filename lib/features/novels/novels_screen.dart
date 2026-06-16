@@ -18,13 +18,42 @@ class NovelsScreen extends ConsumerStatefulWidget {
   ConsumerState<NovelsScreen> createState() => _NovelsScreenState();
 }
 
-class _NovelsScreenState extends ConsumerState<NovelsScreen> {
+class _NovelsScreenState extends ConsumerState<NovelsScreen>
+    with SingleTickerProviderStateMixin {
   int? _selectedGenre;
   int? _selectedStatus;
-  int? _selectedPtype;
   int? _selectedYear;
   String _sortBy = 'click_num';
   bool _descending = true;
+  
+  late TabController _tabController;
+  
+  static const _ptypeTabs = [
+    {'label': '全部', 'value': null},
+    {'label': '其他', 'value': 1},
+    {'label': '免费', 'value': 2},
+    {'label': '签约', 'value': 3},
+    {'label': 'VIP', 'value': 4},
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: _ptypeTabs.length, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  int? get _selectedPtype => _ptypeTabs[_tabController.index]['value'] as int?;
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +70,6 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen> {
 
     final hasFilters = _selectedGenre != null ||
         _selectedStatus != null ||
-        _selectedPtype != null ||
         _selectedYear != null;
 
     return Scaffold(
@@ -79,6 +107,14 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen> {
             onPressed: () => _showFilterBottomSheet(context),
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+          unselectedLabelStyle: const TextStyle(fontSize: 13),
+          tabs: _ptypeTabs.map((tab) => Tab(text: tab['label'] as String)).toList(),
+        ),
       ),
       body: novelsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -112,15 +148,13 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen> {
       builder: (context) => _FilterBottomSheet(
         selectedGenre: _selectedGenre,
         selectedStatus: _selectedStatus,
-        selectedPtype: _selectedPtype,
         selectedYear: _selectedYear,
         sortBy: _sortBy,
         descending: _descending,
-        onApply: (genre, status, ptype, year, sortBy, descending) {
+        onApply: (genre, status, year, sortBy, descending) {
           setState(() {
             _selectedGenre = genre;
             _selectedStatus = status;
-            _selectedPtype = ptype;
             _selectedYear = year;
             _sortBy = sortBy;
             _descending = descending;
@@ -154,16 +188,14 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen> {
 class _FilterBottomSheet extends StatefulWidget {
   final int? selectedGenre;
   final int? selectedStatus;
-  final int? selectedPtype;
   final int? selectedYear;
   final String sortBy;
   final bool descending;
-  final Function(int?, int?, int?, int?, String, bool) onApply;
+  final Function(int?, int?, int?, String, bool) onApply;
 
   const _FilterBottomSheet({
     required this.selectedGenre,
     required this.selectedStatus,
-    required this.selectedPtype,
     required this.selectedYear,
     required this.sortBy,
     required this.descending,
@@ -177,7 +209,6 @@ class _FilterBottomSheet extends StatefulWidget {
 class _FilterBottomSheetState extends State<_FilterBottomSheet> {
   late int? _genre;
   late int? _status;
-  late int? _ptype;
   late int? _year;
   late String _sortBy;
   late bool _descending;
@@ -189,7 +220,6 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
     super.initState();
     _genre = widget.selectedGenre;
     _status = widget.selectedStatus;
-    _ptype = widget.selectedPtype;
     _year = widget.selectedYear;
     _sortBy = widget.sortBy;
     _descending = widget.descending;
@@ -233,7 +263,6 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                       setState(() {
                         _genre = null;
                         _status = null;
-                        _ptype = null;
                         _year = null;
                         _sortBy = 'click_num';
                         _descending = true;
@@ -271,16 +300,6 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                   ),
                   const SizedBox(height: 24),
                   _buildSection(
-                    title: '类型',
-                    options: ptypeMapping.allZh.map((zh) {
-                      final value = ptypeMapping.getValue(zh);
-                      return _Option(label: zh, value: value);
-                    }).toList(),
-                    selectedValue: _ptype,
-                    onChanged: (v) => setState(() => _ptype = v),
-                  ),
-                  const SizedBox(height: 24),
-                  _buildSection(
                     title: '更新年份',
                     options: _years
                         .map((y) => _Option(label: '$y年', value: y))
@@ -304,7 +323,6 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                     widget.onApply(
                       _genre,
                       _status,
-                      _ptype,
                       _year,
                       _sortBy,
                       _descending,
