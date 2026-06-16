@@ -258,6 +258,78 @@ class AppDatabase extends _$AppDatabase {
     return query.get();
   }
 
+  Future<List<Novel>> getNovelsFiltered({
+    int? genre,
+    int? status,
+    int? ptype,
+    String sortBy = 'click_num',
+    bool descending = true,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final query = select(novels);
+
+    if (genre != null) {
+      query.where((t) => t.genre.equals(genre));
+    }
+    if (status != null) {
+      query.where((t) => t.status.equals(status));
+    }
+    if (ptype != null) {
+      query.where((t) => t.ptype.equals(ptype));
+    }
+
+    switch (sortBy) {
+      case 'click_num':
+        query.orderBy([
+          (t) => OrderingTerm(
+              expression: t.clickNum,
+              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+        ]);
+        break;
+      case 'word_num':
+        query.orderBy([
+          (t) => OrderingTerm(
+              expression: t.wordNum,
+              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+        ]);
+        break;
+      case 'praise_num':
+        query.orderBy([
+          (t) => OrderingTerm(
+              expression: t.praiseNum,
+              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+        ]);
+        break;
+      case 'like_num':
+        query.orderBy([
+          (t) => OrderingTerm(
+              expression: t.likeNum,
+              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+        ]);
+        break;
+      case 'review_num':
+        query.orderBy([
+          (t) => OrderingTerm(
+              expression: t.reviewNum,
+              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+        ]);
+        break;
+      case 'comment_num':
+        query.orderBy([
+          (t) => OrderingTerm(
+              expression: t.commentNum,
+              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+        ]);
+        break;
+      default:
+        query.orderBy([(t) => OrderingTerm.desc(t.lastUpdate)]);
+    }
+
+    query.limit(limit, offset: offset);
+    return query.get();
+  }
+
   Future<int> getNovelCount() async {
     final count = countAll();
     final query = select(novels).addColumns([count]);

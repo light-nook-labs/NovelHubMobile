@@ -431,13 +431,15 @@ Future<List<Novel>> filteredNovels(
   int? genre,
   int? status,
   int? ptype,
-  String sortBy = 'last_update',
+  String sortBy = 'click_num',
   bool descending = true,
 }) async {
   final db = ref.watch(databaseProvider);
-  // TODO: Apply genre/status/ptype filters in query
-  return db.getNovelsSorted(
-    sortBy,
+  return db.getNovelsFiltered(
+    genre: genre,
+    status: status,
+    ptype: ptype,
+    sortBy: sortBy,
     descending: descending,
     limit: 100,
   );
