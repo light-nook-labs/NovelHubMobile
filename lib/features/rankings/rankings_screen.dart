@@ -124,66 +124,67 @@ class _RankingList extends ConsumerWidget {
   }
 
   Widget _buildTable(BuildContext context, List<Novel> novels) {
-    return SingleChildScrollView(
-      child: Table(
-        columnWidths: const {
-          0: FixedColumnWidth(40),  // Rank
-          1: FlexColumnWidth(),     // Title
-          2: FixedColumnWidth(70),  // Value
-        },
-        children: [
-          // Header
-          TableRow(
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            ),
-            children: [
-              _buildHeaderCell('#'),
-              _buildHeaderCell('标题'),
-              _buildHeaderCell(type.label.replaceAll('榜', '')),
-            ],
-          ),
-          // Data rows
-          ...List.generate(novels.length, (index) {
-            final novel = novels[index];
-            final rank = index + 1;
-            final value = _getValue(novel);
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: novels.length,
+      itemBuilder: (context, index) {
+        final novel = novels[index];
+        final rank = index + 1;
+        final value = _getValue(novel);
 
-            return TableRow(
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
+        return InkWell(
+          onTap: () => context.push('/novel/${novel.id}'),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              children: [
+                // Rank
+                _buildRank(rank),
+                const SizedBox(width: 12),
+                // Novel info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        novel.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'ID: ${novel.id}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              children: [
-                _buildRankCell(rank),
-                _buildTitleCell(context, novel),
-                _buildValueCell(value),
+                const SizedBox(width: 12),
+                // Value
+                Text(
+                  _formatNumber(value),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
               ],
-            );
-          }),
-        ],
-      ),
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildHeaderCell(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: Colors.grey,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRankCell(int rank) {
+  Widget _buildRank(int rank) {
     final isTop3 = rank <= 3;
     final color = switch (rank) {
       1 => const Color(0xFFFFD700), // Gold
@@ -192,82 +193,38 @@ class _RankingList extends ConsumerWidget {
       _ => Colors.grey,
     };
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-      child: Center(
-        child: isTop3
-            ? Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: color, width: 1.5),
-                ),
-                child: Center(
-                  child: Text(
-                    '$rank',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: color,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              )
-            : Text(
-                '$rank',
-                style: const TextStyle(
-                  color: Colors.grey,
-                  fontSize: 12,
-                ),
-              ),
-      ),
-    );
-  }
-
-  Widget _buildTitleCell(BuildContext context, Novel novel) {
-    return InkWell(
-      onTap: () => context.push('/novel/${novel.id}'),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              novel.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
+    if (isTop3) {
+      return Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.2),
+          shape: BoxShape.circle,
+          border: Border.all(color: color, width: 1.5),
+        ),
+        child: Center(
+          child: Text(
+            '$rank',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: color,
+              fontSize: 13,
             ),
-            if (novel.authorId != null)
-              Text(
-                '作者ID: ${novel.authorId}',
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: Colors.grey,
-                ),
-              ),
-          ],
+          ),
         ),
-      ),
-    );
-  }
+      );
+    }
 
-  Widget _buildValueCell(int value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+    return SizedBox(
+      width: 28,
       child: Text(
-        _formatNumber(value),
-        style: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.bold,
-          color: AppColors.primary,
+        '$rank',
+        style: TextStyle(
+          color: Colors.grey[400],
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
         ),
-        textAlign: TextAlign.right,
+        textAlign: TextAlign.center,
       ),
     );
   }
