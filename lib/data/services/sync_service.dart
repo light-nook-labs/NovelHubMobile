@@ -215,8 +215,10 @@ class SyncService {
   }
 
   /// Load data from a single JSONL file (for testing).
-  Future<SyncResult> loadFromJsonlFile(String filePath,
-      {Function(double)? onProgress}) async {
+  Future<SyncResult> loadFromJsonlFile(
+    String filePath, {
+    Function(double)? onProgress,
+  }) async {
     try {
       final file = File(filePath);
       if (!file.existsSync()) {
@@ -262,8 +264,9 @@ class SyncService {
       // 5. Upsert novels
       final companions = allNovels.map((novel) {
         final authorId = authorMap[novel.author];
-        final contestId =
-            novel.contest != null ? contestMap[novel.contest] : null;
+        final contestId = novel.contest != null
+            ? contestMap[novel.contest]
+            : null;
         return JsonlParser.toCompanion(novel, authorId, contestId);
       }).toList();
       await _db.upsertNovelsBatch(companions);
@@ -274,9 +277,7 @@ class SyncService {
         for (final tagName in novel.tags) {
           final tagId = tagMap[tagName];
           if (tagId != null) {
-            novelTagPairs.add(
-              NovelTagPair(novelId: novel.nid, tagId: tagId),
-            );
+            novelTagPairs.add(NovelTagPair(novelId: novel.nid, tagId: tagId));
           }
         }
       }
@@ -285,8 +286,7 @@ class SyncService {
       // 7. Save sync state
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_lastSyncKey, 'local-test');
-      await prefs.setString(
-          _lastSyncTimeKey, DateTime.now().toIso8601String());
+      await prefs.setString(_lastSyncTimeKey, DateTime.now().toIso8601String());
 
       if (onProgress != null) onProgress(1.0);
 
@@ -302,8 +302,10 @@ class SyncService {
   }
 
   /// Load data from a local release.tar.gz file (for testing).
-  Future<SyncResult> loadFromLocalFile(String filePath,
-      {Function(double)? onProgress}) async {
+  Future<SyncResult> loadFromLocalFile(
+    String filePath, {
+    Function(double)? onProgress,
+  }) async {
     try {
       final archiveFile = File(filePath);
       if (!archiveFile.existsSync()) {
@@ -373,8 +375,9 @@ class SyncService {
 
         final companions = batch.map((novel) {
           final authorId = authorMap[novel.author];
-          final contestId =
-              novel.contest != null ? contestMap[novel.contest] : null;
+          final contestId = novel.contest != null
+              ? contestMap[novel.contest]
+              : null;
           return JsonlParser.toCompanion(novel, authorId, contestId);
         }).toList();
 
@@ -384,9 +387,7 @@ class SyncService {
           for (final tagName in novel.tags) {
             final tagId = tagMap[tagName];
             if (tagId != null) {
-              novelTagPairs.add(
-                NovelTagPair(novelId: novel.nid, tagId: tagId),
-              );
+              novelTagPairs.add(NovelTagPair(novelId: novel.nid, tagId: tagId));
             }
           }
         }
@@ -402,8 +403,7 @@ class SyncService {
       // 8. Save sync state
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_lastSyncKey, 'local-test');
-      await prefs.setString(
-          _lastSyncTimeKey, DateTime.now().toIso8601String());
+      await prefs.setString(_lastSyncTimeKey, DateTime.now().toIso8601String());
 
       if (onProgress != null) {
         onProgress(1.0);

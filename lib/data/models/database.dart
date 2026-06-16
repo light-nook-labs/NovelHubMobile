@@ -58,11 +58,7 @@ class BannerNovel {
   final String title;
   final String author;
 
-  BannerNovel({
-    required this.id,
-    required this.title,
-    required this.author,
-  });
+  BannerNovel({required this.id, required this.title, required this.author});
 }
 
 class AuthorWithStats {
@@ -144,10 +140,9 @@ class AppDatabase extends _$AppDatabase {
   // ===== Tag operations =====
 
   Future<int> createTag(String name) async {
-    return into(tags).insert(
-      TagsCompanion.insert(name: name),
-      mode: InsertMode.insertOrIgnore,
-    );
+    return into(
+      tags,
+    ).insert(TagsCompanion.insert(name: name), mode: InsertMode.insertOrIgnore);
   }
 
   Future<Map<String, int>> createTagsBatch(List<String> names) async {
@@ -210,16 +205,13 @@ class AppDatabase extends _$AppDatabase {
     await batch((batch) {
       batch.insertAll(
         novelTags,
-        pairs.map((p) => NovelTagsCompanion.insert(
-              novelId: p.novelId,
-              tagId: p.tagId,
-            )),
+        pairs.map(
+          (p) => NovelTagsCompanion.insert(novelId: p.novelId, tagId: p.tagId),
+        ),
         mode: InsertMode.insertOrIgnore,
       );
     });
   }
-
-
 
   // ===== Query operations =====
 
@@ -236,8 +228,11 @@ class AppDatabase extends _$AppDatabase {
     return query.getSingleOrNull();
   }
 
-  Future<List<Novel>> getNovelsByGenre(int genre,
-      {int limit = 50, int offset = 0}) async {
+  Future<List<Novel>> getNovelsByGenre(
+    int genre, {
+    int limit = 50,
+    int offset = 0,
+  }) async {
     final query = select(novels)
       ..where((t) => t.genre.equals(genre))
       ..orderBy([(t) => OrderingTerm.desc(t.lastUpdate)])
@@ -252,8 +247,12 @@ class AppDatabase extends _$AppDatabase {
     return query.get();
   }
 
-  Future<List<Novel>> getNovelsSorted(String field,
-      {bool descending = true, int limit = 50, int offset = 0}) async {
+  Future<List<Novel>> getNovelsSorted(
+    String field, {
+    bool descending = true,
+    int limit = 50,
+    int offset = 0,
+  }) async {
     final query = select(novels);
 
     // Filter out null and 0 values for the sorting field
@@ -282,43 +281,49 @@ class AppDatabase extends _$AppDatabase {
       case 'click_num':
         query.orderBy([
           (t) => OrderingTerm(
-              expression: t.clickNum,
-              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+            expression: t.clickNum,
+            mode: descending ? OrderingMode.desc : OrderingMode.asc,
+          ),
         ]);
         break;
       case 'word_num':
         query.orderBy([
           (t) => OrderingTerm(
-              expression: t.wordNum,
-              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+            expression: t.wordNum,
+            mode: descending ? OrderingMode.desc : OrderingMode.asc,
+          ),
         ]);
         break;
       case 'praise_num':
         query.orderBy([
           (t) => OrderingTerm(
-              expression: t.praiseNum,
-              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+            expression: t.praiseNum,
+            mode: descending ? OrderingMode.desc : OrderingMode.asc,
+          ),
         ]);
         break;
       case 'like_num':
         query.orderBy([
           (t) => OrderingTerm(
-              expression: t.likeNum,
-              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+            expression: t.likeNum,
+            mode: descending ? OrderingMode.desc : OrderingMode.asc,
+          ),
         ]);
         break;
       case 'review_num':
         query.orderBy([
           (t) => OrderingTerm(
-              expression: t.reviewNum,
-              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+            expression: t.reviewNum,
+            mode: descending ? OrderingMode.desc : OrderingMode.asc,
+          ),
         ]);
         break;
       case 'comment_num':
         query.orderBy([
           (t) => OrderingTerm(
-              expression: t.commentNum,
-              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+            expression: t.commentNum,
+            mode: descending ? OrderingMode.desc : OrderingMode.asc,
+          ),
         ]);
         break;
       default:
@@ -353,52 +358,60 @@ class AppDatabase extends _$AppDatabase {
     if (year != null) {
       final startDate = DateTime(year, 1, 1);
       final endDate = DateTime(year + 1, 1, 1);
-      query.where((t) =>
-          t.lastUpdate.isBiggerOrEqualValue(startDate) &
-          t.lastUpdate.isSmallerThanValue(endDate));
+      query.where(
+        (t) =>
+            t.lastUpdate.isBiggerOrEqualValue(startDate) &
+            t.lastUpdate.isSmallerThanValue(endDate),
+      );
     }
 
     switch (sortBy) {
       case 'click_num':
         query.orderBy([
           (t) => OrderingTerm(
-              expression: t.clickNum,
-              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+            expression: t.clickNum,
+            mode: descending ? OrderingMode.desc : OrderingMode.asc,
+          ),
         ]);
         break;
       case 'word_num':
         query.orderBy([
           (t) => OrderingTerm(
-              expression: t.wordNum,
-              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+            expression: t.wordNum,
+            mode: descending ? OrderingMode.desc : OrderingMode.asc,
+          ),
         ]);
         break;
       case 'praise_num':
         query.orderBy([
           (t) => OrderingTerm(
-              expression: t.praiseNum,
-              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+            expression: t.praiseNum,
+            mode: descending ? OrderingMode.desc : OrderingMode.asc,
+          ),
         ]);
         break;
       case 'like_num':
         query.orderBy([
           (t) => OrderingTerm(
-              expression: t.likeNum,
-              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+            expression: t.likeNum,
+            mode: descending ? OrderingMode.desc : OrderingMode.asc,
+          ),
         ]);
         break;
       case 'review_num':
         query.orderBy([
           (t) => OrderingTerm(
-              expression: t.reviewNum,
-              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+            expression: t.reviewNum,
+            mode: descending ? OrderingMode.desc : OrderingMode.asc,
+          ),
         ]);
         break;
       case 'comment_num':
         query.orderBy([
           (t) => OrderingTerm(
-              expression: t.commentNum,
-              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+            expression: t.commentNum,
+            mode: descending ? OrderingMode.desc : OrderingMode.asc,
+          ),
         ]);
         break;
       default:
@@ -446,8 +459,11 @@ class AppDatabase extends _$AppDatabase {
     return query.getSingleOrNull();
   }
 
-  Future<List<Novel>> getNovelsByAuthor(int authorId,
-      {int limit = 50, int offset = 0}) async {
+  Future<List<Novel>> getNovelsByAuthor(
+    int authorId, {
+    int limit = 50,
+    int offset = 0,
+  }) async {
     final query = select(novels)
       ..where((t) => t.authorId.equals(authorId))
       ..orderBy([(t) => OrderingTerm.desc(t.lastUpdate)])
@@ -455,7 +471,10 @@ class AppDatabase extends _$AppDatabase {
     return query.get();
   }
 
-  Future<List<AuthorWithStats>> getAuthorsWithStats({int limit = 1000, int offset = 0}) async {
+  Future<List<AuthorWithStats>> getAuthorsWithStats({
+    int limit = 1000,
+    int offset = 0,
+  }) async {
     // Get total clicks per author
     final authorClicks = <int, int>{};
     final authorClicksQuery = selectOnly(novels)
@@ -481,8 +500,11 @@ class AppDatabase extends _$AppDatabase {
 
     // Apply offset and limit after sorting
     final end = offset + limit;
-    final limitedAuthors = authorList.length > offset 
-        ? authorList.sublist(offset, end > authorList.length ? authorList.length : end)
+    final limitedAuthors = authorList.length > offset
+        ? authorList.sublist(
+            offset,
+            end > authorList.length ? authorList.length : end,
+          )
         : <Author>[];
 
     // Get novel counts per author
@@ -517,10 +539,11 @@ class AppDatabase extends _$AppDatabase {
 
     // Get top novels (by click_num per author)
     final topNovels = <int, String>{};
-    final allNovels = await (select(novels)
-          ..where((t) => t.authorId.isNotNull())
-          ..orderBy([(t) => OrderingTerm.desc(t.clickNum)]))
-        .get();
+    final allNovels =
+        await (select(novels)
+              ..where((t) => t.authorId.isNotNull())
+              ..orderBy([(t) => OrderingTerm.desc(t.clickNum)]))
+            .get();
     for (final novel in allNovels) {
       if (novel.authorId != null && !topNovels.containsKey(novel.authorId)) {
         topNovels[novel.authorId!] = novel.title;
@@ -548,14 +571,18 @@ class AppDatabase extends _$AppDatabase {
     return query.get();
   }
 
-  Future<List<TagWithCount>> getTagsWithCount({int limit = 100, int offset = 0}) async {
-    final query = select(tags).join([
-      innerJoin(novelTags, novelTags.tagId.equalsExp(tags.id)),
-    ])
-      ..addColumns([novelTags.novelId.count()])
-      ..groupBy([tags.id])
-      ..orderBy([OrderingTerm.desc(novelTags.novelId.count())])
-      ..limit(limit, offset: offset);
+  Future<List<TagWithCount>> getTagsWithCount({
+    int limit = 100,
+    int offset = 0,
+  }) async {
+    final query =
+        select(
+            tags,
+          ).join([innerJoin(novelTags, novelTags.tagId.equalsExp(tags.id))])
+          ..addColumns([novelTags.novelId.count()])
+          ..groupBy([tags.id])
+          ..orderBy([OrderingTerm.desc(novelTags.novelId.count())])
+          ..limit(limit, offset: offset);
 
     final results = await query.get();
     return results.map((row) {
@@ -572,40 +599,48 @@ class AppDatabase extends _$AppDatabase {
     return query.getSingleOrNull();
   }
 
-  Future<List<Novel>> getNovelsByTag(int tagId,
-      {int limit = 50, int offset = 0, String sortBy = 'click_num', bool descending = true}) async {
+  Future<List<Novel>> getNovelsByTag(
+    int tagId, {
+    int limit = 50,
+    int offset = 0,
+    String sortBy = 'click_num',
+    bool descending = true,
+  }) async {
     final query = select(novelTags).join([
       innerJoin(novels, novels.id.equalsExp(novelTags.novelId)),
-    ])
-      ..where(novelTags.tagId.equals(tagId));
+    ])..where(novelTags.tagId.equals(tagId));
 
     switch (sortBy) {
       case 'click_num':
         query.orderBy([
           OrderingTerm(
-              expression: novels.clickNum,
-              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+            expression: novels.clickNum,
+            mode: descending ? OrderingMode.desc : OrderingMode.asc,
+          ),
         ]);
         break;
       case 'word_num':
         query.orderBy([
           OrderingTerm(
-              expression: novels.wordNum,
-              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+            expression: novels.wordNum,
+            mode: descending ? OrderingMode.desc : OrderingMode.asc,
+          ),
         ]);
         break;
       case 'like_num':
         query.orderBy([
           OrderingTerm(
-              expression: novels.likeNum,
-              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+            expression: novels.likeNum,
+            mode: descending ? OrderingMode.desc : OrderingMode.asc,
+          ),
         ]);
         break;
       case 'praise_num':
         query.orderBy([
           OrderingTerm(
-              expression: novels.praiseNum,
-              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+            expression: novels.praiseNum,
+            mode: descending ? OrderingMode.desc : OrderingMode.asc,
+          ),
         ]);
         break;
       default:
@@ -619,23 +654,28 @@ class AppDatabase extends _$AppDatabase {
 
   // ===== Contest queries =====
 
-  Future<List<Contest>> getAllContests(
-      {int limit = 100, int offset = 0}) async {
+  Future<List<Contest>> getAllContests({
+    int limit = 100,
+    int offset = 0,
+  }) async {
     final query = select(contests)
       ..orderBy([(t) => OrderingTerm.asc(t.name)])
       ..limit(limit, offset: offset);
     return query.get();
   }
 
-  Future<List<ContestWithCount>> getContestsWithCount(
-      {int limit = 100, int offset = 0}) async {
-    final query = select(contests).join([
-      innerJoin(novels, novels.contestId.equalsExp(contests.id)),
-    ])
-      ..addColumns([novels.id.count()])
-      ..groupBy([contests.id])
-      ..orderBy([OrderingTerm.desc(novels.id.count())])
-      ..limit(limit, offset: offset);
+  Future<List<ContestWithCount>> getContestsWithCount({
+    int limit = 100,
+    int offset = 0,
+  }) async {
+    final query =
+        select(
+            contests,
+          ).join([innerJoin(novels, novels.contestId.equalsExp(contests.id))])
+          ..addColumns([novels.id.count()])
+          ..groupBy([contests.id])
+          ..orderBy([OrderingTerm.desc(novels.id.count())])
+          ..limit(limit, offset: offset);
 
     final results = await query.get();
     return results.map((row) {
@@ -652,8 +692,11 @@ class AppDatabase extends _$AppDatabase {
     return query.getSingleOrNull();
   }
 
-  Future<List<Novel>> getNovelsByContest(int contestId,
-      {int limit = 50, int offset = 0}) async {
+  Future<List<Novel>> getNovelsByContest(
+    int contestId, {
+    int limit = 50,
+    int offset = 0,
+  }) async {
     final query = select(novels)
       ..where((t) => t.contestId.equals(contestId))
       ..orderBy([(t) => OrderingTerm.desc(t.lastUpdate)])
@@ -664,12 +707,13 @@ class AppDatabase extends _$AppDatabase {
   // ===== Banner novels =====
 
   Future<List<BannerNovel>> getBannerNovels({int limit = 12}) async {
-    final query = select(novels).join([
-      innerJoin(authors, authors.id.equalsExp(novels.authorId)),
-    ])
-      ..where(novels.hasBanner.equals(true))
-      ..orderBy([OrderingTerm.desc(novels.clickNum)])
-      ..limit(limit);
+    final query =
+        select(
+            novels,
+          ).join([innerJoin(authors, authors.id.equalsExp(novels.authorId))])
+          ..where(novels.hasBanner.equals(true))
+          ..orderBy([OrderingTerm.desc(novels.clickNum)])
+          ..limit(limit);
 
     final results = await query.get();
     return results.map((row) {
@@ -685,12 +729,13 @@ class AppDatabase extends _$AppDatabase {
     required int offset,
     required int limit,
   }) async {
-    final query = select(novels).join([
-      innerJoin(authors, authors.id.equalsExp(novels.authorId)),
-    ])
-      ..where(novels.hasBanner.equals(true))
-      ..orderBy([OrderingTerm.desc(novels.clickNum)])
-      ..limit(limit, offset: offset);
+    final query =
+        select(
+            novels,
+          ).join([innerJoin(authors, authors.id.equalsExp(novels.authorId))])
+          ..where(novels.hasBanner.equals(true))
+          ..orderBy([OrderingTerm.desc(novels.clickNum)])
+          ..limit(limit, offset: offset);
 
     final results = await query.get();
     return results.map((row) {
@@ -735,21 +780,30 @@ class AppDatabase extends _$AppDatabase {
       ..where(novels.genre.isBiggerThanValue(1))
       ..addColumns([novels.genre]);
     final genreResults = await genreQuery.get();
-    final genreCount = genreResults.map((r) => r.read(novels.genre)).toSet().length;
+    final genreCount = genreResults
+        .map((r) => r.read(novels.genre))
+        .toSet()
+        .length;
 
     // Count distinct statuses (excluding 其他=1)
     final statusQuery = selectOnly(novels)
       ..where(novels.status.isBiggerThanValue(1))
       ..addColumns([novels.status]);
     final statusResults = await statusQuery.get();
-    final statusCount = statusResults.map((r) => r.read(novels.status)).toSet().length;
+    final statusCount = statusResults
+        .map((r) => r.read(novels.status))
+        .toSet()
+        .length;
 
     // Count distinct ptypes (excluding 其他=1)
     final ptypeQuery = selectOnly(novels)
       ..where(novels.ptype.isBiggerThanValue(1))
       ..addColumns([novels.ptype]);
     final ptypeResults = await ptypeQuery.get();
-    final ptypeCount = ptypeResults.map((r) => r.read(novels.ptype)).toSet().length;
+    final ptypeCount = ptypeResults
+        .map((r) => r.read(novels.ptype))
+        .toSet()
+        .length;
 
     return {
       'novels': novelCount,
@@ -851,13 +905,13 @@ class AppDatabase extends _$AppDatabase {
   Future<void> resetToDefault() async {
     final dbFolder = await getApplicationDocumentsDirectory();
     final dbPath = p.join(dbFolder.path, 'novel_hub.sqlite');
-    
+
     // Delete existing database
     final file = File(dbPath);
     if (await file.exists()) {
       await file.delete();
     }
-    
+
     // Copy bundled database
     await _copyBundledDatabase(dbPath);
   }
@@ -868,12 +922,12 @@ LazyDatabase _openConnection() {
     final dbFolder = await getApplicationDocumentsDirectory();
     final dbPath = p.join(dbFolder.path, 'novel_hub.sqlite');
     final file = File(dbPath);
-    
+
     // If database doesn't exist, copy from bundled asset
     if (!await file.exists()) {
       await _copyBundledDatabase(dbPath);
     }
-    
+
     return NativeDatabase.createInBackground(file);
   });
 }
@@ -882,7 +936,7 @@ Future<void> _copyBundledDatabase(String targetPath) async {
   // Load bundled database from assets
   final data = await rootBundle.load('assets/db/novel_hub.sqlite');
   final bytes = data.buffer.asUint8List();
-  
+
   // Write to target path
   final file = File(targetPath);
   await file.writeAsBytes(bytes, flush: true);

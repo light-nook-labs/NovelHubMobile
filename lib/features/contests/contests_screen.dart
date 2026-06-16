@@ -83,73 +83,70 @@ class _ContestsScreenState extends ConsumerState<ContestsScreen> {
       body: _contests.isEmpty && _isLoadingMore
           ? const LoadingState(message: '加载比赛列表...')
           : _contests.isEmpty
-              ? const EmptyState(
-                  icon: Icons.emoji_events,
-                  message: '暂无比赛数据',
-                )
-              : Stack(
-                  children: [
-                    GridView.builder(
-                      controller: _scrollController,
-                      padding: AppSpacing.paddingM,
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        childAspectRatio: 2.5,
-                        crossAxisSpacing: AppSpacing.gridSpacing,
-                        mainAxisSpacing: AppSpacing.gridSpacing,
-                      ),
-                      itemCount: _contests.length + (_hasMore ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index == _contests.length) {
-                          return const Center(
-                              child: CircularProgressIndicator());
-                        }
-                        final contest = _contests[index];
-                        return Card(
-                          child: InkWell(
-                            onTap: () => context.push('/contest/${contest.id}'),
-                            borderRadius: BorderRadius.circular(12),
-                            child: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      contest.name,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '${contest.novelCount} 本',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+          ? const EmptyState(icon: Icons.emoji_events, message: '暂无比赛数据')
+          : Stack(
+              children: [
+                GridView.builder(
+                  controller: _scrollController,
+                  padding: AppSpacing.paddingM,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 2.5,
+                    crossAxisSpacing: AppSpacing.gridSpacing,
+                    mainAxisSpacing: AppSpacing.gridSpacing,
+                  ),
+                  itemCount: _contests.length + (_hasMore ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index == _contests.length) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    final contest = _contests[index];
+                    return Card(
+                      child: InkWell(
+                        onTap: () => context.push('/contest/${contest.id}'),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
                           ),
-                        );
-                      },
-                    ),
-                    BackToTopButton(
-                      scrollController: _scrollController,
-                      show: _showBackToTop,
-                    ),
-                  ],
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  contest.name,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${contest.novelCount} 本',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
+                BackToTopButton(
+                  scrollController: _scrollController,
+                  show: _showBackToTop,
+                ),
+              ],
+            ),
     );
   }
 }

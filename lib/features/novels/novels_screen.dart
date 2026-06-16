@@ -36,9 +36,9 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
   int? _selectedYear;
   String _sortBy = 'click_num';
   bool _descending = true;
-  
+
   late TabController _tabController;
-  
+
   static const _ptypeTabs = [
     {'label': '全部', 'value': null},
     {'label': '其他', 'value': 1},
@@ -52,7 +52,7 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
     super.initState();
     _selectedGenre = widget.initialGenre;
     _selectedStatus = widget.initialStatus;
-    
+
     // Set initial ptype tab
     int initialTabIndex = 0;
     if (widget.initialPtype != null) {
@@ -61,7 +61,7 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
       );
       if (index >= 0) initialTabIndex = index;
     }
-    
+
     _tabController = TabController(
       length: _ptypeTabs.length,
       vsync: this,
@@ -95,7 +95,8 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
       ),
     );
 
-    final hasFilters = _selectedGenre != null ||
+    final hasFilters =
+        _selectedGenre != null ||
         _selectedStatus != null ||
         _selectedYear != null;
 
@@ -115,9 +116,14 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
           controller: _tabController,
           isScrollable: true,
           tabAlignment: TabAlignment.start,
-          labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+          labelStyle: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+          ),
           unselectedLabelStyle: const TextStyle(fontSize: 13),
-          tabs: _ptypeTabs.map((tab) => Tab(text: tab['label'] as String)).toList(),
+          tabs: _ptypeTabs
+              .map((tab) => Tab(text: tab['label'] as String))
+              .toList(),
         ),
       ),
       body: novelsAsync.when(
@@ -252,10 +258,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                 children: [
                   const Text(
                     '筛选与排序',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   TextButton(
                     onPressed: () {
@@ -352,10 +355,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
       children: [
         Text(
           title,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -367,11 +367,13 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
               isSelected: selectedValue == null,
               onTap: () => onChanged(null),
             ),
-            ...options.map((option) => _buildChip(
-              label: option.label,
-              isSelected: selectedValue == option.value,
-              onTap: () => onChanged(option.value),
-            )),
+            ...options.map(
+              (option) => _buildChip(
+                label: option.label,
+                isSelected: selectedValue == option.value,
+                onTap: () => onChanged(option.value),
+              ),
+            ),
           ],
         ),
       ],
@@ -395,10 +397,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
           children: [
             const Text(
               '排序',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
             TextButton.icon(
               onPressed: () {
@@ -435,11 +434,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
     required bool isSelected,
     required VoidCallback onTap,
   }) {
-    return FilterChipWidget(
-      label: label,
-      isSelected: isSelected,
-      onTap: onTap,
-    );
+    return FilterChipWidget(label: label, isSelected: isSelected, onTap: onTap);
   }
 }
 

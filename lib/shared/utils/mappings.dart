@@ -52,8 +52,4 @@ final statusMapping = EnumMapping.create('status', {
 
 /// Ptype mappings (from novel_hub/utils/mappings.py)
 /// 1=其他, 2=免费, 3=签约, 4=VIP
-final ptypeMapping = EnumMapping.create('ptype', {
-  '免费': 2,
-  '签约': 3,
-  'VIP': 4,
-});
+final ptypeMapping = EnumMapping.create('ptype', {'免费': 2, '签约': 3, 'VIP': 4});

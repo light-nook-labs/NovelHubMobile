@@ -47,8 +47,9 @@ class HomeScreen extends ConsumerWidget {
               error: (_, __) => const SizedBox.shrink(),
               data: (novels) {
                 if (novels.isEmpty) return const SizedBox.shrink();
-                final displayNovels =
-                    novels.length > 5 ? novels.sublist(0, 5) : novels;
+                final displayNovels = novels.length > 5
+                    ? novels.sublist(0, 5)
+                    : novels;
                 return _HeroBannerCarousel(novels: displayNovels);
               },
             ),
@@ -108,9 +109,9 @@ class HomeScreen extends ConsumerWidget {
       if (release == null) {
         if (!context.mounted) return;
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('数据已是最新')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('数据已是最新')));
         return;
       }
 
@@ -130,16 +131,16 @@ class HomeScreen extends ConsumerWidget {
           ref.invalidate(novelsProvider);
         });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('同步失败: ${result.error}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('同步失败: ${result.error}')));
       }
     } catch (e) {
       if (!context.mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('错误: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('错误: $e')));
     }
   }
 }
@@ -204,15 +205,15 @@ class _HeroBannerCarouselState extends State<_HeroBannerCarousel> {
                                 gradient: LinearGradient(
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
-                                  colors: [
-                                    AppColors.primary,
-                                    AppColors.accent
-                                  ],
+                                  colors: [AppColors.primary, AppColors.accent],
                                 ),
                               ),
                               child: const Center(
-                                child: Icon(Icons.book,
-                                    size: 48, color: Colors.white),
+                                child: Icon(
+                                  Icons.book,
+                                  size: 48,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                           ),
@@ -230,10 +231,7 @@ class _HeroBannerCarouselState extends State<_HeroBannerCarousel> {
                       ),
                       Text(
                         novel.author,
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 10,
-                        ),
+                        style: TextStyle(color: Colors.grey[600], fontSize: 10),
                       ),
                     ],
                   ),
@@ -279,14 +277,18 @@ class _QuickNavCard extends StatelessWidget {
         children: [
           ListTile(
             leading: const Icon(Icons.book, color: AppColors.primary),
-            title: Text('小说${stats != null ? '（${stats!['novels'] ?? 0}）' : ''}'),
+            title: Text(
+              '小说${stats != null ? '（${stats!['novels'] ?? 0}）' : ''}',
+            ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.go('/novels'),
           ),
           const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.person, color: AppColors.primary),
-            title: Text('作者${stats != null ? '（${stats!['authors'] ?? 0}）' : ''}'),
+            title: Text(
+              '作者${stats != null ? '（${stats!['authors'] ?? 0}）' : ''}',
+            ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/authors'),
           ),
@@ -300,28 +302,39 @@ class _QuickNavCard extends StatelessWidget {
           const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.emoji_events, color: AppColors.secondary),
-            title: Text('比赛${stats != null ? '（${stats!['contests'] ?? 0}）' : ''}'),
+            title: Text(
+              '比赛${stats != null ? '（${stats!['contests'] ?? 0}）' : ''}',
+            ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/contests'),
           ),
           const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.category, color: AppColors.primary),
-            title: Text('小说分类${stats != null ? '（${stats!['genres'] ?? 0}）' : ''}'),
+            title: Text(
+              '小说分类${stats != null ? '（${stats!['genres'] ?? 0}）' : ''}',
+            ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/genres'),
           ),
           const Divider(height: 1),
           ListTile(
-            leading: const Icon(Icons.signal_wifi_statusbar_4_bar, color: AppColors.primary),
-            title: Text('状态${stats != null ? '（${stats!['statuses'] ?? 0}）' : ''}'),
+            leading: const Icon(
+              Icons.signal_wifi_statusbar_4_bar,
+              color: AppColors.primary,
+            ),
+            title: Text(
+              '状态${stats != null ? '（${stats!['statuses'] ?? 0}）' : ''}',
+            ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/statuses'),
           ),
           const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.vpn_key, color: AppColors.primary),
-            title: Text('类型${stats != null ? '（${stats!['ptypes'] ?? 0}）' : ''}'),
+            title: Text(
+              '类型${stats != null ? '（${stats!['ptypes'] ?? 0}）' : ''}',
+            ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/ptypes'),
           ),
@@ -344,10 +357,12 @@ class _SyncStatusCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('同步状态',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                )),
+            Text(
+              '同步状态',
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
             syncInfo.when(
               loading: () => const CircularProgressIndicator(),
@@ -358,8 +373,11 @@ class _SyncStatusCard extends StatelessWidget {
                 }
                 return Row(
                   children: [
-                    const Icon(Icons.check_circle,
-                        color: AppColors.ongoing, size: 16),
+                    const Icon(
+                      Icons.check_circle,
+                      color: AppColors.ongoing,
+                      size: 16,
+                    ),
                     const SizedBox(width: 8),
                     Text('版本: ${info.version}'),
                     if (info.syncedAt != null) ...[

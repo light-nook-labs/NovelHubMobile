@@ -49,7 +49,10 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const Divider(height: 1),
                 ListTile(
-                  leading: const Icon(Icons.science, color: AppColors.secondary),
+                  leading: const Icon(
+                    Icons.science,
+                    color: AppColors.secondary,
+                  ),
                   title: const Text('加载测试数据'),
                   subtitle: const Text('从本地 JSONL 文件加载'),
                   onTap: () => _loadTestData(context, ref),
@@ -104,9 +107,9 @@ class SettingsScreen extends ConsumerWidget {
       if (release == null) {
         if (!context.mounted) return;
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('数据已是最新')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('数据已是最新')));
         return;
       }
 
@@ -124,16 +127,16 @@ class SettingsScreen extends ConsumerWidget {
           ref.invalidate(statisticsProvider);
         });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('同步失败: ${result.error}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('同步失败: ${result.error}')));
       }
     } catch (e) {
       if (!context.mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('错误: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('错误: $e')));
     }
   }
 
@@ -159,9 +162,9 @@ class SettingsScreen extends ConsumerWidget {
                   ref.invalidate(statisticsProvider);
                   ref.invalidate(lastSyncInfoProvider);
                 });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('已重置为默认数据库')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('已重置为默认数据库')));
               }
             },
             child: const Text('确认重置'),
@@ -178,16 +181,14 @@ class SettingsScreen extends ConsumerWidget {
     if (!file.existsSync()) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('测试文件不存在: /tmp/jsonl/meta_13.jsonl'),
-          ),
+          const SnackBar(content: Text('测试文件不存在: /tmp/jsonl/meta_13.jsonl')),
         );
       }
       return;
     }
 
     if (!context.mounted) return;
-    
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -199,14 +200,12 @@ class SettingsScreen extends ConsumerWidget {
       final result = await syncService.loadFromJsonlFile(testPath);
 
       if (!context.mounted) return;
-      
+
       Navigator.pop(context);
 
       if (result.success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('加载成功: ${result.novelCount} 本小说'),
-          ),
+          SnackBar(content: Text('加载成功: ${result.novelCount} 本小说')),
         );
         // Delay invalidation to next frame to avoid lifecycle issues
         Future.microtask(() {
@@ -214,16 +213,16 @@ class SettingsScreen extends ConsumerWidget {
           ref.invalidate(statisticsProvider);
         });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('加载失败: ${result.error}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('加载失败: ${result.error}')));
       }
     } catch (e) {
       if (!context.mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('错误: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('错误: $e')));
     }
   }
 }

@@ -10,11 +10,7 @@ class SearchBarWidget extends StatelessWidget {
   final String hintText;
   final VoidCallback? onTap;
 
-  const SearchBarWidget({
-    super.key,
-    this.hintText = '搜索小说...',
-    this.onTap,
-  });
+  const SearchBarWidget({super.key, this.hintText = '搜索小说...', this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -33,10 +29,7 @@ class SearchBarWidget extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               hintText,
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
+              style: TextStyle(color: Colors.grey[600], fontSize: 14),
             ),
           ],
         ),
@@ -100,19 +93,13 @@ class EmptyState extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             message,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
-            ),
+            style: const TextStyle(fontSize: 16, color: Colors.grey),
           ),
           if (subtitle != null) ...[
             const SizedBox(height: 8),
             Text(
               subtitle!,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[400],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey[400]),
             ),
           ],
         ],
@@ -138,10 +125,7 @@ class LoadingState extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               message!,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
             ),
           ],
         ],
@@ -197,13 +181,13 @@ class CoverImage extends StatelessWidget {
           fit: fit,
           placeholder: (context, url) => Container(
             color: AppColors.primary.withValues(alpha: 0.1),
-            child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            child: const Center(
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
           ),
           errorWidget: (context, url, error) => Container(
             color: AppColors.primary.withValues(alpha: 0.1),
-            child: const Center(
-              child: Icon(Icons.broken_image, size: 24),
-            ),
+            child: const Center(child: Icon(Icons.broken_image, size: 24)),
           ),
         ),
       ),
@@ -231,7 +215,9 @@ class BadgeWidget extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(4),
-        border: outlined ? Border.all(color: color.withValues(alpha: 0.3)) : null,
+        border: outlined
+            ? Border.all(color: color.withValues(alpha: 0.3))
+            : null,
       ),
       child: Text(
         label,
@@ -262,10 +248,7 @@ class StatusBadge extends StatelessWidget {
       _ => Colors.grey,
     };
 
-    return BadgeWidget(
-      label: statusMapping.getZh(status),
-      color: color,
-    );
+    return BadgeWidget(label: statusMapping.getZh(status), color: color);
   }
 }
 
@@ -342,20 +325,13 @@ class ListItemWithDivider extends StatelessWidget {
   final Widget child;
   final VoidCallback? onTap;
 
-  const ListItemWithDivider({
-    super.key,
-    required this.child,
-    this.onTap,
-  });
+  const ListItemWithDivider({super.key, required this.child, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        InkWell(
-          onTap: onTap,
-          child: child,
-        ),
+        InkWell(onTap: onTap, child: child),
         const Divider(height: 1),
       ],
     );
@@ -412,9 +388,9 @@ class StatItem extends StatelessWidget {
                 ),
                 Text(
                   value,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                 ),
               ],
             ),

@@ -80,12 +80,10 @@ class NovelCard extends StatelessWidget {
       fit: BoxFit.cover,
       memCacheHeight: 400,
       memCacheWidth: 320,
-      placeholder: (context, url) => const Center(
-        child: CircularProgressIndicator(strokeWidth: 2),
-      ),
-      errorWidget: (context, url, error) => const Center(
-        child: Icon(Icons.broken_image, size: 32),
-      ),
+      placeholder: (context, url) =>
+          const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      errorWidget: (context, url, error) =>
+          const Center(child: Icon(Icons.broken_image, size: 32)),
     );
   }
 }

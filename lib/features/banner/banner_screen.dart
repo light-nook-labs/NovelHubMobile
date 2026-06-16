@@ -112,42 +112,42 @@ class _BannerScreenState extends ConsumerState<BannerScreen> {
       body: _novels.isEmpty && _isLoadingMore
           ? const Center(child: CircularProgressIndicator())
           : _novels.isEmpty
-               ? const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.book, size: 64, color: AppColors.primary),
-                      SizedBox(height: 16),
-                      Text('暂无背投数据'),
-                    ],
-                  ),
-                )
-               : RefreshIndicator(
-                  onRefresh: () async {
-                    setState(() {
-                      _currentPage = 0;
-                      _novels = [];
-                      _hasMore = true;
-                    });
-                    await _loadMore();
-                  },
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(12),
-                    itemCount: _novels.length + (_hasMore ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index == _novels.length) {
-                        return const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(16),
-                            child: CircularProgressIndicator(),
-                          ),
-                        );
-                      }
-                      return _BannerCard(novel: _novels[index]);
-                    },
-                  ),
-                ),
+          ? const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.book, size: 64, color: AppColors.primary),
+                  SizedBox(height: 16),
+                  Text('暂无背投数据'),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: () async {
+                setState(() {
+                  _currentPage = 0;
+                  _novels = [];
+                  _hasMore = true;
+                });
+                await _loadMore();
+              },
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.all(12),
+                itemCount: _novels.length + (_hasMore ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (index == _novels.length) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  }
+                  return _BannerCard(novel: _novels[index]);
+                },
+              ),
+            ),
     );
   }
 }
@@ -220,10 +220,7 @@ class _BannerCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   novel.author,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
               ],
             ),

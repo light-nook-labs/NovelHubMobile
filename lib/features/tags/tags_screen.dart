@@ -84,71 +84,69 @@ class _TagsScreenState extends ConsumerState<TagsScreen> {
       body: _tags.isEmpty && _isLoadingMore
           ? const LoadingState(message: '加载标签列表...')
           : _tags.isEmpty
-              ? const EmptyState(
-                  icon: Icons.tag,
-                  message: '暂无标签数据',
-                )
-              : Stack(
-                  children: [
-                    GridView.builder(
-                      controller: _scrollController,
-                      padding: AppSpacing.paddingM,
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        childAspectRatio: 2.2,
-                        crossAxisSpacing: AppSpacing.gridSpacingSmall,
-                        mainAxisSpacing: AppSpacing.gridSpacingSmall,
-                      ),
-                      itemCount: _tags.length + (_hasMore ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index == _tags.length) {
-                          return const Center(
-                              child: CircularProgressIndicator());
-                        }
-                        final tag = _tags[index];
-                        return Card(
-                          child: InkWell(
-                            onTap: () => context.push('/tag/${tag.id}'),
-                            borderRadius: BorderRadius.circular(12),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      tag.name,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '${tag.novelCount} 本',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+          ? const EmptyState(icon: Icons.tag, message: '暂无标签数据')
+          : Stack(
+              children: [
+                GridView.builder(
+                  controller: _scrollController,
+                  padding: AppSpacing.paddingM,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    childAspectRatio: 2.2,
+                    crossAxisSpacing: AppSpacing.gridSpacingSmall,
+                    mainAxisSpacing: AppSpacing.gridSpacingSmall,
+                  ),
+                  itemCount: _tags.length + (_hasMore ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index == _tags.length) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    final tag = _tags[index];
+                    return Card(
+                      child: InkWell(
+                        onTap: () => context.push('/tag/${tag.id}'),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 6,
                           ),
-                        );
-                      },
-                    ),
-                    BackToTopButton(
-                      scrollController: _scrollController,
-                      show: _showBackToTop,
-                    ),
-                  ],
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  tag.name,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${tag.novelCount} 本',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
+                BackToTopButton(
+                  scrollController: _scrollController,
+                  show: _showBackToTop,
+                ),
+              ],
+            ),
     );
   }
 }

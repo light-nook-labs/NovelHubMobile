@@ -12,9 +12,15 @@ class AppSpacing {
   static const EdgeInsets paddingXL = EdgeInsets.all(24);
 
   // Horizontal padding
-  static const EdgeInsets paddingHorizontalS = EdgeInsets.symmetric(horizontal: 8);
-  static const EdgeInsets paddingHorizontalM = EdgeInsets.symmetric(horizontal: 12);
-  static const EdgeInsets paddingHorizontalL = EdgeInsets.symmetric(horizontal: 16);
+  static const EdgeInsets paddingHorizontalS = EdgeInsets.symmetric(
+    horizontal: 8,
+  );
+  static const EdgeInsets paddingHorizontalM = EdgeInsets.symmetric(
+    horizontal: 12,
+  );
+  static const EdgeInsets paddingHorizontalL = EdgeInsets.symmetric(
+    horizontal: 16,
+  );
 
   // Vertical padding
   static const EdgeInsets paddingVerticalS = EdgeInsets.symmetric(vertical: 4);
@@ -47,15 +53,23 @@ class AppSpacing {
   static const BorderRadius radiusM = BorderRadius.all(Radius.circular(8));
   static const BorderRadius radiusL = BorderRadius.all(Radius.circular(12));
   static const BorderRadius radiusXL = BorderRadius.all(Radius.circular(16));
-  static const BorderRadius radiusCircular = BorderRadius.all(Radius.circular(100));
+  static const BorderRadius radiusCircular = BorderRadius.all(
+    Radius.circular(100),
+  );
 
   // Card padding
   static const EdgeInsets cardPadding = EdgeInsets.all(12);
   static const EdgeInsets cardPaddingLarge = EdgeInsets.all(16);
 
   // List item padding
-  static const EdgeInsets listItemPadding = EdgeInsets.symmetric(horizontal: 16, vertical: 10);
-  static const EdgeInsets listItemPaddingDense = EdgeInsets.symmetric(horizontal: 12, vertical: 8);
+  static const EdgeInsets listItemPadding = EdgeInsets.symmetric(
+    horizontal: 16,
+    vertical: 10,
+  );
+  static const EdgeInsets listItemPaddingDense = EdgeInsets.symmetric(
+    horizontal: 12,
+    vertical: 8,
+  );
 
   // Grid spacing
   static const double gridSpacing = 10;
@@ -73,12 +87,12 @@ class AppTextStyles {
     fontSize: 18,
     fontWeight: FontWeight.bold,
   );
-  
+
   static const TextStyle titleMedium = TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.bold,
   );
-  
+
   static const TextStyle titleSmall = TextStyle(
     fontSize: 14,
     fontWeight: FontWeight.bold,
@@ -89,12 +103,12 @@ class AppTextStyles {
     fontSize: 16,
     fontWeight: FontWeight.normal,
   );
-  
+
   static const TextStyle bodyMedium = TextStyle(
     fontSize: 14,
     fontWeight: FontWeight.normal,
   );
-  
+
   static const TextStyle bodySmall = TextStyle(
     fontSize: 12,
     fontWeight: FontWeight.normal,
@@ -105,12 +119,12 @@ class AppTextStyles {
     fontSize: 14,
     fontWeight: FontWeight.w500,
   );
-  
+
   static const TextStyle labelMedium = TextStyle(
     fontSize: 12,
     fontWeight: FontWeight.w500,
   );
-  
+
   static const TextStyle labelSmall = TextStyle(
     fontSize: 10,
     fontWeight: FontWeight.w500,
@@ -121,7 +135,7 @@ class AppTextStyles {
     fontSize: 10,
     fontWeight: FontWeight.w500,
   );
-  
+
   static const TextStyle badgeLarge = TextStyle(
     fontSize: 12,
     fontWeight: FontWeight.w500,
@@ -151,15 +165,19 @@ class AppDecorations {
   );
 
   // Chip decoration
-  static BoxDecoration chipDecoration(bool isSelected, BuildContext context) => BoxDecoration(
-    color: isSelected
-        ? AppColors.primary
-        : Theme.of(context).colorScheme.surfaceContainerHighest,
-    borderRadius: BorderRadius.circular(20),
-  );
+  static BoxDecoration chipDecoration(bool isSelected, BuildContext context) =>
+      BoxDecoration(
+        color: isSelected
+            ? AppColors.primary
+            : Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(20),
+      );
 
   // Input decoration
-  static InputDecoration inputDecoration(BuildContext context, {String? hintText}) => InputDecoration(
+  static InputDecoration inputDecoration(
+    BuildContext context, {
+    String? hintText,
+  }) => InputDecoration(
     hintText: hintText,
     filled: true,
     fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,

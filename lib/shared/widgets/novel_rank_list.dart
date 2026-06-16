@@ -153,8 +153,8 @@ class NovelRankRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final url = novel.cover != null && novel.cover!.isNotEmpty
         ? (novel.cover!.startsWith('http')
-            ? novel.cover!
-            : 'https://rs.sfacg.com/web/novel/images/NovelCover/Big/${novel.cover}')
+              ? novel.cover!
+              : 'https://rs.sfacg.com/web/novel/images/NovelCover/Big/${novel.cover}')
         : null;
 
     return InkWell(
@@ -165,10 +165,7 @@ class NovelRankRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Rank
-            if (showRank) ...[
-              _buildRank(rank),
-              const SizedBox(width: 10),
-            ],
+            if (showRank) ...[_buildRank(rank), const SizedBox(width: 10)],
             // Cover
             _buildCover(url),
             const SizedBox(width: 10),
@@ -279,10 +276,7 @@ class NovelRankRow extends StatelessWidget {
           ),
           TextSpan(
             text: ' #${novel.id}',
-            style: TextStyle(
-              fontSize: 11,
-              color: Colors.grey[500],
-            ),
+            style: TextStyle(fontSize: 11, color: Colors.grey[500]),
           ),
         ],
       ),
@@ -316,10 +310,7 @@ class NovelRankRow extends StatelessWidget {
         ),
         Text(
           valueLabel,
-          style: TextStyle(
-            fontSize: 10,
-            color: Colors.grey[500],
-          ),
+          style: TextStyle(fontSize: 10, color: Colors.grey[500]),
         ),
       ],
     );
@@ -398,8 +389,10 @@ class _NovelFilterBottomSheetState extends State<NovelFilterBottomSheet> {
               return GestureDetector(
                 onTap: () => setState(() => _sortBy = key),
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: _sortBy == key
                         ? AppColors.primary
@@ -411,8 +404,9 @@ class _NovelFilterBottomSheetState extends State<NovelFilterBottomSheet> {
                     style: TextStyle(
                       fontSize: 13,
                       color: _sortBy == key ? Colors.white : null,
-                      fontWeight:
-                          _sortBy == key ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: _sortBy == key
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                     ),
                   ),
                 ),

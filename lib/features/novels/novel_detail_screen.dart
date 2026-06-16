@@ -40,12 +40,15 @@ class NovelDetailScreen extends ConsumerWidget {
         ),
         data: (novel) {
           if (novel == null) {
-            return const EmptyState(
-              icon: Icons.book,
-              message: '小说不存在',
-            );
+            return const EmptyState(icon: Icons.book, message: '小说不存在');
           }
-          return _buildContent(context, novel, tagsAsync, authorAsync, rankingsAsync);
+          return _buildContent(
+            context,
+            novel,
+            tagsAsync,
+            authorAsync,
+            rankingsAsync,
+          );
         },
       ),
     );
@@ -87,8 +90,7 @@ class NovelDetailScreen extends ConsumerWidget {
                         ),
                         GestureDetector(
                           onTap: () {
-                            Clipboard.setData(
-                                ClipboardData(text: novel.title));
+                            Clipboard.setData(ClipboardData(text: novel.title));
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('已复制标题'),
@@ -106,9 +108,9 @@ class NovelDetailScreen extends ConsumerWidget {
                     ),
                     Text(
                       '#${novel.id}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey,
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Colors.grey),
                     ),
                     AppSpacing.gapHeightS,
 
@@ -159,7 +161,9 @@ class NovelDetailScreen extends ConsumerWidget {
                         return Wrap(
                           spacing: 6,
                           runSpacing: 6,
-                          children: tags.map((tag) => _TagChip(name: tag.name)).toList(),
+                          children: tags
+                              .map((tag) => _TagChip(name: tag.name))
+                              .toList(),
                         );
                       },
                     ),
@@ -225,9 +229,7 @@ class _ViewOnSfacgButton extends StatelessWidget {
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(6),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
         ),
       ),
     );
@@ -247,10 +249,7 @@ class _Breadcrumb extends StatelessWidget {
           onTap: () => Navigator.of(context).pop(),
           child: Text(
             '首页',
-            style: TextStyle(
-              color: Colors.grey[500],
-              fontSize: 13,
-            ),
+            style: TextStyle(color: Colors.grey[500], fontSize: 13),
           ),
         ),
         Padding(
@@ -288,10 +287,7 @@ class _TagChip extends StatelessWidget {
       ),
       child: Text(
         name,
-        style: TextStyle(
-          color: AppColors.primary,
-          fontSize: 12,
-        ),
+        style: TextStyle(color: AppColors.primary, fontSize: 12),
       ),
     );
   }
@@ -370,22 +366,16 @@ class _DatesSection extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
         children: [
-          _DateRow(
-            icon: Icons.update,
-            label: '最后更新',
-            date: novel.lastUpdate,
-          ),
+          _DateRow(icon: Icons.update, label: '最后更新', date: novel.lastUpdate),
           const SizedBox(height: 8),
-          _DateRow(
-            icon: Icons.sync,
-            label: '同步时间',
-            date: novel.dbUpdate,
-          ),
+          _DateRow(icon: Icons.sync, label: '同步时间', date: novel.dbUpdate),
         ],
       ),
     );
@@ -397,11 +387,7 @@ class _DateRow extends StatelessWidget {
   final String label;
   final DateTime? date;
 
-  const _DateRow({
-    required this.icon,
-    required this.label,
-    required this.date,
-  });
+  const _DateRow({required this.icon, required this.label, required this.date});
 
   @override
   Widget build(BuildContext context) {
@@ -411,16 +397,16 @@ class _DateRow extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Colors.grey,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: Colors.grey),
         ),
         const Spacer(),
         Text(
           date != null ? _formatDate(date!) : '未知',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            fontWeight: FontWeight.w500,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500),
         ),
       ],
     );

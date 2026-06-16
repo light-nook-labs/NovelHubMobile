@@ -34,7 +34,10 @@ class _RankingsScreenState extends ConsumerState<RankingsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: RankingType.values.length, vsync: this);
+    _tabController = TabController(
+      length: RankingType.values.length,
+      vsync: this,
+    );
   }
 
   @override
@@ -62,10 +65,7 @@ class _RankingsScreenState extends ConsumerState<RankingsScreen>
                 const SizedBox(width: 8),
                 Text(
                   '搜索小说...',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
                 ),
               ],
             ),
@@ -75,7 +75,10 @@ class _RankingsScreenState extends ConsumerState<RankingsScreen>
           controller: _tabController,
           isScrollable: true,
           tabAlignment: TabAlignment.start,
-          labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+          labelStyle: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+          ),
           unselectedLabelStyle: const TextStyle(fontSize: 13),
           tabs: RankingType.values
               .map((type) => Tab(text: type.label))

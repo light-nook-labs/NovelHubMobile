@@ -87,86 +87,82 @@ class _AuthorsScreenState extends ConsumerState<AuthorsScreen> {
       body: _authors.isEmpty && _isLoadingMore
           ? const LoadingState(message: '加载作者列表...')
           : _authors.isEmpty
-              ? const EmptyState(
-                  icon: Icons.person,
-                  message: '暂无作者数据',
-                )
-              : Stack(
-                  children: [
-                    ListView.separated(
-                      controller: _scrollController,
-                      itemCount: _authors.length + (_hasMore ? 1 : 0),
-                      separatorBuilder: (_, __) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        if (index == _authors.length) {
-                          return const Padding(
-                            padding: EdgeInsets.all(16),
-                            child: Center(child: CircularProgressIndicator()),
-                          );
-                        }
-                        final author = _authors[index];
-                        return InkWell(
-                          onTap: () => context.push('/author/${author.id}'),
-                          child: Padding(
-                            padding: AppSpacing.listItemPadding,
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        author.name,
-                                        style: AppTextStyles.labelLarge,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      if (author.topNovelTitle != null) ...[
-                                        AppSpacing.gapHeightXS,
-                                        Text(
-                                          author.topNovelTitle!,
-                                          style: AppTextStyles.bodySmall.copyWith(
-                                            color: Colors.grey[500],
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ],
+          ? const EmptyState(icon: Icons.person, message: '暂无作者数据')
+          : Stack(
+              children: [
+                ListView.separated(
+                  controller: _scrollController,
+                  itemCount: _authors.length + (_hasMore ? 1 : 0),
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    if (index == _authors.length) {
+                      return const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
+                    final author = _authors[index];
+                    return InkWell(
+                      onTap: () => context.push('/author/${author.id}'),
+                      child: Padding(
+                        padding: AppSpacing.listItemPadding,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    author.name,
+                                    style: AppTextStyles.labelLarge,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                ),
-                                AppSpacing.gapWidthM,
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
+                                  if (author.topNovelTitle != null) ...[
+                                    AppSpacing.gapHeightXS,
                                     Text(
-                                      '${author.bannerCount}/${author.novelCount}',
-                                      style: AppTextStyles.labelLarge.copyWith(
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
-                                    Text(
-                                      '背投/作品',
-                                      style: AppTextStyles.labelSmall.copyWith(
+                                      author.topNovelTitle!,
+                                      style: AppTextStyles.bodySmall.copyWith(
                                         color: Colors.grey[500],
                                       ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ],
+                                ],
+                              ),
+                            ),
+                            AppSpacing.gapWidthM,
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '${author.bannerCount}/${author.novelCount}',
+                                  style: AppTextStyles.labelLarge.copyWith(
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                                Text(
+                                  '背投/作品',
+                                  style: AppTextStyles.labelSmall.copyWith(
+                                    color: Colors.grey[500],
+                                  ),
                                 ),
                               ],
                             ),
-                          ),
-                        );
-                      },
-                    ),
-                    // Back to top button
-                    BackToTopButton(
-                      scrollController: _scrollController,
-                      show: _showBackToTop,
-                    ),
-                  ],
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
+                // Back to top button
+                BackToTopButton(
+                  scrollController: _scrollController,
+                  show: _showBackToTop,
+                ),
+              ],
+            ),
     );
   }
 }
@@ -194,11 +190,8 @@ class AuthorDetailScreen extends ConsumerWidget {
         ),
       ),
       body: NovelRankList(
-        loadNovels: (offset, limit) => db.getNovelsByAuthor(
-          authorId,
-          limit: limit,
-          offset: offset,
-        ),
+        loadNovels: (offset, limit) =>
+            db.getNovelsByAuthor(authorId, limit: limit, offset: offset),
         showRank: true,
         valueLabel: '点击',
       ),

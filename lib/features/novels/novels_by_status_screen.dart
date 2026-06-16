@@ -82,8 +82,7 @@ class _NovelsByStatusScreenState extends ConsumerState<NovelsByStatusScreen>
       ),
     );
 
-    final hasFilters =
-        _selectedGenre != null || _selectedYear != null;
+    final hasFilters = _selectedGenre != null || _selectedYear != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -102,10 +101,7 @@ class _NovelsByStatusScreenState extends ConsumerState<NovelsByStatusScreen>
                 const SizedBox(width: 8),
                 Text(
                   '搜索小说...',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
                 ),
               ],
             ),
@@ -124,8 +120,10 @@ class _NovelsByStatusScreenState extends ConsumerState<NovelsByStatusScreen>
           controller: _tabController,
           isScrollable: true,
           tabAlignment: TabAlignment.start,
-          labelStyle:
-              const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+          labelStyle: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+          ),
           unselectedLabelStyle: const TextStyle(fontSize: 13),
           tabs: _statusTabs
               .map((tab) => Tab(text: tab['label'] as String))
@@ -261,10 +259,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                 children: [
                   const Text(
                     '筛选与排序',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   TextButton(
                     onPressed: () {
@@ -354,11 +349,13 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
               isSelected: selectedValue == null,
               onTap: () => onChanged(null),
             ),
-            ...options.map((option) => _buildChip(
-                  label: option.label,
-                  isSelected: selectedValue == option.value,
-                  onTap: () => onChanged(option.value),
-                )),
+            ...options.map(
+              (option) => _buildChip(
+                label: option.label,
+                isSelected: selectedValue == option.value,
+                onTap: () => onChanged(option.value),
+              ),
+            ),
           ],
         ),
       ],

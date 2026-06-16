@@ -231,10 +231,12 @@ class _EnumListScreenState extends State<EnumListScreen> {
 
     setState(() {
       _currentPage++;
-      _items.addAll(widget.items.sublist(
-        startIndex,
-        endIndex > widget.items.length ? widget.items.length : endIndex,
-      ));
+      _items.addAll(
+        widget.items.sublist(
+          startIndex,
+          endIndex > widget.items.length ? widget.items.length : endIndex,
+        ),
+      );
       _hasMore = endIndex < widget.items.length;
     });
   }
