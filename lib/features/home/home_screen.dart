@@ -16,9 +16,9 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final stats = ref.watch(statisticsProvider);
     final syncInfo = ref.watch(lastSyncInfoProvider);
     final bannerNovels = ref.watch(bannerNovelsProvider);
+    final stats = ref.watch(statisticsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -75,12 +75,12 @@ class HomeScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
 
-            // Statistics
-            _StatsCard(stats: stats),
-            const SizedBox(height: 12),
-
-            // Quick Navigation
-            _QuickNavCard(),
+            // Quick Navigation with counts
+            stats.when(
+              loading: () => _QuickNavCard(),
+              error: (_, __) => _QuickNavCard(),
+              data: (data) => _QuickNavCard(stats: data),
+            ),
             const SizedBox(height: 12),
 
             // Sync Status
@@ -288,80 +288,11 @@ class _HeroBannerCarouselState extends State<_HeroBannerCarousel> {
   }
 }
 
-class _StatsCard extends StatelessWidget {
-  final AsyncValue<Map<String, int>> stats;
-
-  const _StatsCard({required this.stats});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('数据库统计',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                )),
-            const SizedBox(height: 12),
-            stats.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Text('Error: $err'),
-              data: (data) => Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _StatItem(
-                    icon: Icons.book,
-                    label: '小说',
-                    value: '${data['novels'] ?? 0}',
-                  ),
-                  _StatItem(
-                    icon: Icons.person,
-                    label: '作者',
-                    value: '${data['authors'] ?? 0}',
-                  ),
-                  _StatItem(
-                    icon: Icons.tag,
-                    label: '标签',
-                    value: '${data['tags'] ?? 0}',
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _StatItem({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Icon(icon, size: 24, color: AppColors.primary),
-        const SizedBox(height: 4),
-        Text(value, style: Theme.of(context).textTheme.titleMedium),
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
-      ],
-    );
-  }
-}
-
 class _QuickNavCard extends StatelessWidget {
+  final Map<String, int>? stats;
+
+  const _QuickNavCard({this.stats});
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -369,21 +300,21 @@ class _QuickNavCard extends StatelessWidget {
         children: [
           ListTile(
             leading: const Icon(Icons.book, color: AppColors.primary),
-            title: const Text('浏览小说'),
+            title: Text('小说${stats != null ? '（${stats!['novels'] ?? 0}）' : ''}'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.go('/novels'),
           ),
           const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.person, color: AppColors.primary),
-            title: const Text('作者'),
+            title: Text('作者${stats != null ? '（${stats!['authors'] ?? 0}）' : ''}'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/authors'),
           ),
           const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.tag, color: AppColors.primary),
-            title: const Text('标签'),
+            title: Text('标签${stats != null ? '（${stats!['tags'] ?? 0}）' : ''}'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/tags'),
           ),
