@@ -432,11 +432,31 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<List<AuthorWithStats>> getAuthorsWithStats({int limit = 1000}) async {
-    // Get all authors
-    final authorList = await (select(authors)
-          ..orderBy([(t) => OrderingTerm.asc(t.name)])
-          ..limit(limit))
-        .get();
+    // Get total clicks per author
+    final authorClicks = <int, int>{};
+    final authorClicksQuery = selectOnly(novels)
+      ..where(novels.authorId.isNotNull())
+      ..addColumns([novels.authorId, novels.clickNum.sum()])
+      ..groupBy([novels.authorId]);
+    final authorClicksResults = await authorClicksQuery.get();
+    for (final row in authorClicksResults) {
+      final authorId = row.read(novels.authorId);
+      final totalClicks = row.read(novels.clickNum.sum()) ?? 0;
+      if (authorId != null) {
+        authorClicks[authorId] = totalClicks;
+      }
+    }
+
+    // Get all authors and sort by total clicks
+    final authorList = await select(authors).get();
+    authorList.sort((a, b) {
+      final clicksA = authorClicks[a.id] ?? 0;
+      final clicksB = authorClicks[b.id] ?? 0;
+      return clicksB.compareTo(clicksA); // Descending
+    });
+
+    // Limit after sorting
+    final limitedAuthors = authorList.take(limit).toList();
 
     // Get novel counts per author
     final novelCounts = <int, int>{};
@@ -481,7 +501,7 @@ class AppDatabase extends _$AppDatabase {
     }
 
     // Build result
-    return authorList.map((author) {
+    return limitedAuthors.map((author) {
       return AuthorWithStats(
         id: author.id,
         name: author.name,
