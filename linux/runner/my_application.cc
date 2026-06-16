@@ -53,6 +53,8 @@ static void my_application_activate(GApplication* application) {
   }
 
   gtk_window_set_default_size(window, 390, 400);  // Mobile size for testing
+  gtk_window_set_resizable(window, FALSE);  // Disable resizing
+  gtk_window_set_position(window, GTK_WIN_POS_CENTER);  // Center on screen
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(
