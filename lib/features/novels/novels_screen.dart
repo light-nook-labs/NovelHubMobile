@@ -8,6 +8,8 @@ import '../../data/models/database.dart';
 import '../../shared/widgets/novel_card.dart';
 import '../../shared/utils/mappings.dart';
 import '../../app/theme.dart';
+import '../../shared/widgets/common_widgets.dart';
+import '../../shared/utils/spacing.dart';
 
 part 'novels_screen.g.dart';
 
@@ -99,30 +101,7 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: GestureDetector(
-          onTap: () => context.push('/search'),
-          child: Container(
-            height: 36,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.search, size: 18, color: Colors.grey[600]),
-                const SizedBox(width: 8),
-                Text(
-                  '搜索小说...',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+        title: const SearchBarWidget(),
         actions: [
           IconButton(
             icon: Icon(
@@ -146,15 +125,10 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
         error: (err, stack) => Center(child: Text('Error: $err')),
         data: (novels) {
           if (novels.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.book, size: 48, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text('暂无数据'),
-                ],
-              ),
+            return const EmptyState(
+              icon: Icons.book,
+              message: '暂无数据',
+              subtitle: '尝试调整筛选条件',
             );
           }
           return _buildNovelGrid(novels);
@@ -191,12 +165,12 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
 
   Widget _buildNovelGrid(List<Novel> novels) {
     return GridView.builder(
-      padding: const EdgeInsets.all(12),
+      padding: AppSpacing.paddingM,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 4,
         childAspectRatio: 0.55,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
+        crossAxisSpacing: AppSpacing.gridSpacing,
+        mainAxisSpacing: AppSpacing.gridSpacing,
       ),
       itemCount: novels.length,
       itemBuilder: (context, index) {
@@ -461,25 +435,10 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
     required bool isSelected,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
+    return FilterChipWidget(
+      label: label,
+      isSelected: isSelected,
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary
-              : Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            color: isSelected ? Colors.white : null,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-      ),
     );
   }
 }

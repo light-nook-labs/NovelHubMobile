@@ -3,8 +3,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../data/models/database.dart';
-import '../../shared/utils/mappings.dart';
 import '../../app/theme.dart';
+import 'common_widgets.dart';
 
 class NovelRankList extends StatefulWidget {
   final Future<List<Novel>> Function(int offset, int limit) loadNovels;
@@ -294,50 +294,11 @@ class NovelRankRow extends StatelessWidget {
       spacing: 4,
       runSpacing: 4,
       children: [
-        _buildBadge(
-          statusMapping.getZh(novel.status),
-          _getStatusColor(novel.status),
-        ),
-        _buildBadge(
-          genreMapping.getZh(novel.genre),
-          AppColors.primary,
-        ),
-        _buildBadge(
-          ptypeMapping.getZh(novel.ptype),
-          AppColors.secondary,
-        ),
+        StatusBadge(status: novel.status),
+        GenreBadge(genre: novel.genre),
+        PtypeBadge(ptype: novel.ptype),
       ],
     );
-  }
-
-  Widget _buildBadge(String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 10,
-          color: color,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-
-  Color _getStatusColor(int status) {
-    return switch (status) {
-      2 => AppColors.completed,
-      3 => AppColors.ongoing,
-      4 => AppColors.stopped,
-      5 => AppColors.stopped,
-      6 => AppColors.completed,
-      _ => Colors.grey,
-    };
   }
 
   Widget _buildValue() {
@@ -346,7 +307,7 @@ class NovelRankRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Text(
-          _formatNumber(value),
+          formatNumber(value),
           style: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
@@ -362,12 +323,6 @@ class NovelRankRow extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  String _formatNumber(int num) {
-    if (num >= 100000000) return '${(num / 100000000).toStringAsFixed(1)}亿';
-    if (num >= 10000) return '${(num / 10000).toStringAsFixed(1)}万';
-    return num.toString();
   }
 }
 

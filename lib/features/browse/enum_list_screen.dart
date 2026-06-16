@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../shared/utils/mappings.dart';
-import '../../app/theme.dart';
 
 class GenreListScreen extends StatelessWidget {
   const GenreListScreen({super.key});

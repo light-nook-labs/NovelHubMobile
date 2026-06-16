@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/repositories/providers.dart';
 import '../../data/models/database.dart';
-import '../../shared/utils/mappings.dart';
 import '../../app/theme.dart';
+import '../../shared/widgets/common_widgets.dart';
+import '../../shared/utils/spacing.dart';
 
 const _sfacgUrlPattern = 'https://book.sfacg.com/Novel/{nid}/';
 
@@ -32,11 +32,18 @@ class NovelDetailScreen extends ConsumerWidget {
         ),
       ),
       body: novelAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        loading: () => const LoadingState(message: '加载小说详情...'),
+        error: (err, stack) => EmptyState(
+          icon: Icons.error_outline,
+          message: '加载失败',
+          subtitle: err.toString(),
+        ),
         data: (novel) {
           if (novel == null) {
-            return const Center(child: Text('小说不存在'));
+            return const EmptyState(
+              icon: Icons.book,
+              message: '小说不存在',
+            );
           }
           return _buildContent(context, novel, tagsAsync, authorAsync, rankingsAsync);
         },
@@ -52,13 +59,13 @@ class NovelDetailScreen extends ConsumerWidget {
     AsyncValue<Map<String, int>> rankingsAsync,
   ) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: AppSpacing.paddingL,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Breadcrumb
           _Breadcrumb(novelTitle: novel.title),
-          const SizedBox(height: 16),
+          AppSpacing.gapHeightL,
 
           // Main: info + cover
           Row(
@@ -75,10 +82,7 @@ class NovelDetailScreen extends ConsumerWidget {
                         Expanded(
                           child: Text(
                             novel.title,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: AppTextStyles.titleLarge,
                           ),
                         ),
                         GestureDetector(
@@ -106,7 +110,7 @@ class NovelDetailScreen extends ConsumerWidget {
                         color: Colors.grey,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    AppSpacing.gapHeightS,
 
                     // Author
                     authorAsync.when(
@@ -120,15 +124,14 @@ class NovelDetailScreen extends ConsumerWidget {
                           },
                           child: Text(
                             author.name,
-                            style: TextStyle(
+                            style: AppTextStyles.labelLarge.copyWith(
                               color: AppColors.primary,
-                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         );
                       },
                     ),
-                    const SizedBox(height: 8),
+                    AppSpacing.gapHeightS,
 
                     // Badges
                     Wrap(
@@ -136,16 +139,16 @@ class NovelDetailScreen extends ConsumerWidget {
                       runSpacing: 6,
                       children: [
                         if (novel.hasBanner)
-                          _Badge(
+                          const BadgeWidget(
                             label: '背投',
                             color: AppColors.accent,
                           ),
-                        _StatusBadge(status: novel.status),
-                        _GenreBadge(genre: novel.genre),
-                        _PtypeBadge(ptype: novel.ptype),
+                        StatusBadge(status: novel.status),
+                        GenreBadge(genre: novel.genre),
+                        PtypeBadge(ptype: novel.ptype),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    AppSpacing.gapHeightS,
 
                     // Tags (directly below badges)
                     tagsAsync.when(
@@ -163,19 +166,24 @@ class NovelDetailScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 16),
+              AppSpacing.gapWidthL,
 
               // Cover (right)
               Column(
                 children: [
-                  _CoverImage(cover: novel.cover),
-                  const SizedBox(height: 8),
+                  CoverImage(
+                    cover: novel.cover,
+                    width: 120,
+                    height: 160,
+                    borderRadius: 8,
+                  ),
+                  AppSpacing.gapHeightS,
                   _ViewOnSfacgButton(novelId: novel.id),
                 ],
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          AppSpacing.gapHeightL,
 
           // Stats grid (2 cols)
           rankingsAsync.when(
@@ -183,71 +191,11 @@ class NovelDetailScreen extends ConsumerWidget {
             error: (_, __) => _StatsGrid(novel: novel, rankings: const {}),
             data: (rankings) => _StatsGrid(novel: novel, rankings: rankings),
           ),
-          const SizedBox(height: 16),
+          AppSpacing.gapHeightL,
 
           // Dates
           _DatesSection(novel: novel),
         ],
-      ),
-    );
-  }
-}
-
-class _CoverImage extends StatelessWidget {
-  final String? cover;
-
-  const _CoverImage({required this.cover});
-
-  @override
-  Widget build(BuildContext context) {
-    if (cover == null || cover!.isEmpty) {
-      return Container(
-        width: 120,
-        height: 160,
-        decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: const Center(
-          child: Icon(Icons.book, size: 48, color: AppColors.primary),
-        ),
-      );
-    }
-
-    final url = cover!.startsWith('http')
-        ? cover!
-        : 'https://rs.sfacg.com/web/novel/images/NovelCover/Big/$cover';
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        constraints: const BoxConstraints(
-          maxWidth: 120,
-          maxHeight: 200,
-        ),
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: CachedNetworkImage(
-          imageUrl: url,
-          fit: BoxFit.contain,
-          placeholder: (context, url) => Container(
-            color: AppColors.primary.withValues(alpha: 0.1),
-            child: const Center(child: CircularProgressIndicator()),
-          ),
-          errorWidget: (context, url, error) => Container(
-            color: AppColors.primary.withValues(alpha: 0.1),
-            child: const Center(
-              child: Icon(Icons.broken_image, size: 48),
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -325,84 +273,6 @@ class _Breadcrumb extends StatelessWidget {
   }
 }
 
-class _Badge extends StatelessWidget {
-  final String label;
-  final Color color;
-
-  const _Badge({required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  final int status;
-
-  const _StatusBadge({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = switch (status) {
-      2 => AppColors.completed,   // 已完结
-      3 => AppColors.ongoing,     // 连载中
-      4 => AppColors.stopped,     // 断更
-      5 => AppColors.stopped,     // 断更A
-      6 => AppColors.completed,   // 完结A
-      _ => Colors.grey,
-    };
-
-    return _Badge(
-      label: statusMapping.getZh(status),
-      color: color,
-    );
-  }
-}
-
-class _GenreBadge extends StatelessWidget {
-  final int genre;
-
-  const _GenreBadge({required this.genre});
-
-  @override
-  Widget build(BuildContext context) {
-    return _Badge(
-      label: genreMapping.getZh(genre),
-      color: AppColors.primary,
-    );
-  }
-}
-
-class _PtypeBadge extends StatelessWidget {
-  final int ptype;
-
-  const _PtypeBadge({required this.ptype});
-
-  @override
-  Widget build(BuildContext context) {
-    return _Badge(
-      label: ptypeMapping.getZh(ptype),
-      color: AppColors.secondary,
-    );
-  }
-}
-
 class _TagChip extends StatelessWidget {
   final String name;
 
@@ -443,126 +313,50 @@ class _StatsGrid extends StatelessWidget {
       mainAxisSpacing: 8,
       crossAxisSpacing: 8,
       children: [
-        _StatItem(
+        StatItem(
           icon: Icons.text_fields,
           label: '字数',
-          value: novel.wordNum,
+          value: formatNumber(novel.wordNum ?? 0),
           rank: rankings['word_num'],
           color: AppColors.primary,
         ),
-        _StatItem(
+        StatItem(
           icon: Icons.touch_app,
           label: '点击',
-          value: novel.clickNum,
+          value: formatNumber(novel.clickNum ?? 0),
           rank: rankings['click_num'],
           color: AppColors.accent,
         ),
-        _StatItem(
+        StatItem(
           icon: Icons.favorite,
           label: '收藏',
-          value: novel.likeNum,
+          value: formatNumber(novel.likeNum ?? 0),
           rank: rankings['like_num'],
           color: Colors.pink,
         ),
-        _StatItem(
+        StatItem(
           icon: Icons.thumb_up,
           label: '点赞',
-          value: novel.praiseNum,
+          value: formatNumber(novel.praiseNum ?? 0),
           rank: rankings['praise_num'],
           color: AppColors.primary,
         ),
-        _StatItem(
+        StatItem(
           icon: Icons.rate_review,
           label: '长评',
-          value: novel.reviewNum,
+          value: formatNumber(novel.reviewNum ?? 0),
           rank: rankings['review_num'],
           color: Colors.teal,
         ),
-        _StatItem(
+        StatItem(
           icon: Icons.comment,
           label: '短评',
-          value: novel.commentNum,
+          value: formatNumber(novel.commentNum ?? 0),
           rank: rankings['comment_num'],
           color: Colors.brown,
         ),
       ],
     );
-  }
-}
-
-class _StatItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final int? value;
-  final int? rank;
-  final Color color;
-
-  const _StatItem({
-    required this.icon,
-    required this.label,
-    required this.value,
-    this.rank,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Icon(icon, size: 16, color: color),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey,
-                    fontSize: 11,
-                  ),
-                ),
-                Text(
-                  _formatNumber(value ?? 0),
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (rank != null)
-            Text(
-              '#$rank',
-              style: TextStyle(
-                color: Colors.grey[400],
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  String _formatNumber(int num) {
-    if (num >= 100000000) return '${(num / 100000000).toStringAsFixed(1)}亿';
-    if (num >= 10000) return '${(num / 10000).toStringAsFixed(1)}万';
-    return num.toString();
   }
 }
 

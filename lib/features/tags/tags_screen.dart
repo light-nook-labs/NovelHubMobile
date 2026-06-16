@@ -6,7 +6,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../data/repositories/providers.dart';
 import '../../data/models/database.dart';
 import '../../shared/widgets/novel_rank_list.dart';
-import '../../app/theme.dart';
+import '../../shared/widgets/common_widgets.dart';
+import '../../shared/utils/spacing.dart';
 
 part 'tags_screen.g.dart';
 
@@ -81,20 +82,23 @@ class _TagsScreenState extends ConsumerState<TagsScreen> {
         ),
       ),
       body: _tags.isEmpty && _isLoadingMore
-          ? const Center(child: CircularProgressIndicator())
+          ? const LoadingState(message: '加载标签列表...')
           : _tags.isEmpty
-              ? const Center(child: Text('暂无数据'))
+              ? const EmptyState(
+                  icon: Icons.tag,
+                  message: '暂无标签数据',
+                )
               : Stack(
                   children: [
                     GridView.builder(
                       controller: _scrollController,
-                      padding: const EdgeInsets.all(12),
+                      padding: AppSpacing.paddingM,
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,
                         childAspectRatio: 2.5,
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 8,
+                        crossAxisSpacing: AppSpacing.gridSpacingSmall,
+                        mainAxisSpacing: AppSpacing.gridSpacingSmall,
                       ),
                       itemCount: _tags.length + (_hasMore ? 1 : 0),
                       itemBuilder: (context, index) {
@@ -122,21 +126,10 @@ class _TagsScreenState extends ConsumerState<TagsScreen> {
                         );
                       },
                     ),
-                    if (_showBackToTop)
-                      Positioned(
-                        right: 16,
-                        bottom: 16,
-                        child: FloatingActionButton.small(
-                          onPressed: () {
-                            _scrollController.animateTo(
-                              0,
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeOut,
-                            );
-                          },
-                          child: const Icon(Icons.arrow_upward),
-                        ),
-                      ),
+                    BackToTopButton(
+                      scrollController: _scrollController,
+                      show: _showBackToTop,
+                    ),
                   ],
                 ),
     );

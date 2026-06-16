@@ -7,6 +7,8 @@ import '../../data/repositories/providers.dart';
 import '../../data/models/database.dart';
 import '../../shared/widgets/novel_rank_list.dart';
 import '../../app/theme.dart';
+import '../../shared/widgets/common_widgets.dart';
+import '../../shared/utils/spacing.dart';
 
 part 'authors_screen.g.dart';
 
@@ -83,9 +85,12 @@ class _AuthorsScreenState extends ConsumerState<AuthorsScreen> {
         ),
       ),
       body: _authors.isEmpty && _isLoadingMore
-          ? const Center(child: CircularProgressIndicator())
+          ? const LoadingState(message: '加载作者列表...')
           : _authors.isEmpty
-              ? const Center(child: Text('暂无数据'))
+              ? const EmptyState(
+                  icon: Icons.person,
+                  message: '暂无作者数据',
+                )
               : Stack(
                   children: [
                     ListView.separated(
@@ -103,8 +108,7 @@ class _AuthorsScreenState extends ConsumerState<AuthorsScreen> {
                         return InkWell(
                           onTap: () => context.push('/author/${author.id}'),
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 10),
+                            padding: AppSpacing.listItemPadding,
                             child: Row(
                               children: [
                                 Expanded(
@@ -114,19 +118,15 @@ class _AuthorsScreenState extends ConsumerState<AuthorsScreen> {
                                     children: [
                                       Text(
                                         author.name,
-                                        style: const TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w500,
-                                        ),
+                                        style: AppTextStyles.labelLarge,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       if (author.topNovelTitle != null) ...[
-                                        const SizedBox(height: 2),
+                                        AppSpacing.gapHeightXS,
                                         Text(
                                           author.topNovelTitle!,
-                                          style: TextStyle(
-                                            fontSize: 12,
+                                          style: AppTextStyles.bodySmall.copyWith(
                                             color: Colors.grey[500],
                                           ),
                                           maxLines: 1,
@@ -136,22 +136,19 @@ class _AuthorsScreenState extends ConsumerState<AuthorsScreen> {
                                     ],
                                   ),
                                 ),
-                                const SizedBox(width: 12),
+                                AppSpacing.gapWidthM,
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Text(
                                       '${author.bannerCount}/${author.novelCount}',
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
+                                      style: AppTextStyles.labelLarge.copyWith(
                                         color: AppColors.primary,
                                       ),
                                     ),
                                     Text(
                                       '背投/作品',
-                                      style: TextStyle(
-                                        fontSize: 10,
+                                      style: AppTextStyles.labelSmall.copyWith(
                                         color: Colors.grey[500],
                                       ),
                                     ),
@@ -164,21 +161,10 @@ class _AuthorsScreenState extends ConsumerState<AuthorsScreen> {
                       },
                     ),
                     // Back to top button
-                    if (_showBackToTop)
-                      Positioned(
-                        right: 16,
-                        bottom: 16,
-                        child: FloatingActionButton.small(
-                          onPressed: () {
-                            _scrollController.animateTo(
-                              0,
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeOut,
-                            );
-                          },
-                          child: const Icon(Icons.arrow_upward),
-                        ),
-                      ),
+                    BackToTopButton(
+                      scrollController: _scrollController,
+                      show: _showBackToTop,
+                    ),
                   ],
                 ),
     );

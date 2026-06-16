@@ -8,6 +8,8 @@ import '../../data/repositories/providers.dart';
 import '../../data/services/sync_service.dart';
 import '../../data/models/database.dart';
 import '../../app/theme.dart';
+import '../../shared/widgets/common_widgets.dart';
+import '../../shared/utils/spacing.dart';
 
 part 'home_screen.g.dart';
 
@@ -22,30 +24,7 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: GestureDetector(
-          onTap: () => context.push('/search'),
-          child: Container(
-            height: 36,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.search, size: 18, color: Colors.grey[600]),
-                const SizedBox(width: 8),
-                Text(
-                  '搜索小说...',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+        title: const SearchBarWidget(),
         actions: [
           IconButton(
             icon: const Icon(Icons.sync),
@@ -60,7 +39,7 @@ class HomeScreen extends ConsumerWidget {
           ref.invalidate(bannerNovelsProvider);
         },
         child: ListView(
-          padding: const EdgeInsets.all(12),
+          padding: AppSpacing.paddingM,
           children: [
             // Hero Banner Carousel (first 5 banner novels)
             bannerNovels.when(
@@ -73,7 +52,7 @@ class HomeScreen extends ConsumerWidget {
                 return _HeroBannerCarousel(novels: displayNovels);
               },
             ),
-            const SizedBox(height: 12),
+            AppSpacing.gapHeightM,
 
             // Quick Navigation with counts
             stats.when(
@@ -81,7 +60,7 @@ class HomeScreen extends ConsumerWidget {
               error: (_, __) => _QuickNavCard(),
               data: (data) => _QuickNavCard(stats: data),
             ),
-            const SizedBox(height: 12),
+            AppSpacing.gapHeightM,
 
             // Sync Status
             _SyncStatusCard(syncInfo: syncInfo),
