@@ -431,7 +431,7 @@ class AppDatabase extends _$AppDatabase {
     return query.get();
   }
 
-  Future<List<AuthorWithStats>> getAuthorsWithStats({int limit = 1000}) async {
+  Future<List<AuthorWithStats>> getAuthorsWithStats({int limit = 1000, int offset = 0}) async {
     // Get total clicks per author
     final authorClicks = <int, int>{};
     final authorClicksQuery = selectOnly(novels)
@@ -455,8 +455,11 @@ class AppDatabase extends _$AppDatabase {
       return clicksB.compareTo(clicksA); // Descending
     });
 
-    // Limit after sorting
-    final limitedAuthors = authorList.take(limit).toList();
+    // Apply offset and limit after sorting
+    final end = offset + limit;
+    final limitedAuthors = authorList.length > offset 
+        ? authorList.sublist(offset, end > authorList.length ? authorList.length : end)
+        : <Author>[];
 
     // Get novel counts per author
     final novelCounts = <int, int>{};
