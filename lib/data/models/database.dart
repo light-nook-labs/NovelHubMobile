@@ -53,6 +53,18 @@ class NovelTags extends Table {
   Set<Column> get primaryKey => {novelId, tagId};
 }
 
+class BannerNovel {
+  final int id;
+  final String title;
+  final String author;
+
+  BannerNovel({
+    required this.id,
+    required this.title,
+    required this.author,
+  });
+}
+
 @DriftDatabase(tables: [Authors, Tags, Contests, Novels, NovelTags])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -344,23 +356,43 @@ class AppDatabase extends _$AppDatabase {
 
   // ===== Banner novels =====
 
-  Future<List<Novel>> getBannerNovels({int limit = 12}) async {
-    final query = select(novels)
-      ..where((t) => t.hasBanner.equals(true))
-      ..orderBy([(t) => OrderingTerm.desc(t.clickNum)])
+  Future<List<BannerNovel>> getBannerNovels({int limit = 12}) async {
+    final query = select(novels).join([
+      innerJoin(authors, authors.id.equalsExp(novels.authorId)),
+    ])
+      ..where(novels.hasBanner.equals(true))
+      ..orderBy([OrderingTerm.desc(novels.clickNum)])
       ..limit(limit);
-    return query.get();
+
+    final results = await query.get();
+    return results.map((row) {
+      return BannerNovel(
+        id: row.readTable(novels).id,
+        title: row.readTable(novels).title,
+        author: row.readTable(authors).name,
+      );
+    }).toList();
   }
 
-  Future<List<Novel>> getBannerNovelsPaginated({
+  Future<List<BannerNovel>> getBannerNovelsPaginated({
     required int offset,
     required int limit,
   }) async {
-    final query = select(novels)
-      ..where((t) => t.hasBanner.equals(true))
-      ..orderBy([(t) => OrderingTerm.desc(t.clickNum)])
+    final query = select(novels).join([
+      innerJoin(authors, authors.id.equalsExp(novels.authorId)),
+    ])
+      ..where(novels.hasBanner.equals(true))
+      ..orderBy([OrderingTerm.desc(novels.clickNum)])
       ..limit(limit, offset: offset);
-    return query.get();
+
+    final results = await query.get();
+    return results.map((row) {
+      return BannerNovel(
+        id: row.readTable(novels).id,
+        title: row.readTable(novels).title,
+        author: row.readTable(authors).name,
+      );
+    }).toList();
   }
 
   Future<int> getBannerNovelCount() async {

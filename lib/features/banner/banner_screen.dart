@@ -17,6 +17,28 @@ String _getBannerUrl(int nid) {
   return _bannerUrlPattern.replaceAll('{nid}', nid.toString());
 }
 
+void _showLightbox(BuildContext context, String imageUrl) {
+  showDialog(
+    context: context,
+    builder: (context) => Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(16),
+      child: GestureDetector(
+        onTap: () => Navigator.pop(context),
+        child: InteractiveViewer(
+          child: CachedNetworkImage(
+            imageUrl: imageUrl,
+            fit: BoxFit.contain,
+            errorWidget: (_, __, ___) => const Center(
+              child: Icon(Icons.broken_image, size: 64, color: Colors.white),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 class BannerScreen extends ConsumerStatefulWidget {
   const BannerScreen({super.key});
 
@@ -29,7 +51,7 @@ class _BannerScreenState extends ConsumerState<BannerScreen> {
   int _currentPage = 0;
   static const int _pageSize = 20;
   bool _hasMore = true;
-  List<Novel> _novels = [];
+  List<BannerNovel> _novels = [];
   bool _isLoadingMore = false;
 
   @override
@@ -122,11 +144,7 @@ class _BannerScreenState extends ConsumerState<BannerScreen> {
                           ),
                         );
                       }
-                      final novel = _novels[index];
-                      return _BannerCard(
-                        novel: novel,
-                        onTap: () => context.push('/novel/${novel.id}'),
-                      );
+                      return _BannerCard(novel: _novels[index]);
                     },
                   ),
                 ),
@@ -141,29 +159,30 @@ Future<int> bannerCount(BannerCountRef ref) async {
 }
 
 class _BannerCard extends StatelessWidget {
-  final Novel novel;
-  final VoidCallback onTap;
+  final BannerNovel novel;
 
-  const _BannerCard({required this.novel, required this.onTap});
+  const _BannerCard({required this.novel});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          color: AppColors.primary.withValues(alpha: 0.1),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: AspectRatio(
-          aspectRatio: 3 / 1,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              CachedNetworkImage(
-                imageUrl: _getBannerUrl(novel.id),
+    final bannerUrl = _getBannerUrl(novel.id);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: AppColors.primary.withValues(alpha: 0.1),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: AspectRatio(
+        aspectRatio: 3 / 1,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            GestureDetector(
+              onTap: () => _showLightbox(context, bannerUrl),
+              child: CachedNetworkImage(
+                imageUrl: bannerUrl,
                 fit: BoxFit.cover,
                 errorWidget: (_, __, ___) => Container(
                   decoration: const BoxDecoration(
@@ -178,23 +197,26 @@ class _BannerCard extends StatelessWidget {
                   ),
                 ),
               ),
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
-                  ),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
                 ),
               ),
-              Positioned(
-                bottom: 12,
-                left: 12,
-                right: 12,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
+            ),
+            Positioned(
+              bottom: 12,
+              left: 12,
+              right: 12,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  GestureDetector(
+                    onTap: () => context.push('/novel/${novel.id}'),
+                    child: Text(
                       novel.title,
                       style: const TextStyle(
                         color: Colors.white,
@@ -204,19 +226,19 @@ class _BannerCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      novel.authorId?.toString() ?? '未知',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        fontSize: 12,
-                      ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    novel.author,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: 12,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

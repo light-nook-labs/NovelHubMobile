@@ -234,28 +234,29 @@ class HomeScreen extends ConsumerWidget {
 }
 
 class _HeroBanner extends StatelessWidget {
-  final Novel novel;
+  final BannerNovel novel;
 
   const _HeroBanner({required this.novel});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 150,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: AppColors.primary.withValues(alpha: 0.1),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Background image
-          if (novel.cover != null && novel.cover!.isNotEmpty)
+    final bannerUrl =
+        'https://rs.sfacg.com/web/novel/images/images/beitouNew/${novel.id}.jpg';
+
+    return GestureDetector(
+      onTap: () => context.push('/novel/${novel.id}'),
+      child: Container(
+        height: 150,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: AppColors.primary.withValues(alpha: 0.1),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
             CachedNetworkImage(
-              imageUrl: novel.cover!.startsWith('http')
-                  ? novel.cover!
-                  : 'https://rs.sfacg.com/web/novel/images/NovelCover/Big/${novel.cover}',
+              imageUrl: bannerUrl,
               fit: BoxFit.cover,
               errorWidget: (_, __, ___) => Container(
                 decoration: const BoxDecoration(
@@ -267,55 +268,52 @@ class _HeroBanner extends StatelessWidget {
                 ),
               ),
             ),
-          // Gradient overlay
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
+                ),
               ),
             ),
-          ),
-          // Text
-          Positioned(
-            bottom: 12,
-            left: 12,
-            right: 12,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(4),
+            Positioned(
+              bottom: 12,
+              left: 12,
+              right: 12,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    novel.title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  child: const Text('推荐',
-                      style: TextStyle(color: Colors.white, fontSize: 10)),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  novel.title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                  const SizedBox(height: 4),
+                  Text(
+                    novel.author,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: 12,
+                    ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
 class _BannerShowcase extends StatelessWidget {
-  final List<Novel> novels;
+  final List<BannerNovel> novels;
 
   const _BannerShowcase({required this.novels});
 
@@ -328,6 +326,9 @@ class _BannerShowcase extends StatelessWidget {
         itemCount: novels.length,
         itemBuilder: (context, index) {
           final novel = novels[index];
+          final bannerUrl =
+              'https://rs.sfacg.com/web/novel/images/images/beitouNew/${novel.id}.jpg';
+
           return GestureDetector(
             onTap: () => context.push('/novel/${novel.id}'),
             child: Container(
@@ -340,16 +341,13 @@ class _BannerShowcase extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  if (novel.cover != null && novel.cover!.isNotEmpty)
-                    CachedNetworkImage(
-                      imageUrl: novel.cover!.startsWith('http')
-                          ? novel.cover!
-                          : 'https://rs.sfacg.com/web/novel/images/NovelCover/Big/${novel.cover}',
-                      fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => const Center(
-                        child: Icon(Icons.book, size: 48, color: AppColors.primary),
-                      ),
+                  CachedNetworkImage(
+                    imageUrl: bannerUrl,
+                    fit: BoxFit.cover,
+                    errorWidget: (_, __, ___) => const Center(
+                      child: Icon(Icons.book, size: 48, color: AppColors.primary),
                     ),
+                  ),
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -366,17 +364,6 @@ class _BannerShowcase extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text('推荐',
-                              style: TextStyle(color: Colors.white, fontSize: 9)),
-                        ),
-                        const SizedBox(height: 4),
                         Text(
                           novel.title,
                           style: const TextStyle(
@@ -386,6 +373,14 @@ class _BannerShowcase extends StatelessWidget {
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          novel.author,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.8),
+                            fontSize: 10,
+                          ),
                         ),
                       ],
                     ),
@@ -580,7 +575,7 @@ class _SyncProgressDialog extends StatelessWidget {
 }
 
 @riverpod
-Future<List<Novel>> bannerNovels(BannerNovelsRef ref) async {
+Future<List<BannerNovel>> bannerNovels(BannerNovelsRef ref) async {
   final db = ref.watch(databaseProvider);
   return db.getBannerNovels();
 }
