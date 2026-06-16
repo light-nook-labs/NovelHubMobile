@@ -339,6 +339,8 @@ class AppDatabase extends _$AppDatabase {
     int? status,
     int? ptype,
     int? year,
+    int? minWordNum,
+    int? maxWordNum,
     String sortBy = 'click_num',
     bool descending = true,
     int limit = 50,
@@ -363,6 +365,12 @@ class AppDatabase extends _$AppDatabase {
             t.lastUpdate.isBiggerOrEqualValue(startDate) &
             t.lastUpdate.isSmallerThanValue(endDate),
       );
+    }
+    if (minWordNum != null) {
+      query.where((t) => t.wordNum.isBiggerOrEqualValue(minWordNum));
+    }
+    if (maxWordNum != null) {
+      query.where((t) => t.wordNum.isSmallerOrEqualValue(maxWordNum));
     }
 
     switch (sortBy) {

@@ -34,6 +34,8 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
   int? _selectedGenre;
   int? _selectedStatus;
   int? _selectedYear;
+  int? _selectedMinWordNum;
+  int? _selectedMaxWordNum;
   String _sortBy = 'click_num';
   bool _descending = true;
 
@@ -90,6 +92,8 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
         status: _selectedStatus,
         ptype: _selectedPtype,
         year: _selectedYear,
+        minWordNum: _selectedMinWordNum,
+        maxWordNum: _selectedMaxWordNum,
         sortBy: _sortBy,
         descending: _descending,
       ),
@@ -98,7 +102,9 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
     final hasFilters =
         _selectedGenre != null ||
         _selectedStatus != null ||
-        _selectedYear != null;
+        _selectedYear != null ||
+        _selectedMinWordNum != null ||
+        _selectedMaxWordNum != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -154,17 +160,22 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
         selectedGenre: _selectedGenre,
         selectedStatus: _selectedStatus,
         selectedYear: _selectedYear,
+        selectedMinWordNum: _selectedMinWordNum,
+        selectedMaxWordNum: _selectedMaxWordNum,
         sortBy: _sortBy,
         descending: _descending,
-        onApply: (genre, status, year, sortBy, descending) {
-          setState(() {
-            _selectedGenre = genre;
-            _selectedStatus = status;
-            _selectedYear = year;
-            _sortBy = sortBy;
-            _descending = descending;
-          });
-        },
+        onApply:
+            (genre, status, year, minWordNum, maxWordNum, sortBy, descending) {
+              setState(() {
+                _selectedGenre = genre;
+                _selectedStatus = status;
+                _selectedYear = year;
+                _selectedMinWordNum = minWordNum;
+                _selectedMaxWordNum = maxWordNum;
+                _sortBy = sortBy;
+                _descending = descending;
+              });
+            },
       ),
     );
   }
@@ -194,14 +205,18 @@ class _FilterBottomSheet extends StatefulWidget {
   final int? selectedGenre;
   final int? selectedStatus;
   final int? selectedYear;
+  final int? selectedMinWordNum;
+  final int? selectedMaxWordNum;
   final String sortBy;
   final bool descending;
-  final Function(int?, int?, int?, String, bool) onApply;
+  final Function(int?, int?, int?, int?, int?, String, bool) onApply;
 
   const _FilterBottomSheet({
     required this.selectedGenre,
     required this.selectedStatus,
     required this.selectedYear,
+    required this.selectedMinWordNum,
+    required this.selectedMaxWordNum,
     required this.sortBy,
     required this.descending,
     required this.onApply,
@@ -215,10 +230,23 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
   late int? _genre;
   late int? _status;
   late int? _year;
+  late int? _minWordNum;
+  late int? _maxWordNum;
   late String _sortBy;
   late bool _descending;
 
   static const _years = [2026, 2025, 2024, 2023, 2022, 2021, 2020];
+  static const _wordNumBreakpoints = [
+    {'label': '5万', 'value': 50000},
+    {'label': '10万', 'value': 100000},
+    {'label': '20万', 'value': 200000},
+    {'label': '50万', 'value': 500000},
+    {'label': '100万', 'value': 1000000},
+    {'label': '200万', 'value': 2000000},
+    {'label': '300万', 'value': 3000000},
+    {'label': '400万', 'value': 4000000},
+    {'label': '500万', 'value': 5000000},
+  ];
 
   @override
   void initState() {
@@ -226,6 +254,8 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
     _genre = widget.selectedGenre;
     _status = widget.selectedStatus;
     _year = widget.selectedYear;
+    _minWordNum = widget.selectedMinWordNum;
+    _maxWordNum = widget.selectedMaxWordNum;
     _sortBy = widget.sortBy;
     _descending = widget.descending;
   }
@@ -266,6 +296,8 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                         _genre = null;
                         _status = null;
                         _year = null;
+                        _minWordNum = null;
+                        _maxWordNum = null;
                         _sortBy = 'click_num';
                         _descending = true;
                       });
@@ -310,6 +342,8 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                     onChanged: (v) => setState(() => _year = v),
                   ),
                   const SizedBox(height: 24),
+                  _buildWordNumSection(),
+                  const SizedBox(height: 24),
                   _buildSortSection(),
                   const SizedBox(height: 24),
                 ],
@@ -326,6 +360,8 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                       _genre,
                       _status,
                       _year,
+                      _minWordNum,
+                      _maxWordNum,
                       _sortBy,
                       _descending,
                     );
@@ -429,6 +465,76 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
     );
   }
 
+  Widget _buildWordNumSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '字数范围',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        // Min word num
+        Row(
+          children: [
+            const Text('最少：', style: TextStyle(fontSize: 13)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  _buildChip(
+                    label: '不限',
+                    isSelected: _minWordNum == null,
+                    onTap: () => setState(() => _minWordNum = null),
+                  ),
+                  ..._wordNumBreakpoints.map(
+                    (bp) => _buildChip(
+                      label: bp['label'] as String,
+                      isSelected: _minWordNum == bp['value'],
+                      onTap: () =>
+                          setState(() => _minWordNum = bp['value'] as int),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Max word num
+        Row(
+          children: [
+            const Text('最多：', style: TextStyle(fontSize: 13)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  _buildChip(
+                    label: '不限',
+                    isSelected: _maxWordNum == null,
+                    onTap: () => setState(() => _maxWordNum = null),
+                  ),
+                  ..._wordNumBreakpoints.map(
+                    (bp) => _buildChip(
+                      label: bp['label'] as String,
+                      isSelected: _maxWordNum == bp['value'],
+                      onTap: () =>
+                          setState(() => _maxWordNum = bp['value'] as int),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _buildChip({
     required String label,
     required bool isSelected,
@@ -452,6 +558,8 @@ Future<List<Novel>> filteredNovels(
   int? status,
   int? ptype,
   int? year,
+  int? minWordNum,
+  int? maxWordNum,
   String sortBy = 'click_num',
   bool descending = true,
 }) async {
@@ -461,6 +569,8 @@ Future<List<Novel>> filteredNovels(
     status: status,
     ptype: ptype,
     year: year,
+    minWordNum: minWordNum,
+    maxWordNum: maxWordNum,
     sortBy: sortBy,
     descending: descending,
     limit: 100,
