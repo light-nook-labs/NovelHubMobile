@@ -12,7 +12,16 @@ import '../../app/theme.dart';
 part 'novels_screen.g.dart';
 
 class NovelsScreen extends ConsumerStatefulWidget {
-  const NovelsScreen({super.key});
+  final int? initialGenre;
+  final int? initialStatus;
+  final int? initialPtype;
+
+  const NovelsScreen({
+    super.key,
+    this.initialGenre,
+    this.initialStatus,
+    this.initialPtype,
+  });
 
   @override
   ConsumerState<NovelsScreen> createState() => _NovelsScreenState();
@@ -39,7 +48,23 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _ptypeTabs.length, vsync: this);
+    _selectedGenre = widget.initialGenre;
+    _selectedStatus = widget.initialStatus;
+    
+    // Set initial ptype tab
+    int initialTabIndex = 0;
+    if (widget.initialPtype != null) {
+      final index = _ptypeTabs.indexWhere(
+        (tab) => tab['value'] == widget.initialPtype,
+      );
+      if (index >= 0) initialTabIndex = index;
+    }
+    
+    _tabController = TabController(
+      length: _ptypeTabs.length,
+      vsync: this,
+      initialIndex: initialTabIndex,
+    );
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         setState(() {});

@@ -9,6 +9,7 @@ import '../features/authors/authors_screen.dart';
 import '../features/tags/tags_screen.dart';
 import '../features/contests/contests_screen.dart';
 import '../features/banner/banner_screen.dart';
+import '../features/browse/enum_list_screen.dart';
 import '../features/search/search_screen.dart';
 import '../features/settings/settings_screen.dart';
 
@@ -30,8 +31,18 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/novels',
-          pageBuilder: (context, state) =>
-              const NoTransitionPage(child: NovelsScreen()),
+          pageBuilder: (context, state) {
+            final genre = state.uri.queryParameters['genre'];
+            final status = state.uri.queryParameters['status'];
+            final ptype = state.uri.queryParameters['ptype'];
+            return NoTransitionPage(
+              child: NovelsScreen(
+                initialGenre: genre != null ? int.tryParse(genre) : null,
+                initialStatus: status != null ? int.tryParse(status) : null,
+                initialPtype: ptype != null ? int.tryParse(ptype) : null,
+              ),
+            );
+          },
         ),
         GoRoute(
           path: '/banners',
@@ -94,6 +105,21 @@ final router = GoRouter(
       path: '/contests',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const ContestsScreen(),
+    ),
+    GoRoute(
+      path: '/genres',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const GenreListScreen(),
+    ),
+    GoRoute(
+      path: '/statuses',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const StatusListScreen(),
+    ),
+    GoRoute(
+      path: '/ptypes',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const PtypeListScreen(),
     ),
     GoRoute(
       path: '/contest/:id',
