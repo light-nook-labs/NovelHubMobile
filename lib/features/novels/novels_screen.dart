@@ -31,7 +31,7 @@ class NovelsScreen extends ConsumerStatefulWidget {
 }
 
 class _NovelsScreenState extends ConsumerState<NovelsScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   int? _selectedGenre;
   int? _selectedStatus;
   int? _selectedYear;
