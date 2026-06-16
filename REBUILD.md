@@ -24,27 +24,27 @@ flutter build apk --release
 
 ```bash
 # Delete old release
-gh release delete v0.1.0-beta.6 --yes 2>/dev/null || true
+gh release delete v0.1.0-beta.7 --yes 2>/dev/null || true
 
 # Delete old tag
-git tag -d v0.1.0-beta.6 2>/dev/null || true
-git push origin :refs/tags/v0.1.0-beta.6 2>/dev/null || true
+git tag -d v0.1.0-beta.7 2>/dev/null || true
+git push origin :refs/tags/v0.1.0-beta.7 2>/dev/null || true
 
 # Create new tag
-git tag v0.1.0-beta.7
-git push origin v0.1.0-beta.7
+git tag v0.1.0-beta.8
+git push origin v0.1.0-beta.8
 
 # Create prerelease
-gh release create v0.1.0-beta.7 \
+gh release create v0.1.0-beta.8 \
   --prerelease \
-  --title "v0.1.0-beta.7 - Merged Database" \
-  --notes "## Novel Hub Mobile v0.1.0-beta.7
+  --title "v0.1.0-beta.8 - Force Fresh Data" \
+  --notes "## Novel Hub Mobile v0.1.0-beta.8
 
 ### Changes
 
-- Merged all chunks into single database on startup
-- All 246k+ novels now available immediately
-- No need to download data on first launch
+- Force recreate database from chunks on every startup
+- Ensures fresh data from bundled chunks
+- Fixes issue where stale database was being used
 
 ### Features
 
