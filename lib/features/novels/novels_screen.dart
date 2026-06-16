@@ -237,15 +237,15 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
 
   static const _years = [2026, 2025, 2024, 2023, 2022, 2021, 2020];
   static const _wordNumBreakpoints = [
-    {'label': '5万', 'value': 50000},
-    {'label': '10万', 'value': 100000},
-    {'label': '20万', 'value': 200000},
-    {'label': '50万', 'value': 500000},
-    {'label': '100万', 'value': 1000000},
-    {'label': '200万', 'value': 2000000},
-    {'label': '300万', 'value': 3000000},
-    {'label': '400万', 'value': 4000000},
-    {'label': '500万', 'value': 5000000},
+    50000,
+    100000,
+    200000,
+    500000,
+    1000000,
+    2000000,
+    3000000,
+    4000000,
+    5000000,
   ];
 
   @override
@@ -466,6 +466,20 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
   }
 
   Widget _buildWordNumSection() {
+    // Build range options from breakpoints
+    final ranges = <Map<String, dynamic>>[
+      {'label': '不限', 'min': null, 'max': null},
+      {'label': '<5万', 'min': null, 'max': 50000},
+    ];
+    for (int i = 0; i < _wordNumBreakpoints.length - 1; i++) {
+      final min = _wordNumBreakpoints[i];
+      final max = _wordNumBreakpoints[i + 1];
+      final minLabel = _formatWordNum(min);
+      final maxLabel = _formatWordNum(max);
+      ranges.add({'label': '$minLabel-$maxLabel', 'min': min, 'max': max});
+    }
+    ranges.add({'label': '>500万', 'min': 5000000, 'max': null});
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -474,65 +488,30 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
-        // Min word num
-        Row(
-          children: [
-            const Text('最少：', style: TextStyle(fontSize: 13)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  _buildChip(
-                    label: '不限',
-                    isSelected: _minWordNum == null,
-                    onTap: () => setState(() => _minWordNum = null),
-                  ),
-                  ..._wordNumBreakpoints.map(
-                    (bp) => _buildChip(
-                      label: bp['label'] as String,
-                      isSelected: _minWordNum == bp['value'],
-                      onTap: () =>
-                          setState(() => _minWordNum = bp['value'] as int),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        // Max word num
-        Row(
-          children: [
-            const Text('最多：', style: TextStyle(fontSize: 13)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  _buildChip(
-                    label: '不限',
-                    isSelected: _maxWordNum == null,
-                    onTap: () => setState(() => _maxWordNum = null),
-                  ),
-                  ..._wordNumBreakpoints.map(
-                    (bp) => _buildChip(
-                      label: bp['label'] as String,
-                      isSelected: _maxWordNum == bp['value'],
-                      onTap: () =>
-                          setState(() => _maxWordNum = bp['value'] as int),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: ranges.map((range) {
+            final min = range['min'] as int?;
+            final max = range['max'] as int?;
+            final isSelected = _minWordNum == min && _maxWordNum == max;
+            return _buildChip(
+              label: range['label'] as String,
+              isSelected: isSelected,
+              onTap: () => setState(() {
+                _minWordNum = min;
+                _maxWordNum = max;
+              }),
+            );
+          }).toList(),
         ),
       ],
     );
+  }
+
+  String _formatWordNum(int num) {
+    if (num >= 10000) return '${(num / 10000).toInt()}万';
+    return num.toString();
   }
 
   Widget _buildChip({
