@@ -432,17 +432,28 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<List<AuthorWithStats>> getAuthorsWithStats({int limit = 1000}) async {
-    // Single query to get all authors with novel stats
-    final query = select(authors).join([
-      leftJoin(novels, novels.authorId.equalsExp(authors.id)),
-    ])
-      ..groupBy([authors.id, authors.name])
-      ..orderBy([OrderingTerm.asc(authors.name)])
-      ..limit(limit);
+    // Get all authors
+    final authorList = await (select(authors)
+          ..orderBy([(t) => OrderingTerm.asc(t.name)])
+          ..limit(limit))
+        .get();
 
-    final results = await query.get();
+    // Get novel counts per author
+    final novelCounts = <int, int>{};
+    final novelCountQuery = selectOnly(novels)
+      ..where(novels.authorId.isNotNull())
+      ..addColumns([novels.authorId, countAll()])
+      ..groupBy([novels.authorId]);
+    final novelCountResults = await novelCountQuery.get();
+    for (final row in novelCountResults) {
+      final authorId = row.read(novels.authorId);
+      final count = row.read(countAll()) ?? 0;
+      if (authorId != null) {
+        novelCounts[authorId] = count;
+      }
+    }
 
-    // Get banner counts separately (more efficient than complex join)
+    // Get banner counts per author
     final bannerCounts = <int, int>{};
     final bannerQuery = selectOnly(novels)
       ..where(novels.hasBanner.equals(true) & novels.authorId.isNotNull())
@@ -459,33 +470,23 @@ class AppDatabase extends _$AppDatabase {
 
     // Get top novels (by click_num per author)
     final topNovels = <int, String>{};
-    final topNovelQuery = select(novels).join([
-      innerJoin(
-        authors,
-        authors.id.equalsExp(novels.authorId),
-        useColumns: false,
-      ),
-    ])
-      ..orderBy([OrderingTerm.desc(novels.clickNum)]);
-
-    final allNovels = await topNovelQuery.get();
-    for (final row in allNovels) {
-      final novel = row.readTable(novels);
+    final allNovels = await (select(novels)
+          ..where((t) => t.authorId.isNotNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.clickNum)]))
+        .get();
+    for (final novel in allNovels) {
       if (novel.authorId != null && !topNovels.containsKey(novel.authorId)) {
         topNovels[novel.authorId!] = novel.title;
       }
     }
 
     // Build result
-    return results.map((row) {
-      final author = row.readTable(authors);
-      final novelCount = row.read(countAll()) ?? 0;
-
+    return authorList.map((author) {
       return AuthorWithStats(
         id: author.id,
         name: author.name,
         topNovelTitle: topNovels[author.id],
-        novelCount: novelCount,
+        novelCount: novelCounts[author.id] ?? 0,
         bannerCount: bannerCounts[author.id] ?? 0,
       );
     }).toList();
