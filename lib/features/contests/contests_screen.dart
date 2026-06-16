@@ -31,19 +31,43 @@ class ContestsScreen extends ConsumerWidget {
           if (contests.isEmpty) {
             return const Center(child: Text('暂无数据'));
           }
-          return ListView.builder(
+          return GridView.builder(
+            padding: const EdgeInsets.all(12),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: 3,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+            ),
             itemCount: contests.length,
             itemBuilder: (context, index) {
               final contest = contests[index];
-              return ListTile(
-                leading: const Icon(Icons.emoji_events, color: AppColors.secondary),
-                title: Text(
-                  contest.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+              return Card(
+                child: InkWell(
+                  onTap: () => context.push('/contest/${contest.id}'),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.emoji_events,
+                            color: AppColors.secondary, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            contest.name,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push('/contest/${contest.id}'),
               );
             },
           );
