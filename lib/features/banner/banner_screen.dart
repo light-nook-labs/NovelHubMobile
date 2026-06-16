@@ -2,13 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../data/models/database.dart';
 import '../../data/repositories/providers.dart';
-import '../../shared/widgets/novel_card.dart';
 import '../../app/theme.dart';
 
 part 'banner_screen.g.dart';
+
+const _bannerUrlPattern =
+    'https://rs.sfacg.com/web/novel/images/images/beitouNew/{nid}.jpg';
+
+String _getBannerUrl(int nid) {
+  return _bannerUrlPattern.replaceAll('{nid}', nid.toString());
+}
 
 class BannerScreen extends ConsumerStatefulWidget {
   const BannerScreen({super.key});
@@ -29,6 +36,10 @@ class _BannerScreenState extends ConsumerState<BannerScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    // Trigger initial load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadMore();
+    });
   }
 
   @override
@@ -71,25 +82,25 @@ class _BannerScreenState extends ConsumerState<BannerScreen> {
     return Scaffold(
       appBar: AppBar(
         title: bannerCount.when(
-          loading: () => const Text('推荐小说'),
-          error: (_, __) => const Text('推荐小说'),
-          data: (count) => Text('推荐小说 ($count)'),
+          loading: () => const Text('背投'),
+          error: (_, __) => const Text('背投'),
+          data: (count) => Text('背投 ($count)'),
         ),
       ),
       body: _novels.isEmpty && _isLoadingMore
           ? const Center(child: CircularProgressIndicator())
           : _novels.isEmpty
-              ? const Center(
+               ? const Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.book, size: 64, color: AppColors.primary),
                       SizedBox(height: 16),
-                      Text('暂无推荐小说'),
+                      Text('暂无背投数据'),
                     ],
                   ),
                 )
-              : RefreshIndicator(
+               : RefreshIndicator(
                   onRefresh: () async {
                     setState(() {
                       _currentPage = 0;
@@ -98,16 +109,9 @@ class _BannerScreenState extends ConsumerState<BannerScreen> {
                     });
                     await _loadMore();
                   },
-                  child: GridView.builder(
+                  child: ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.all(12),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 4,
-                      childAspectRatio: 0.65,
-                      crossAxisSpacing: 8,
-                      mainAxisSpacing: 8,
-                    ),
                     itemCount: _novels.length + (_hasMore ? 1 : 0),
                     itemBuilder: (context, index) {
                       if (index == _novels.length) {
@@ -118,10 +122,10 @@ class _BannerScreenState extends ConsumerState<BannerScreen> {
                           ),
                         );
                       }
-                      return NovelCard(
-                        novel: _novels[index],
-                        onTap: () =>
-                            context.push('/novel/${_novels[index].id}'),
+                      final novel = _novels[index];
+                      return _BannerCard(
+                        novel: novel,
+                        onTap: () => context.push('/novel/${novel.id}'),
                       );
                     },
                   ),
@@ -134,4 +138,87 @@ class _BannerScreenState extends ConsumerState<BannerScreen> {
 Future<int> bannerCount(BannerCountRef ref) async {
   final db = ref.watch(databaseProvider);
   return db.getBannerNovelCount();
+}
+
+class _BannerCard extends StatelessWidget {
+  final Novel novel;
+  final VoidCallback onTap;
+
+  const _BannerCard({required this.novel, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          color: AppColors.primary.withValues(alpha: 0.1),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: AspectRatio(
+          aspectRatio: 3 / 1,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              CachedNetworkImage(
+                imageUrl: _getBannerUrl(novel.id),
+                fit: BoxFit.cover,
+                errorWidget: (_, __, ___) => Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [AppColors.primary, AppColors.accent],
+                    ),
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.book, size: 48, color: Colors.white),
+                  ),
+                ),
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 12,
+                left: 12,
+                right: 12,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      novel.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      novel.authorId?.toString() ?? '未知',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

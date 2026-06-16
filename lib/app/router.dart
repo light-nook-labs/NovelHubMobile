@@ -132,7 +132,7 @@ class MainShell extends StatelessWidget {
           NavigationDestination(
             icon: Icon(Icons.star_outline),
             selectedIcon: Icon(Icons.star),
-            label: '推荐',
+            label: '背投',
           ),
           NavigationDestination(
             icon: Icon(Icons.leaderboard_outlined),

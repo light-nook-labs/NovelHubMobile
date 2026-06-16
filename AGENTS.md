@@ -49,7 +49,7 @@ flutter build linux --debug                          # Build for testing
 **Bottom Nav (5 tabs):**
 - 首页 (Home)
 - 小说 (Novels)
-- 推荐 (Banners)
+- 背投 (Banners)
 - 排行 (Rankings)
 - 设置 (Settings)
 
