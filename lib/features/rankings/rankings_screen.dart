@@ -14,10 +14,10 @@ part 'rankings_screen.g.dart';
 enum RankingType {
   click('点击榜', Icons.touch_app, 'click_num'),
   word('字数榜', Icons.text_fields, 'word_num'),
-  praise('收藏榜', Icons.favorite, 'praise_num'),
-  like('点赞榜', Icons.thumb_up, 'like_num'),
-  review('书评榜', Icons.rate_review, 'review_num'),
-  comment('评论榜', Icons.comment, 'comment_num');
+  like('收藏榜', Icons.favorite, 'like_num'),
+  praise('点赞榜', Icons.thumb_up, 'praise_num'),
+  review('长评榜', Icons.rate_review, 'review_num'),
+  comment('短评榜', Icons.comment, 'comment_num');
 
   final String label;
   final IconData icon;
