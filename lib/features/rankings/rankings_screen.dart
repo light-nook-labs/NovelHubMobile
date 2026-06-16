@@ -164,45 +164,39 @@ class _RankingList extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Title
-                      Text(
-                        novel.title,
+                      // Title + ID
+                      RichText(
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          height: 1.3,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      // ID + Author
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 4, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[200],
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                            child: Text(
-                              '#${novel.id}',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey[600],
+                        text: TextSpan(
+                          children: [
+                            TextSpan(
+                              text: novel.title,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black,
+                                height: 1.3,
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            authorName,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey[500],
+                            TextSpan(
+                              text: ' #${novel.id}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey[500],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      // Author
+                      Text(
+                        authorName,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[500],
+                        ),
                       ),
                       const SizedBox(height: 4),
                       // Badges
