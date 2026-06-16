@@ -178,52 +178,35 @@ class _CoverImage extends StatelessWidget {
         ? cover!
         : 'https://rs.sfacg.com/web/novel/images/NovelCover/Big/$cover';
 
-    return CachedNetworkImage(
-      imageUrl: url,
-      // 不设置固定宽高，让图片使用自身尺寸
-      // 使用 maxWidth/maxHeight 限制最大尺寸，防止过度缩放
-      maxHeightDiskCache: 600,
-      maxWidthDiskCache: 450,
-      imageBuilder: (context, imageProvider) {
-        return Container(
-          constraints: const BoxConstraints(
-            maxWidth: 120,
-            maxHeight: 200,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        constraints: const BoxConstraints(
+          maxWidth: 120,
+          maxHeight: 200,
+        ),
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: CachedNetworkImage(
+          imageUrl: url,
+          fit: BoxFit.contain,
+          placeholder: (context, url) => Container(
+            color: AppColors.primary.withValues(alpha: 0.1),
+            child: const Center(child: CircularProgressIndicator()),
           ),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-            image: DecorationImage(
-              image: imageProvider,
-              fit: BoxFit.cover, // 保持宽高比，裁剪以填充
+          errorWidget: (context, url, error) => Container(
+            color: AppColors.primary.withValues(alpha: 0.1),
+            child: const Center(
+              child: Icon(Icons.broken_image, size: 48),
             ),
           ),
-        );
-      },
-      placeholder: (context, url) => Container(
-        width: 120,
-        height: 160,
-        decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: const Center(child: CircularProgressIndicator()),
-      ),
-      errorWidget: (context, url, error) => Container(
-        width: 120,
-        height: 160,
-        decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: const Center(
-          child: Icon(Icons.broken_image, size: 48),
         ),
       ),
     );
