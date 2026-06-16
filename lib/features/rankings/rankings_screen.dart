@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../data/repositories/providers.dart';
 import '../../data/models/database.dart';
+import '../../shared/utils/mappings.dart';
 import '../../app/theme.dart';
 
 part 'rankings_screen.g.dart';
@@ -138,17 +140,22 @@ class _RankingList extends ConsumerWidget {
         return InkWell(
           onTap: () => context.push('/novel/${novel.id}'),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Rank
                 _buildRank(rank),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
+                // Cover
+                _buildCover(novel),
+                const SizedBox(width: 10),
                 // Novel info
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Title
                       Text(
                         novel.title,
                         maxLines: 1,
@@ -158,32 +165,114 @@ class _RankingList extends ConsumerWidget {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'ID: ${novel.id}',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey[500],
-                        ),
+                      const SizedBox(height: 4),
+                      // ID + Author
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                            child: Text(
+                              '#${novel.id}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '未知',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      // Badges
+                      Wrap(
+                        spacing: 4,
+                        runSpacing: 4,
+                        children: [
+                          _buildBadge(
+                            statusMapping.getZh(novel.status),
+                            _getStatusColor(novel.status),
+                          ),
+                          _buildBadge(
+                            genreMapping.getZh(novel.genre),
+                            AppColors.primary,
+                          ),
+                          _buildBadge(
+                            ptypeMapping.getZh(novel.ptype),
+                            AppColors.secondary,
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 // Value
-                Text(
-                  _formatNumber(value),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      _formatNumber(value),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    Text(
+                      type.label.replaceAll('榜', ''),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildCover(Novel novel) {
+    final url = novel.cover != null && novel.cover!.isNotEmpty
+        ? (novel.cover!.startsWith('http')
+            ? novel.cover!
+            : 'https://rs.sfacg.com/web/novel/images/NovelCover/Big/${novel.cover}')
+        : null;
+
+    return Container(
+      width: 50,
+      height: 62,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(4),
+        color: AppColors.primary.withValues(alpha: 0.1),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: url != null
+          ? CachedNetworkImage(
+              imageUrl: url,
+              fit: BoxFit.cover,
+              errorWidget: (_, __, ___) => const Center(
+                child: Icon(Icons.book, size: 24, color: AppColors.primary),
+              ),
+            )
+          : const Center(
+              child: Icon(Icons.book, size: 24, color: AppColors.primary),
+            ),
     );
   }
 
@@ -230,6 +319,36 @@ class _RankingList extends ConsumerWidget {
         textAlign: TextAlign.center,
       ),
     );
+  }
+
+  Widget _buildBadge(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          color: color,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  Color _getStatusColor(int status) {
+    return switch (status) {
+      2 => AppColors.completed, // 已完结
+      3 => AppColors.ongoing, // 连载中
+      4 => AppColors.stopped, // 断更
+      5 => AppColors.stopped, // 断更A
+      6 => AppColors.completed, // 完结A
+      _ => Colors.grey,
+    };
   }
 
   int _getValue(Novel novel) {
