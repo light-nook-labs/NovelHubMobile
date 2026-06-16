@@ -142,7 +142,7 @@ class _RankingList extends ConsumerWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 // Rank
                 _buildRank(rank),
@@ -158,11 +158,12 @@ class _RankingList extends ConsumerWidget {
                       // Title
                       Text(
                         novel.title,
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
+                          height: 1.3,
                         ),
                       ),
                       const SizedBox(height: 4),
