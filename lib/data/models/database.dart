@@ -216,6 +216,28 @@ class AppDatabase extends _$AppDatabase {
       {bool descending = true, int limit = 50, int offset = 0}) async {
     final query = select(novels);
 
+    // Filter out null and 0 values for the sorting field
+    switch (field) {
+      case 'click_num':
+        query.where((t) => t.clickNum.isBiggerThanValue(0));
+        break;
+      case 'word_num':
+        query.where((t) => t.wordNum.isBiggerThanValue(0));
+        break;
+      case 'praise_num':
+        query.where((t) => t.praiseNum.isBiggerThanValue(0));
+        break;
+      case 'like_num':
+        query.where((t) => t.likeNum.isBiggerThanValue(0));
+        break;
+      case 'review_num':
+        query.where((t) => t.reviewNum.isBiggerThanValue(0));
+        break;
+      case 'comment_num':
+        query.where((t) => t.commentNum.isBiggerThanValue(0));
+        break;
+    }
+
     switch (field) {
       case 'click_num':
         query.orderBy([
