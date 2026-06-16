@@ -262,6 +262,7 @@ class AppDatabase extends _$AppDatabase {
     int? genre,
     int? status,
     int? ptype,
+    int? year,
     String sortBy = 'click_num',
     bool descending = true,
     int limit = 50,
@@ -277,6 +278,13 @@ class AppDatabase extends _$AppDatabase {
     }
     if (ptype != null) {
       query.where((t) => t.ptype.equals(ptype));
+    }
+    if (year != null) {
+      final startDate = DateTime(year, 1, 1);
+      final endDate = DateTime(year + 1, 1, 1);
+      query.where((t) =>
+          t.lastUpdate.isBiggerOrEqualValue(startDate) &
+          t.lastUpdate.isSmallerThanValue(endDate));
     }
 
     switch (sortBy) {

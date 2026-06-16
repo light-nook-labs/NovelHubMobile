@@ -22,6 +22,7 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen> {
   int? _selectedGenre;
   int? _selectedStatus;
   int? _selectedPtype;
+  int? _selectedYear;
   String _sortBy = 'click_num';
   bool _descending = true;
 
@@ -32,13 +33,16 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen> {
         genre: _selectedGenre,
         status: _selectedStatus,
         ptype: _selectedPtype,
+        year: _selectedYear,
         sortBy: _sortBy,
         descending: _descending,
       ),
     );
 
-    final hasFilters =
-        _selectedGenre != null || _selectedStatus != null || _selectedPtype != null;
+    final hasFilters = _selectedGenre != null ||
+        _selectedStatus != null ||
+        _selectedPtype != null ||
+        _selectedYear != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -109,13 +113,15 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen> {
         selectedGenre: _selectedGenre,
         selectedStatus: _selectedStatus,
         selectedPtype: _selectedPtype,
+        selectedYear: _selectedYear,
         sortBy: _sortBy,
         descending: _descending,
-        onApply: (genre, status, ptype, sortBy, descending) {
+        onApply: (genre, status, ptype, year, sortBy, descending) {
           setState(() {
             _selectedGenre = genre;
             _selectedStatus = status;
             _selectedPtype = ptype;
+            _selectedYear = year;
             _sortBy = sortBy;
             _descending = descending;
           });
@@ -149,14 +155,16 @@ class _FilterBottomSheet extends StatefulWidget {
   final int? selectedGenre;
   final int? selectedStatus;
   final int? selectedPtype;
+  final int? selectedYear;
   final String sortBy;
   final bool descending;
-  final Function(int?, int?, int?, String, bool) onApply;
+  final Function(int?, int?, int?, int?, String, bool) onApply;
 
   const _FilterBottomSheet({
     required this.selectedGenre,
     required this.selectedStatus,
     required this.selectedPtype,
+    required this.selectedYear,
     required this.sortBy,
     required this.descending,
     required this.onApply,
@@ -170,8 +178,11 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
   late int? _genre;
   late int? _status;
   late int? _ptype;
+  late int? _year;
   late String _sortBy;
   late bool _descending;
+
+  static const _years = [2026, 2025, 2024, 2023, 2022, 2021, 2020];
 
   @override
   void initState() {
@@ -179,6 +190,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
     _genre = widget.selectedGenre;
     _status = widget.selectedStatus;
     _ptype = widget.selectedPtype;
+    _year = widget.selectedYear;
     _sortBy = widget.sortBy;
     _descending = widget.descending;
   }
@@ -222,6 +234,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                         _genre = null;
                         _status = null;
                         _ptype = null;
+                        _year = null;
                         _sortBy = 'click_num';
                         _descending = true;
                       });
@@ -267,6 +280,15 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                     onChanged: (v) => setState(() => _ptype = v),
                   ),
                   const SizedBox(height: 24),
+                  _buildSection(
+                    title: '更新年份',
+                    options: _years
+                        .map((y) => _Option(label: '$y年', value: y))
+                        .toList(),
+                    selectedValue: _year,
+                    onChanged: (v) => setState(() => _year = v),
+                  ),
+                  const SizedBox(height: 24),
                   _buildSortSection(),
                   const SizedBox(height: 24),
                 ],
@@ -283,6 +305,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                       _genre,
                       _status,
                       _ptype,
+                      _year,
                       _sortBy,
                       _descending,
                     );
@@ -431,6 +454,7 @@ Future<List<Novel>> filteredNovels(
   int? genre,
   int? status,
   int? ptype,
+  int? year,
   String sortBy = 'click_num',
   bool descending = true,
 }) async {
@@ -439,6 +463,7 @@ Future<List<Novel>> filteredNovels(
     genre: genre,
     status: status,
     ptype: ptype,
+    year: year,
     sortBy: sortBy,
     descending: descending,
     limit: 100,
