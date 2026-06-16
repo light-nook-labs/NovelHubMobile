@@ -88,7 +88,10 @@ class PtypeListScreen extends StatelessWidget {
                 const Icon(Icons.vpn_key, color: AppColors.primary),
             title: Text(zh),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/novels?ptype=$value'),
+            onTap: () {
+              // Navigate to novels tab with ptype filter
+              context.go('/novels?ptype=$value');
+            },
           );
         },
       ),
