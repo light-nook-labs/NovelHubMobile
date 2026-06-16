@@ -1,10 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../data/repositories/providers.dart';
 import '../../shared/utils/mappings.dart';
+import '../../shared/widgets/common_widgets.dart';
 
-class GenreListScreen extends StatelessWidget {
+class GenreListScreen extends ConsumerStatefulWidget {
   const GenreListScreen({super.key});
+
+  @override
+  ConsumerState<GenreListScreen> createState() => _GenreListScreenState();
+}
+
+class _GenreListScreenState extends ConsumerState<GenreListScreen> {
+  Map<int, int> _counts = {};
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCounts();
+  }
+
+  Future<void> _loadCounts() async {
+    final db = ref.read(databaseProvider);
+    final counts = await db.getGenreCounts();
+    setState(() {
+      _counts = counts;
+      _isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,24 +42,51 @@ class GenreListScreen extends StatelessWidget {
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      body: ListView.builder(
-        itemCount: genreMapping.allZh.length,
-        itemBuilder: (context, index) {
-          final zh = genreMapping.allZh[index];
-          final value = genreMapping.getValue(zh);
-          return ListTile(
-            title: Text(zh),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/novels-by-genre?genre=$value'),
-          );
-        },
-      ),
+      body: _isLoading
+          ? const LoadingState(message: '加载分类数据...')
+          : ListView.builder(
+              itemCount: genreMapping.allZh.length,
+              itemBuilder: (context, index) {
+                final zh = genreMapping.allZh[index];
+                final value = genreMapping.getValue(zh);
+                final count = _counts[value] ?? 0;
+                return ListTile(
+                  title: Text(zh),
+                  subtitle: Text('$count 本'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/novels-by-genre?genre=$value'),
+                );
+              },
+            ),
     );
   }
 }
 
-class StatusListScreen extends StatelessWidget {
+class StatusListScreen extends ConsumerStatefulWidget {
   const StatusListScreen({super.key});
+
+  @override
+  ConsumerState<StatusListScreen> createState() => _StatusListScreenState();
+}
+
+class _StatusListScreenState extends ConsumerState<StatusListScreen> {
+  Map<int, int> _counts = {};
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCounts();
+  }
+
+  Future<void> _loadCounts() async {
+    final db = ref.read(databaseProvider);
+    final counts = await db.getStatusCounts();
+    setState(() {
+      _counts = counts;
+      _isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,24 +98,51 @@ class StatusListScreen extends StatelessWidget {
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      body: ListView.builder(
-        itemCount: statusMapping.allZh.length,
-        itemBuilder: (context, index) {
-          final zh = statusMapping.allZh[index];
-          final value = statusMapping.getValue(zh);
-          return ListTile(
-            title: Text(zh),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/novels-by-status?status=$value'),
-          );
-        },
-      ),
+      body: _isLoading
+          ? const LoadingState(message: '加载状态数据...')
+          : ListView.builder(
+              itemCount: statusMapping.allZh.length,
+              itemBuilder: (context, index) {
+                final zh = statusMapping.allZh[index];
+                final value = statusMapping.getValue(zh);
+                final count = _counts[value] ?? 0;
+                return ListTile(
+                  title: Text(zh),
+                  subtitle: Text('$count 本'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/novels-by-status?status=$value'),
+                );
+              },
+            ),
     );
   }
 }
 
-class PtypeListScreen extends StatelessWidget {
+class PtypeListScreen extends ConsumerStatefulWidget {
   const PtypeListScreen({super.key});
+
+  @override
+  ConsumerState<PtypeListScreen> createState() => _PtypeListScreenState();
+}
+
+class _PtypeListScreenState extends ConsumerState<PtypeListScreen> {
+  Map<int, int> _counts = {};
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCounts();
+  }
+
+  Future<void> _loadCounts() async {
+    final db = ref.read(databaseProvider);
+    final counts = await db.getPtypeCounts();
+    setState(() {
+      _counts = counts;
+      _isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,20 +154,24 @@ class PtypeListScreen extends StatelessWidget {
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      body: ListView.builder(
-        itemCount: ptypeMapping.allZh.length,
-        itemBuilder: (context, index) {
-          final zh = ptypeMapping.allZh[index];
-          final value = ptypeMapping.getValue(zh);
-          return ListTile(
-            title: Text(zh),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              context.go('/novels?ptype=$value');
-            },
-          );
-        },
-      ),
+      body: _isLoading
+          ? const LoadingState(message: '加载类型数据...')
+          : ListView.builder(
+              itemCount: ptypeMapping.allZh.length,
+              itemBuilder: (context, index) {
+                final zh = ptypeMapping.allZh[index];
+                final value = ptypeMapping.getValue(zh);
+                final count = _counts[value] ?? 0;
+                return ListTile(
+                  title: Text(zh),
+                  subtitle: Text('$count 本'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    context.go('/novels?ptype=$value');
+                  },
+                );
+              },
+            ),
     );
   }
 }

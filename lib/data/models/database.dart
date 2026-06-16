@@ -802,6 +802,50 @@ class AppDatabase extends _$AppDatabase {
     return rankings;
   }
 
+  // ===== Enum count queries =====
+
+  Future<Map<int, int>> getGenreCounts() async {
+    final query = selectOnly(novels)
+      ..addColumns([novels.genre, countAll()])
+      ..groupBy([novels.genre]);
+    final results = await query.get();
+    final counts = <int, int>{};
+    for (final row in results) {
+      final genre = row.read(novels.genre)!;
+      final count = row.read(countAll()) ?? 0;
+      counts[genre] = count;
+    }
+    return counts;
+  }
+
+  Future<Map<int, int>> getStatusCounts() async {
+    final query = selectOnly(novels)
+      ..addColumns([novels.status, countAll()])
+      ..groupBy([novels.status]);
+    final results = await query.get();
+    final counts = <int, int>{};
+    for (final row in results) {
+      final status = row.read(novels.status)!;
+      final count = row.read(countAll()) ?? 0;
+      counts[status] = count;
+    }
+    return counts;
+  }
+
+  Future<Map<int, int>> getPtypeCounts() async {
+    final query = selectOnly(novels)
+      ..addColumns([novels.ptype, countAll()])
+      ..groupBy([novels.ptype]);
+    final results = await query.get();
+    final counts = <int, int>{};
+    for (final row in results) {
+      final ptype = row.read(novels.ptype)!;
+      final count = row.read(countAll()) ?? 0;
+      counts[ptype] = count;
+    }
+    return counts;
+  }
+
   // ===== Reset to bundled database =====
 
   Future<void> resetToDefault() async {
