@@ -31,19 +31,35 @@ class TagsScreen extends ConsumerWidget {
           if (tags.isEmpty) {
             return const Center(child: Text('暂无数据'));
           }
-          return Padding(
+          return GridView.builder(
             padding: const EdgeInsets.all(12),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: tags.map((tag) {
-                return ActionChip(
-                  label: Text(tag.name),
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                  onPressed: () => context.push('/tag/${tag.id}'),
-                );
-              }).toList(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: 3,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
             ),
+            itemCount: tags.length,
+            itemBuilder: (context, index) {
+              final tag = tags[index];
+              return Card(
+                child: InkWell(
+                  onTap: () => context.push('/tag/${tag.id}'),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Center(
+                    child: Text(
+                      tag.name,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              );
+            },
           );
         },
       ),
