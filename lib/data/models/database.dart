@@ -530,13 +530,46 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<List<Novel>> getNovelsByTag(int tagId,
-      {int limit = 50, int offset = 0}) async {
+      {int limit = 50, int offset = 0, String sortBy = 'click_num', bool descending = true}) async {
     final query = select(novelTags).join([
       innerJoin(novels, novels.id.equalsExp(novelTags.novelId)),
     ])
-      ..where(novelTags.tagId.equals(tagId))
-      ..orderBy([OrderingTerm.desc(novels.lastUpdate)])
-      ..limit(limit, offset: offset);
+      ..where(novelTags.tagId.equals(tagId));
+
+    switch (sortBy) {
+      case 'click_num':
+        query.orderBy([
+          OrderingTerm(
+              expression: novels.clickNum,
+              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+        ]);
+        break;
+      case 'word_num':
+        query.orderBy([
+          OrderingTerm(
+              expression: novels.wordNum,
+              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+        ]);
+        break;
+      case 'like_num':
+        query.orderBy([
+          OrderingTerm(
+              expression: novels.likeNum,
+              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+        ]);
+        break;
+      case 'praise_num':
+        query.orderBy([
+          OrderingTerm(
+              expression: novels.praiseNum,
+              mode: descending ? OrderingMode.desc : OrderingMode.asc),
+        ]);
+        break;
+      default:
+        query.orderBy([OrderingTerm.desc(novels.lastUpdate)]);
+    }
+
+    query.limit(limit, offset: offset);
     final results = await query.get();
     return results.map((row) => row.readTable(novels)).toList();
   }
