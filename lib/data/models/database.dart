@@ -503,29 +503,26 @@ class AppDatabase extends _$AppDatabase {
     final contestResult = await contestQuery.getSingle();
     final contestCount = contestResult.read(contestCountQuery) ?? 0;
 
-    // Count novels by genre (excluding 其他=1)
-    final genreCountQuery = countAll();
+    // Count distinct genres (excluding 其他=1)
     final genreQuery = selectOnly(novels)
       ..where(novels.genre.isBiggerThanValue(1))
-      ..addColumns([genreCountQuery]);
-    final genreResult = await genreQuery.getSingle();
-    final genreCount = genreResult.read(genreCountQuery) ?? 0;
+      ..addColumns([novels.genre]);
+    final genreResults = await genreQuery.get();
+    final genreCount = genreResults.map((r) => r.read(novels.genre)).toSet().length;
 
-    // Count novels by status (excluding 其他=1)
-    final statusCountQuery = countAll();
+    // Count distinct statuses (excluding 其他=1)
     final statusQuery = selectOnly(novels)
       ..where(novels.status.isBiggerThanValue(1))
-      ..addColumns([statusCountQuery]);
-    final statusResult = await statusQuery.getSingle();
-    final statusCount = statusResult.read(statusCountQuery) ?? 0;
+      ..addColumns([novels.status]);
+    final statusResults = await statusQuery.get();
+    final statusCount = statusResults.map((r) => r.read(novels.status)).toSet().length;
 
-    // Count novels by ptype (excluding 其他=1)
-    final ptypeCountQuery = countAll();
+    // Count distinct ptypes (excluding 其他=1)
     final ptypeQuery = selectOnly(novels)
       ..where(novels.ptype.isBiggerThanValue(1))
-      ..addColumns([ptypeCountQuery]);
-    final ptypeResult = await ptypeQuery.getSingle();
-    final ptypeCount = ptypeResult.read(ptypeCountQuery) ?? 0;
+      ..addColumns([novels.ptype]);
+    final ptypeResults = await ptypeQuery.get();
+    final ptypeCount = ptypeResults.map((r) => r.read(novels.ptype)).toSet().length;
 
     return {
       'novels': novelCount,
