@@ -24,7 +24,7 @@ class _TagsScreenState extends ConsumerState<TagsScreen> {
   int _currentPage = 0;
   bool _hasMore = true;
   bool _isLoadingMore = false;
-  List<Tag> _tags = [];
+  List<TagWithCount> _tags = [];
   bool _showBackToTop = false;
 
   @override
@@ -58,7 +58,7 @@ class _TagsScreenState extends ConsumerState<TagsScreen> {
     setState(() => _isLoadingMore = true);
 
     final db = ref.read(databaseProvider);
-    final newTags = await db.getAllTags(
+    final newTags = await db.getTagsWithCount(
       limit: _pageSize,
       offset: _currentPage * _pageSize,
     );
@@ -111,15 +111,29 @@ class _TagsScreenState extends ConsumerState<TagsScreen> {
                           child: InkWell(
                             onTap: () => context.push('/tag/${tag.id}'),
                             borderRadius: BorderRadius.circular(12),
-                            child: Center(
-                              child: Text(
-                                tag.name,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    tag.name,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${tag.novelCount} 本',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),

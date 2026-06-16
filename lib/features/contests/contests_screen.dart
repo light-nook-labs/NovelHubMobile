@@ -23,7 +23,7 @@ class _ContestsScreenState extends ConsumerState<ContestsScreen> {
   int _currentPage = 0;
   bool _hasMore = true;
   bool _isLoadingMore = false;
-  List<Contest> _contests = [];
+  List<ContestWithCount> _contests = [];
   bool _showBackToTop = false;
 
   @override
@@ -57,7 +57,7 @@ class _ContestsScreenState extends ConsumerState<ContestsScreen> {
     setState(() => _isLoadingMore = true);
 
     final db = ref.read(databaseProvider);
-    final newContests = await db.getAllContests(
+    final newContests = await db.getContestsWithCount(
       limit: _pageSize,
       offset: _currentPage * _pageSize,
     );
@@ -110,20 +110,31 @@ class _ContestsScreenState extends ConsumerState<ContestsScreen> {
                           child: InkWell(
                             onTap: () => context.push('/contest/${contest.id}'),
                             borderRadius: BorderRadius.circular(12),
-                            child: Center(
-                              child: Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 12),
-                                child: Text(
-                                  contest.name,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 12),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    contest.name,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.center,
                                   ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.center,
-                                ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${contest.novelCount} 本',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),

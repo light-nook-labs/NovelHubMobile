@@ -81,6 +81,30 @@ class AuthorWithStats {
   });
 }
 
+class TagWithCount {
+  final int id;
+  final String name;
+  final int novelCount;
+
+  TagWithCount({
+    required this.id,
+    required this.name,
+    required this.novelCount,
+  });
+}
+
+class ContestWithCount {
+  final int id;
+  final String name;
+  final int novelCount;
+
+  ContestWithCount({
+    required this.id,
+    required this.name,
+    required this.novelCount,
+  });
+}
+
 @DriftDatabase(tables: [Authors, Tags, Contests, Novels, NovelTags])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -524,6 +548,25 @@ class AppDatabase extends _$AppDatabase {
     return query.get();
   }
 
+  Future<List<TagWithCount>> getTagsWithCount({int limit = 100, int offset = 0}) async {
+    final query = select(tags).join([
+      innerJoin(novelTags, novelTags.tagId.equalsExp(tags.id)),
+    ])
+      ..addColumns([novelTags.novelId.count()])
+      ..groupBy([tags.id])
+      ..orderBy([OrderingTerm.desc(novelTags.novelId.count())])
+      ..limit(limit, offset: offset);
+
+    final results = await query.get();
+    return results.map((row) {
+      return TagWithCount(
+        id: row.readTable(tags).id,
+        name: row.readTable(tags).name,
+        novelCount: row.read(novelTags.novelId.count()) ?? 0,
+      );
+    }).toList();
+  }
+
   Future<Tag?> getTag(int id) async {
     final query = select(tags)..where((t) => t.id.equals(id));
     return query.getSingleOrNull();
@@ -582,6 +625,26 @@ class AppDatabase extends _$AppDatabase {
       ..orderBy([(t) => OrderingTerm.asc(t.name)])
       ..limit(limit, offset: offset);
     return query.get();
+  }
+
+  Future<List<ContestWithCount>> getContestsWithCount(
+      {int limit = 100, int offset = 0}) async {
+    final query = select(contests).join([
+      innerJoin(novels, novels.contestId.equalsExp(contests.id)),
+    ])
+      ..addColumns([novels.id.count()])
+      ..groupBy([contests.id])
+      ..orderBy([OrderingTerm.desc(novels.id.count())])
+      ..limit(limit, offset: offset);
+
+    final results = await query.get();
+    return results.map((row) {
+      return ContestWithCount(
+        id: row.readTable(contests).id,
+        name: row.readTable(contests).name,
+        novelCount: row.read(novels.id.count()) ?? 0,
+      );
+    }).toList();
   }
 
   Future<Contest?> getContest(int id) async {
