@@ -929,12 +929,22 @@ LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
     final dbPath = p.join(dbFolder.path, 'novel_hub.sqlite');
-    final file = File(dbPath);
+    final chunksDir = p.join(dbFolder.path, 'chunks');
     
-    // If merged database doesn't exist, create it from chunks
-    if (!await file.exists()) {
-      await _createMergedDatabase(dbPath);
+    // Copy chunks from assets if needed
+    for (final chunkName in ['cold', 'warm', 'hot']) {
+      final chunkPath = p.join(chunksDir, '${chunkName}_chunk.sqlite');
+      if (!await File(chunkPath).exists()) {
+        await _copyBundledChunk(chunkName, chunkPath);
+      }
     }
+    
+    // Always recreate from chunks to ensure fresh data
+    final file = File(dbPath);
+    if (await file.exists()) {
+      await file.delete();
+    }
+    await _createMergedDatabase(dbPath);
     
     return NativeDatabase.createInBackground(file);
   });
