@@ -78,8 +78,11 @@ class _RankingsScreenState extends ConsumerState<RankingsScreen>
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+          unselectedLabelStyle: const TextStyle(fontSize: 13),
           tabs: RankingType.values
-              .map((type) => Tab(icon: Icon(type.icon), text: type.label))
+              .map((type) => Tab(text: type.label))
               .toList(),
         ),
       ),
