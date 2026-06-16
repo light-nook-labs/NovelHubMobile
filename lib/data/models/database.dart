@@ -432,45 +432,63 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<List<AuthorWithStats>> getAuthorsWithStats({int limit = 1000}) async {
-    final authorList = await (select(authors)
-          ..orderBy([(t) => OrderingTerm.asc(t.name)])
-          ..limit(limit))
-        .get();
+    // Single query to get all authors with novel stats
+    final query = select(authors).join([
+      leftJoin(novels, novels.authorId.equalsExp(authors.id)),
+    ])
+      ..groupBy([authors.id, authors.name])
+      ..orderBy([OrderingTerm.asc(authors.name)])
+      ..limit(limit);
 
-    final result = <AuthorWithStats>[];
-    for (final author in authorList) {
-      // Get novel count
-      final novelCountQuery = selectOnly(novels)
-        ..where(novels.authorId.equals(author.id))
-        ..addColumns([countAll()]);
-      final novelCountResult = await novelCountQuery.getSingle();
-      final novelCount = novelCountResult.read(countAll()) ?? 0;
+    final results = await query.get();
 
-      // Get banner count
-      final bannerCountQuery = selectOnly(novels)
-        ..where(novels.authorId.equals(author.id) &
-            novels.hasBanner.equals(true))
-        ..addColumns([countAll()]);
-      final bannerCountResult = await bannerCountQuery.getSingle();
-      final bannerCount = bannerCountResult.read(countAll()) ?? 0;
-
-      // Get top novel (by click_num)
-      final topNovelQuery = select(novels)
-        ..where((t) => t.authorId.equals(author.id))
-        ..orderBy([(t) => OrderingTerm.desc(t.clickNum)])
-        ..limit(1);
-      final topNovel = await topNovelQuery.getSingleOrNull();
-
-      result.add(AuthorWithStats(
-        id: author.id,
-        name: author.name,
-        topNovelTitle: topNovel?.title,
-        novelCount: novelCount,
-        bannerCount: bannerCount,
-      ));
+    // Get banner counts separately (more efficient than complex join)
+    final bannerCounts = <int, int>{};
+    final bannerQuery = selectOnly(novels)
+      ..where(novels.hasBanner.equals(true) & novels.authorId.isNotNull())
+      ..addColumns([novels.authorId, countAll()])
+      ..groupBy([novels.authorId]);
+    final bannerResults = await bannerQuery.get();
+    for (final row in bannerResults) {
+      final authorId = row.read(novels.authorId);
+      final count = row.read(countAll()) ?? 0;
+      if (authorId != null) {
+        bannerCounts[authorId] = count;
+      }
     }
 
-    return result;
+    // Get top novels (by click_num per author)
+    final topNovels = <int, String>{};
+    final topNovelQuery = select(novels).join([
+      innerJoin(
+        authors,
+        authors.id.equalsExp(novels.authorId),
+        useColumns: false,
+      ),
+    ])
+      ..orderBy([OrderingTerm.desc(novels.clickNum)]);
+
+    final allNovels = await topNovelQuery.get();
+    for (final row in allNovels) {
+      final novel = row.readTable(novels);
+      if (novel.authorId != null && !topNovels.containsKey(novel.authorId)) {
+        topNovels[novel.authorId!] = novel.title;
+      }
+    }
+
+    // Build result
+    return results.map((row) {
+      final author = row.readTable(authors);
+      final novelCount = row.read(countAll()) ?? 0;
+
+      return AuthorWithStats(
+        id: author.id,
+        name: author.name,
+        topNovelTitle: topNovels[author.id],
+        novelCount: novelCount,
+        bannerCount: bannerCounts[author.id] ?? 0,
+      );
+    }).toList();
   }
 
   // ===== Tag queries =====
