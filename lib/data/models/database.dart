@@ -170,8 +170,9 @@ class AppDatabase extends _$AppDatabase {
   // ===== Query operations =====
 
   Future<List<Novel>> getAllNovels({int limit = 50, int offset = 0}) async {
+    // Default sort: click_num desc (matching novel_hub web)
     final query = select(novels)
-      ..orderBy([(t) => OrderingTerm.desc(t.lastUpdate)])
+      ..orderBy([(t) => OrderingTerm.desc(t.clickNum)])
       ..limit(limit, offset: offset);
     return query.get();
   }

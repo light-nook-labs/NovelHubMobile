@@ -22,7 +22,7 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen> {
   int? _selectedGenre;
   int? _selectedStatus;
   int? _selectedPtype;
-  String _sortBy = 'last_update';
+  String _sortBy = 'click_num';  // Default: click_num desc (matching novel_hub)
   bool _descending = true;
 
   @override
@@ -39,7 +39,30 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('小说列表'),
+        title: GestureDetector(
+          onTap: () => context.push('/search'),
+          child: Container(
+            height: 36,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.search, size: 18, color: Colors.grey[600]),
+                const SizedBox(width: 8),
+                Text(
+                  '搜索小说...',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
       body: Column(
         children: [

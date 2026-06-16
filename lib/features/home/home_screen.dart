@@ -36,13 +36,31 @@ class HomeScreen extends ConsumerWidget {
             SliverAppBar(
               expandedHeight: 200,
               pinned: true,
-              flexibleSpace: FlexibleSpaceBar(
-                title: const Text(
-                  'Novel Hub',
-                  style: TextStyle(
-                    shadows: [Shadow(blurRadius: 8, color: Colors.black54)],
+              title: GestureDetector(
+                onTap: () => context.push('/search'),
+                child: Container(
+                  height: 36,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.search, size: 18, color: Colors.grey[600]),
+                      const SizedBox(width: 8),
+                      Text(
+                        '搜索小说...',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+              ),
+              flexibleSpace: FlexibleSpaceBar(
                 background: bannerNovels.when(
                   loading: () => Container(color: AppColors.primary),
                   error: (_, __) => Container(color: AppColors.primary),

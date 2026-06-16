@@ -51,7 +51,30 @@ class _RankingsScreenState extends ConsumerState<RankingsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('排行榜'),
+        title: GestureDetector(
+          onTap: () => context.push('/search'),
+          child: Container(
+            height: 36,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.search, size: 18, color: Colors.grey[600]),
+                const SizedBox(width: 8),
+                Text(
+                  '搜索小说...',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,

@@ -38,18 +38,13 @@ final router = GoRouter(
               const NoTransitionPage(child: RankingsScreen()),
         ),
         GoRoute(
-          path: '/search',
-          pageBuilder: (context, state) =>
-              const NoTransitionPage(child: SearchScreen()),
-        ),
-        GoRoute(
           path: '/settings',
           pageBuilder: (context, state) =>
               const NoTransitionPage(child: SettingsScreen()),
         ),
       ],
     ),
-    // Detail screens (full screen)
+    // Full screens (no bottom nav)
     GoRoute(
       path: '/novel/:id',
       parentNavigatorKey: _rootNavigatorKey,
@@ -57,6 +52,11 @@ final router = GoRouter(
         final id = int.parse(state.pathParameters['id']!);
         return NovelDetailScreen(novelId: id);
       },
+    ),
+    GoRoute(
+      path: '/search',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const SearchScreen(),
     ),
     GoRoute(
       path: '/authors',
@@ -129,11 +129,6 @@ class MainShell extends StatelessWidget {
             label: '排行',
           ),
           NavigationDestination(
-            icon: Icon(Icons.search_outlined),
-            selectedIcon: Icon(Icons.search),
-            label: '搜索',
-          ),
-          NavigationDestination(
             icon: Icon(Icons.settings_outlined),
             selectedIcon: Icon(Icons.settings),
             label: '设置',
@@ -147,8 +142,7 @@ class MainShell extends StatelessWidget {
     final location = GoRouterState.of(context).uri.path;
     if (location.startsWith('/novels')) return 1;
     if (location.startsWith('/rankings')) return 2;
-    if (location.startsWith('/search')) return 3;
-    if (location.startsWith('/settings')) return 4;
+    if (location.startsWith('/settings')) return 3;
     return 0;
   }
 
@@ -161,8 +155,6 @@ class MainShell extends StatelessWidget {
       case 2:
         context.go('/rankings');
       case 3:
-        context.go('/search');
-      case 4:
         context.go('/settings');
     }
   }
