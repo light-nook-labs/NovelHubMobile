@@ -55,13 +55,6 @@ class SettingsScreen extends ConsumerWidget {
                   subtitle: const Text('从本地 JSONL 文件加载'),
                   onTap: () => _loadTestData(context, ref),
                 ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.cleaning_services, color: Colors.orange),
-                  title: const Text('清理脏数据'),
-                  subtitle: const Text('删除格式不正确的标签'),
-                  onTap: () => _cleanDirtyTags(context, ref),
-                ),
               ],
             ),
           ),
@@ -214,36 +207,6 @@ class SettingsScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
-
-  void _cleanDirtyTags(BuildContext context, WidgetRef ref) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const _SyncProgressDialog(),
-    );
-
-    try {
-      final db = ref.read(databaseProvider);
-      final count = await db.cleanDirtyTags();
-
-      if (!context.mounted) return;
-      Navigator.pop(context);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已清理 $count 个脏标签')),
-      );
-
-      Future.microtask(() {
-        ref.invalidate(statisticsProvider);
-      });
-    } catch (e) {
-      if (!context.mounted) return;
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('清理失败: $e')),
-      );
-    }
   }
 
   void _loadTestData(BuildContext context, WidgetRef ref) async {
