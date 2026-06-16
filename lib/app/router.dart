@@ -166,32 +166,36 @@ class MainShell extends StatelessWidget {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _getSelectedIndex(context),
         onDestinationSelected: (index) => _onItemTapped(context, index),
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
+            icon: const Icon(Icons.home_outlined),
+            selectedIcon: const Icon(Icons.home),
             label: '首页',
+            tooltip: '',
           ),
           NavigationDestination(
-            icon: Icon(Icons.book_outlined),
-            selectedIcon: Icon(Icons.book),
+            icon: const Icon(Icons.book_outlined),
+            selectedIcon: const Icon(Icons.book),
             label: '小说',
+            tooltip: '',
           ),
           NavigationDestination(
-            icon: Icon(Icons.star_outline),
-            selectedIcon: Icon(Icons.star),
+            icon: const Icon(Icons.star_outline),
+            selectedIcon: const Icon(Icons.star),
             label: '背投',
+            tooltip: '',
           ),
           NavigationDestination(
-            icon: Icon(Icons.leaderboard_outlined),
-            selectedIcon: Icon(Icons.leaderboard),
+            icon: const Icon(Icons.leaderboard_outlined),
+            selectedIcon: const Icon(Icons.leaderboard),
             label: '排行',
+            tooltip: '',
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
+            icon: const Icon(Icons.settings_outlined),
+            selectedIcon: const Icon(Icons.settings),
             label: '设置',
+            tooltip: '',
           ),
         ],
       ),
