@@ -23,6 +23,38 @@ class HomeScreen extends ConsumerWidget {
     final latestNovels = ref.watch(novelsProvider(limit: 10));
 
     return Scaffold(
+      appBar: AppBar(
+        title: GestureDetector(
+          onTap: () => context.push('/search'),
+          child: Container(
+            height: 36,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.search, size: 18, color: Colors.grey[600]),
+                const SizedBox(width: 8),
+                Text(
+                  '搜索小说...',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.sync),
+            onPressed: () => _showSyncDialog(context, ref),
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(statisticsProvider);
@@ -30,152 +62,97 @@ class HomeScreen extends ConsumerWidget {
           ref.invalidate(bannerNovelsProvider);
           ref.invalidate(novelsProvider);
         },
-        child: CustomScrollView(
-          slivers: [
-            // Hero Banner + App Bar
-            SliverAppBar(
-              expandedHeight: 200,
-              pinned: true,
-              title: GestureDetector(
-                onTap: () => context.push('/search'),
-                child: Container(
-                  height: 36,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.search, size: 18, color: Colors.grey[600]),
-                      const SizedBox(width: 8),
-                      Text(
-                        '搜索小说...',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
+        child: ListView(
+          padding: const EdgeInsets.all(12),
+          children: [
+            // Hero Banner (below search bar)
+            bannerNovels.when(
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+              data: (novels) {
+                if (novels.isEmpty) return const SizedBox.shrink();
+                return _HeroBanner(novel: novels.first);
+              },
+            ),
+            const SizedBox(height: 12),
+
+            // Banner novels carousel
+            bannerNovels.when(
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+              data: (novels) {
+                if (novels.length <= 1) return const SizedBox.shrink();
+                return _BannerShowcase(novels: novels.skip(1).toList());
+              },
+            ),
+            const SizedBox(height: 12),
+
+            // Statistics
+            _StatsCard(stats: stats),
+            const SizedBox(height: 12),
+
+            // Latest novels
+            Text(
+              '最新小说',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            latestNovels.when(
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32),
+                  child: CircularProgressIndicator(),
                 ),
               ),
-              flexibleSpace: FlexibleSpaceBar(
-                background: bannerNovels.when(
-                  loading: () => Container(color: AppColors.primary),
-                  error: (_, __) => Container(color: AppColors.primary),
-                  data: (novels) {
-                    if (novels.isEmpty) {
-                      return Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [AppColors.primary, AppColors.accent],
-                          ),
+              error: (err, stack) => Text('Error: $err'),
+              data: (novels) {
+                if (novels.isEmpty) {
+                  return const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(32),
+                      child: Center(
+                        child: Column(
+                          children: [
+                            Icon(Icons.cloud_download,
+                                size: 48, color: AppColors.primary),
+                            SizedBox(height: 16),
+                            Text('暂无数据，点击同步按钮下载'),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }
+                return SizedBox(
+                  height: 240,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: novels.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 10),
+                    itemBuilder: (context, index) {
+                      final novel = novels[index];
+                      return SizedBox(
+                        width: 100,
+                        child: NovelCard(
+                          novel: novel,
+                          onTap: () => context.push('/novel/${novel.id}'),
                         ),
                       );
-                    }
-                    return _HeroBanner(novel: novels.first);
-                  },
-                ),
-              ),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.sync),
-                  onPressed: () => _showSyncDialog(context, ref),
-                ),
-              ],
+                    },
+                  ),
+                );
+              },
             ),
+            const SizedBox(height: 12),
 
-            // Content
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Banner novels carousel
-                    bannerNovels.when(
-                      loading: () => const SizedBox.shrink(),
-                      error: (_, __) => const SizedBox.shrink(),
-                      data: (novels) {
-                        if (novels.length <= 1) return const SizedBox.shrink();
-                        return _BannerShowcase(novels: novels.skip(1).toList());
-                      },
-                    ),
-                    const SizedBox(height: 16),
+            // Quick Navigation
+            _QuickNavCard(),
+            const SizedBox(height: 12),
 
-                    // Statistics
-                    _StatsCard(stats: stats),
-                    const SizedBox(height: 16),
-
-                    // Latest novels
-                    Text(
-                      '最新小说',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    latestNovels.when(
-                      loading: () => const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(32),
-                          child: CircularProgressIndicator(),
-                        ),
-                      ),
-                      error: (err, stack) => Text('Error: $err'),
-                      data: (novels) {
-                        if (novels.isEmpty) {
-                          return const Card(
-                            child: Padding(
-                              padding: EdgeInsets.all(32),
-                              child: Center(
-                                child: Column(
-                                  children: [
-                                    Icon(Icons.cloud_download,
-                                        size: 48, color: AppColors.primary),
-                                    SizedBox(height: 16),
-                                    Text('暂无数据，点击同步按钮下载'),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          );
-                        }
-                        return SizedBox(
-                          height: 280,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: novels.length,
-                            separatorBuilder: (_, __) => const SizedBox(width: 12),
-                            itemBuilder: (context, index) {
-                              final novel = novels[index];
-                              return SizedBox(
-                                width: 120,
-                                child: NovelCard(
-                                  novel: novel,
-                                  onTap: () => context.push('/novel/${novel.id}'),
-                                ),
-                              );
-                            },
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Quick Navigation
-                    _QuickNavCard(),
-                    const SizedBox(height: 16),
-
-                    // Sync Status
-                    _SyncStatusCard(syncInfo: syncInfo),
-                  ],
-                ),
-              ),
-            ),
+            // Sync Status
+            _SyncStatusCard(syncInfo: syncInfo),
           ],
         ),
       ),
@@ -263,37 +240,76 @@ class _HeroBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // Background image
-        if (novel.cover != null && novel.cover!.isNotEmpty)
-          CachedNetworkImage(
-            imageUrl: novel.cover!.startsWith('http')
-                ? novel.cover!
-                : 'https://rs.sfacg.com/web/novel/images/NovelCover/Big/${novel.cover}',
-            fit: BoxFit.cover,
-            errorWidget: (_, __, ___) => Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [AppColors.primary, AppColors.accent],
+    return Container(
+      height: 150,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: AppColors.primary.withValues(alpha: 0.1),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Background image
+          if (novel.cover != null && novel.cover!.isNotEmpty)
+            CachedNetworkImage(
+              imageUrl: novel.cover!.startsWith('http')
+                  ? novel.cover!
+                  : 'https://rs.sfacg.com/web/novel/images/NovelCover/Big/${novel.cover}',
+              fit: BoxFit.cover,
+              errorWidget: (_, __, ___) => Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.primary, AppColors.accent],
+                  ),
                 ),
               ),
             ),
-          ),
-        // Gradient overlay
-        Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Colors.transparent, Colors.black87],
+          // Gradient overlay
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
+              ),
             ),
           ),
-        ),
-      ],
+          // Text
+          Positioned(
+            bottom: 12,
+            left: 12,
+            right: 12,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text('推荐',
+                      style: TextStyle(color: Colors.white, fontSize: 10)),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  novel.title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -306,7 +322,7 @@ class _BannerShowcase extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 160,
+      height: 140,
       child: PageView.builder(
         controller: PageController(viewportFraction: 0.9),
         itemCount: novels.length,
@@ -335,37 +351,37 @@ class _BannerShowcase extends StatelessWidget {
                       ),
                     ),
                   Container(
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, Colors.black87],
+                        colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
                       ),
                     ),
                   ),
                   Positioned(
-                    bottom: 12,
-                    left: 12,
-                    right: 12,
+                    bottom: 10,
+                    left: 10,
+                    right: 10,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: AppColors.primary,
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: const Text('推荐',
-                              style: TextStyle(color: Colors.white, fontSize: 10)),
+                              style: TextStyle(color: Colors.white, fontSize: 9)),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           novel.title,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.bold,
                           ),
                           maxLines: 1,
@@ -393,15 +409,15 @@ class _StatsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('数据库统计',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 )),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             stats.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, stack) => Text('Error: $err'),
@@ -448,9 +464,9 @@ class _StatItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Icon(icon, size: 28, color: AppColors.primary),
-        const SizedBox(height: 8),
-        Text(value, style: Theme.of(context).textTheme.titleLarge),
+        Icon(icon, size: 24, color: AppColors.primary),
+        const SizedBox(height: 4),
+        Text(value, style: Theme.of(context).textTheme.titleMedium),
         Text(label, style: Theme.of(context).textTheme.bodySmall),
       ],
     );
@@ -490,13 +506,6 @@ class _QuickNavCard extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/contests'),
           ),
-          const Divider(height: 1),
-          ListTile(
-            leading: const Icon(Icons.search, color: AppColors.primary),
-            title: const Text('搜索'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.go('/search'),
-          ),
         ],
       ),
     );
@@ -512,12 +521,12 @@ class _SyncStatusCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('同步状态',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 )),
             const SizedBox(height: 8),

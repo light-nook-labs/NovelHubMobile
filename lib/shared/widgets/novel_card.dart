@@ -16,12 +16,14 @@ class NovelCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Cover with 4:5 aspect ratio (matching web design)
-          AspectRatio(
-            aspectRatio: 4 / 5,
+          Expanded(
+            flex: 3,
             child: Container(
+              width: double.infinity,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(6),
                 color: AppColors.primary.withValues(alpha: 0.1),
@@ -30,35 +32,37 @@ class NovelCard extends StatelessWidget {
               child: _buildCover(),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
 
           // Title (max 2 lines)
-          Text(
-            novel.title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              height: 1.3,
+          Expanded(
+            flex: 1,
+            child: Text(
+              novel.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                height: 1.2,
+              ),
             ),
           ),
 
-          // Status + Genre badges (hidden on very small cards)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Row(
-              children: [
-                _SmallBadge(
-                  label: statusMapping.getZh(novel.status),
-                  color: _getStatusColor(novel.status),
-                ),
-                const SizedBox(width: 4),
-                _SmallBadge(
-                  label: genreMapping.getZh(novel.genre),
-                  color: AppColors.primary,
-                ),
-              ],
+          // Status badge only (genre removed to save space)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            decoration: BoxDecoration(
+              color: _getStatusColor(novel.status).withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(3),
+            ),
+            child: Text(
+              statusMapping.getZh(novel.status),
+              style: TextStyle(
+                fontSize: 8,
+                color: _getStatusColor(novel.status),
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
@@ -69,7 +73,7 @@ class NovelCard extends StatelessWidget {
   Widget _buildCover() {
     if (novel.cover == null || novel.cover!.isEmpty) {
       return const Center(
-        child: Icon(Icons.book, size: 32, color: AppColors.primary),
+        child: Icon(Icons.book, size: 24, color: AppColors.primary),
       );
     }
 
@@ -80,51 +84,25 @@ class NovelCard extends StatelessWidget {
     return CachedNetworkImage(
       imageUrl: url,
       fit: BoxFit.cover,
-      memCacheHeight: 500, // Limit cache size
-      memCacheWidth: 400,
+      memCacheHeight: 400,
+      memCacheWidth: 320,
       placeholder: (context, url) => const Center(
         child: CircularProgressIndicator(strokeWidth: 2),
       ),
       errorWidget: (context, url, error) => const Center(
-        child: Icon(Icons.broken_image, size: 32),
+        child: Icon(Icons.broken_image, size: 24),
       ),
     );
   }
 
   Color _getStatusColor(int status) {
     return switch (status) {
-      2 => AppColors.completed,   // 已完结
-      3 => AppColors.ongoing,     // 连载中
-      4 => AppColors.stopped,     // 断更
-      5 => AppColors.stopped,     // 断更A
-      6 => AppColors.completed,   // 完结A
+      2 => AppColors.completed,
+      3 => AppColors.ongoing,
+      4 => AppColors.stopped,
+      5 => AppColors.stopped,
+      6 => AppColors.completed,
       _ => Colors.grey,
     };
-  }
-}
-
-class _SmallBadge extends StatelessWidget {
-  final String label;
-  final Color color;
-
-  const _SmallBadge({required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(3),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 9,
-          color: color,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
   }
 }
