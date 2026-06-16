@@ -1,0 +1,133 @@
+name: Build and Publish Data Chunks
+
+on:
+  # Run monthly on the 1st at 02:00 UTC
+  schedule:
+    - cron: '0 2 1 * *'
+  
+  # Manual trigger
+  workflow_dispatch:
+  
+  # Listen for novel_hub release events
+  repository_dispatch:
+    types: [novel-hub-release]
+
+jobs:
+  build-chunks:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1. Checkout code
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      # 2. Setup Python
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      
+      # 3. Install uv
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      
+      # 4. Download novel_hub latest release
+      - name: Download Novel Hub Release
+        run: |
+          # Get latest release info
+          RELEASE_INFO=$(curl -s https://api.github.com/repos/light-nook-labs/novel_hub/releases/latest)
+          RELEASE_URL=$(echo "$RELEASE_INFO" | jq -r '.assets[] | select(.name | endswith("tar.gz")) | .browser_download_url')
+          TAG_NAME=$(echo "$RELEASE_INFO" | jq -r '.tag_name')
+          
+          echo "Downloading novel_hub release: $TAG_NAME"
+          echo "URL: $RELEASE_URL"
+          
+          # Download
+          curl -L -o release.tar.gz "$RELEASE_URL"
+          
+          # Extract
+          mkdir -p novel_hub_data
+          tar -xzf release.tar.gz -C novel_hub_data
+          
+          # List contents
+          echo "Extracted files:"
+          ls -la novel_hub_data/
+          
+          # Save tag name for later
+          echo "NOVEL_HUB_TAG=$TAG_NAME" >> $GITHUB_ENV
+      
+      # 5. Build chunks
+      - name: Build Chunks
+        run: |
+          cd scripts
+          uv run python build_chunks.py ../novel_hub_data/dataset ../output
+          
+          # List output
+          echo "Built chunks:"
+          ls -lh ../output/
+      
+      # 6. Compress chunks
+      - name: Compress Chunks
+        run: |
+          cd output
+          gzip -9 -k cold_chunk.sqlite
+          gzip -9 -k warm_chunk.sqlite
+          gzip -9 -k hot_chunk.sqlite
+          
+          echo "Compressed chunks:"
+          ls -lh *.gz
+      
+      # 7. Create release tag
+      - name: Create Release Tag
+        id: create_tag
+        run: |
+          # Generate tag based on date and novel_hub version
+          TAG_NAME="data-$(date +%Y%m%d)-${NOVEL_HUB_TAG}"
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "Created tag: $TAG_NAME"
+      
+      # 8. Create GitHub Release
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.create_tag.outputs.TAG_NAME }}
+          name: Data Update ${{ steps.create_tag.outputs.TAG_NAME }}
+          body: |
+            ## Data Chunks Update
+            
+            **Source**: novel_hub ${{ env.NOVEL_HUB_TAG }}
+            **Date**: ${{ github.event.head_commit.timestamp }}
+            
+            ### Chunks
+            
+            | Chunk | Records | Size | Description |
+            |-------|---------|------|-------------|
+            | cold_chunk | ~240k | ~38MB | 断更 + 已完结 (inactive) |
+            | warm_chunk | ~2.5k | ~480KB | 完结A + 断更A (low activity) |
+            | hot_chunk | ~2.8k | ~778KB | 连载中 (high activity) |
+            
+            ### Download
+            
+            - `cold_chunk.sqlite.gz` - Bundled with app (inactive data)
+            - `warm_chunk.sqlite.gz` - Download on first launch
+            - `hot_chunk.sqlite.gz` - Monthly update
+            
+            ### Notes
+            
+            - 下架 (removed) data is excluded
+            - Cold chunk is optimized with minimal indexes
+          files: |
+            output/cold_chunk.sqlite.gz
+            output/warm_chunk.sqlite.gz
+            output/hot_chunk.sqlite.gz
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      # 9. Cleanup
+      - name: Cleanup
+        run: |
+          rm -rf novel_hub_data release.tar.gz output

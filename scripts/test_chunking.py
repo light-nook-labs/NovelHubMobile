@@ -1,0 +1,371 @@
+#!/usr/bin/env python3
+"""
+Test chunking strategy for Novel Hub mobile app.
+Converts JSONL to chunked SQLite databases and measures disk space.
+"""
+
+import json
+import sqlite3
+import os
+import sys
+from pathlib import Path
+from datetime import datetime
+
+# Chunk configuration
+CHUNKS = {
+    'cold': {
+        'statuses': ['断更', '已完结'],  # Excluding 下架
+        'description': 'Inactive data (never updated)',
+    },
+    'warm': {
+        'statuses': ['完结A', '断更A'],
+        'description': 'Low activity data',
+    },
+    'hot': {
+        'statuses': ['连载中'],
+        'description': 'High activity data (updated monthly)',
+    },
+}
+
+def create_database(db_path: str) -> sqlite3.Connection:
+    """Create SQLite database with schema."""
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    # Create novels table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS novels (
+            id INTEGER PRIMARY KEY,
+            title TEXT NOT NULL,
+            author TEXT,
+            genre INTEGER DEFAULT 1,
+            status INTEGER DEFAULT 1,
+            ptype INTEGER DEFAULT 1,
+            has_banner BOOLEAN DEFAULT 0,
+            word_num INTEGER,
+            click_num INTEGER,
+            praise_num INTEGER,
+            like_num INTEGER,
+            comment_num INTEGER,
+            review_num INTEGER,
+            contest_id INTEGER,
+            cover TEXT,
+            last_update DATETIME,
+            db_update DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # Create authors table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS authors (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE
+        )
+    ''')
+    
+    # Create tags table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS tags (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE
+        )
+    ''')
+    
+    # Create novel_tags table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS novel_tags (
+            novel_id INTEGER,
+            tag_id INTEGER,
+            PRIMARY KEY (novel_id, tag_id),
+            FOREIGN KEY (novel_id) REFERENCES novels(id),
+            FOREIGN KEY (tag_id) REFERENCES tags(id)
+        )
+    ''')
+    
+    # Create contests table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS contests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE
+        )
+    ''')
+    
+    conn.commit()
+    return conn
+
+
+def insert_novel(conn: sqlite3.Connection, novel: dict) -> None:
+    """Insert a novel into the database."""
+    cursor = conn.cursor()
+    
+    # Map status string to integer
+    status_map = {
+        '其他': 1,
+        '已完结': 2,
+        '连载中': 3,
+        '断更': 4,
+        '断更A': 5,
+        '完结A': 6,
+        '下架': 7,
+    }
+    
+    # Map genre string to integer
+    genre_map = {
+        '其他': 1,
+        '魔幻': 2,
+        '玄幻': 3,
+        '古风': 4,
+        '科幻': 5,
+        '校园': 6,
+        '都市': 7,
+        '游戏': 8,
+        '同人': 9,
+        '悬疑': 10,
+    }
+    
+    # Map ptype string to integer
+    ptype_map = {
+        '其他': 1,
+        '免费': 2,
+        '签约': 3,
+        'VIP': 4,
+    }
+    
+    # Get mapped values
+    status = status_map.get(novel.get('status', '其他'), 1)
+    genre = genre_map.get(novel.get('genre', '其他'), 1)
+    ptype = ptype_map.get(novel.get('ptype', '其他'), 1)
+    
+    # Handle author
+    author_name = novel.get('author')
+    author_id = None
+    if author_name:
+        cursor.execute('INSERT OR IGNORE INTO authors (name) VALUES (?)', (author_name,))
+        cursor.execute('SELECT id FROM authors WHERE name = ?', (author_name,))
+        author_id = cursor.fetchone()[0]
+    
+    # Handle contest
+    contest_name = novel.get('contest')
+    contest_id = None
+    if contest_name:
+        cursor.execute('INSERT OR IGNORE INTO contests (name) VALUES (?)', (contest_name,))
+        cursor.execute('SELECT id FROM contests WHERE name = ?', (contest_name,))
+        contest_id = cursor.fetchone()[0]
+    
+    # Insert novel
+    cursor.execute('''
+        INSERT OR REPLACE INTO novels 
+        (id, title, author, genre, status, ptype, has_banner, 
+         word_num, click_num, praise_num, like_num, comment_num, 
+         review_num, contest_id, cover, last_update)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        novel['nid'],
+        novel['title'],
+        author_name,
+        genre,
+        status,
+        ptype,
+        novel.get('has_banner', False),
+        novel.get('word_num'),
+        novel.get('click_num'),
+        novel.get('praise_num'),
+        novel.get('like_num'),
+        novel.get('comment_num'),
+        novel.get('review_num'),
+        contest_id,
+        novel.get('cover'),
+        novel.get('last_update'),
+    ))
+    
+    # Handle tags
+    for tag_name in novel.get('tags', []):
+        cursor.execute('INSERT OR IGNORE INTO tags (name) VALUES (?)', (tag_name,))
+        cursor.execute('SELECT id FROM tags WHERE name = ?', (tag_name,))
+        tag_id = cursor.fetchone()[0]
+        cursor.execute('''
+            INSERT OR IGNORE INTO novel_tags (novel_id, tag_id) 
+            VALUES (?, ?)
+        ''', (novel['nid'], tag_id))
+
+
+def create_indexes(conn: sqlite3.Connection) -> None:
+    """Create indexes for better query performance."""
+    cursor = conn.cursor()
+    
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_novels_status ON novels(status)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_novels_genre ON novels(genre)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_novels_ptype ON novels(ptype)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_novels_click_num ON novels(click_num DESC)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_novels_last_update ON novels(last_update DESC)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_novels_has_banner ON novels(has_banner)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_novel_tags_novel_id ON novel_tags(novel_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_novel_tags_tag_id ON novel_tags(tag_id)')
+    
+    conn.commit()
+
+
+def get_file_size_mb(filepath: str) -> float:
+    """Get file size in MB."""
+    return os.path.getsize(filepath) / (1024 * 1024)
+
+
+def process_jsonl_files(jsonl_dir: str, output_dir: str) -> None:
+    """Process JSONL files and create chunked SQLite databases."""
+    
+    # Create output directory
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Initialize chunk connections
+    connections = {}
+    stats = {}
+    
+    for chunk_name, chunk_config in CHUNKS.items():
+        db_path = os.path.join(output_dir, f'{chunk_name}_chunk.sqlite')
+        connections[chunk_name] = create_database(db_path)
+        stats[chunk_name] = {
+            'count': 0,
+            'statuses': {},
+            'db_path': db_path,
+        }
+    
+    # Process all JSONL files
+    total_processed = 0
+    skipped = 0
+    
+    jsonl_files = sorted(Path(jsonl_dir).glob('*.jsonl'))
+    print(f'Found {len(jsonl_files)} JSONL files')
+    print()
+    
+    for jsonl_file in jsonl_files:
+        print(f'Processing {jsonl_file.name}...')
+        
+        with open(jsonl_file, 'r', encoding='utf-8') as f:
+            for line_num, line in enumerate(f, 1):
+                line = line.strip()
+                if not line:
+                    continue
+                
+                try:
+                    novel = json.loads(line)
+                    status = novel.get('status', '其他')
+                    
+                    # Skip 下架 (removed) data
+                    if status == '下架':
+                        skipped += 1
+                        continue
+                    
+                    # Find the chunk for this status
+                    chunk_name = None
+                    for name, config in CHUNKS.items():
+                        if status in config['statuses']:
+                            chunk_name = name
+                            break
+                    
+                    # Default to cold if status not found
+                    if chunk_name is None:
+                        chunk_name = 'cold'
+                    
+                    # Insert into the appropriate chunk
+                    insert_novel(connections[chunk_name], novel)
+                    stats[chunk_name]['count'] += 1
+                    stats[chunk_name]['statuses'][status] = stats[chunk_name]['statuses'].get(status, 0) + 1
+                    total_processed += 1
+                    
+                except json.JSONDecodeError as e:
+                    print(f'  Warning: Invalid JSON at line {line_num}: {e}')
+                    continue
+                except Exception as e:
+                    print(f'  Warning: Error processing line {line_num}: {e}')
+                    continue
+    
+    # Create indexes and close connections
+    for chunk_name, conn in connections.items():
+        create_indexes(conn)
+        conn.commit()
+        conn.close()
+    
+    # Print statistics
+    print()
+    print('=' * 60)
+    print('CHUNKING RESULTS')
+    print('=' * 60)
+    print()
+    print(f'Total processed: {total_processed:,}')
+    print(f'Skipped (下架): {skipped:,}')
+    print()
+    
+    total_size = 0
+    for chunk_name, chunk_stats in stats.items():
+        db_path = chunk_stats['db_path']
+        size_mb = get_file_size_mb(db_path)
+        total_size += size_mb
+        
+        print(f'{chunk_name.upper()} CHUNK:')
+        print(f'  Records: {chunk_stats["count"]:,}')
+        print(f'  Size: {size_mb:.2f} MB')
+        print(f'  Description: {CHUNKS[chunk_name]["description"]}')
+        print(f'  Statuses:')
+        for status, count in sorted(chunk_stats['statuses'].items(), key=lambda x: -x[1]):
+            print(f'    {status}: {count:,}')
+        print()
+    
+    print(f'Total size: {total_size:.2f} MB')
+    print()
+    
+    # Estimate compressed sizes (typically 3-5x compression for SQLite)
+    print('Estimated compressed sizes (gzip):')
+    for chunk_name, chunk_stats in stats.items():
+        db_path = chunk_stats['db_path']
+        size_mb = get_file_size_mb(db_path)
+        compressed_mb = size_mb / 4  # Rough estimate
+        print(f'  {chunk_name}_chunk.sqlite.gz: {compressed_mb:.2f} MB')
+    
+    total_compressed = total_size / 4
+    print(f'  Total compressed: {total_compressed:.2f} MB')
+    print()
+    
+    # App bundling recommendation
+    cold_size = get_file_size_mb(stats['cold']['db_path'])
+    warm_size = get_file_size_mb(stats['warm']['db_path'])
+    hot_size = get_file_size_mb(stats['hot']['db_path'])
+    
+    print('=' * 60)
+    print('APP BUNDLING RECOMMENDATION')
+    print('=' * 60)
+    print()
+    print(f'Bundle with App: cold_chunk.sqlite ({cold_size:.2f} MB)')
+    print(f'Download on first launch: warm_chunk.sqlite ({warm_size:.2f} MB)')
+    print(f'Monthly update: hot_chunk.sqlite ({hot_size:.2f} MB)')
+    print()
+    print(f'Total App size: ~{5 + cold_size:.0f} MB (code + cold chunk)')
+    print(f'First launch download: ~{warm_size + hot_size:.2f} MB')
+    print(f'Monthly update: ~{hot_size:.2f} MB')
+
+
+def main():
+    # Default paths
+    jsonl_dir = '/home/interset/Desktop/novel_hub/release/dataset'
+    output_dir = '/home/interset/Desktop/mobile/scripts/test_chunks'
+    
+    # Allow overriding from command line
+    if len(sys.argv) > 1:
+        jsonl_dir = sys.argv[1]
+    if len(sys.argv) > 2:
+        output_dir = sys.argv[2]
+    
+    print('Novel Hub Chunking Test')
+    print('=' * 60)
+    print(f'Input: {jsonl_dir}')
+    print(f'Output: {output_dir}')
+    print()
+    
+    if not os.path.exists(jsonl_dir):
+        print(f'Error: Input directory not found: {jsonl_dir}')
+        sys.exit(1)
+    
+    process_jsonl_files(jsonl_dir, output_dir)
+
+
+if __name__ == '__main__':
+    main()

@@ -141,6 +141,23 @@ release.tar.gz
 └── tasks.csv
 ```
 
+### Chunked Data Strategy
+
+Data is split into chunks based on activity level:
+
+| Chunk | Status | Records | Size | Update Frequency |
+|-------|--------|---------|------|------------------|
+| Cold | 断更, 已完结 | ~240k | ~38MB | Never |
+| Warm | 完结A, 断更A | ~2.5k | ~480KB | Quarterly |
+| Hot | 连载中 | ~2.8k | ~778KB | Monthly |
+
+**下架 (removed) data is excluded** as it has no value.
+
+**App bundling:**
+- App includes: Cold chunk (~38MB compressed)
+- First launch download: Warm + Hot chunks (~1.3MB)
+- Monthly update: Hot chunk (~778KB)
+
 ### Novel Data Schema (JSONL)
 
 ```json
