@@ -23,7 +23,6 @@ class GenreListScreen extends StatelessWidget {
           final zh = genreMapping.allZh[index];
           final value = genreMapping.getValue(zh);
           return ListTile(
-            leading: const Icon(Icons.category, color: AppColors.primary),
             title: Text(zh),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/novels-by-genre?genre=$value'),
@@ -53,8 +52,6 @@ class StatusListScreen extends StatelessWidget {
           final zh = statusMapping.allZh[index];
           final value = statusMapping.getValue(zh);
           return ListTile(
-            leading: const Icon(Icons.signal_wifi_statusbar_4_bar,
-                color: AppColors.primary),
             title: Text(zh),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/novels-by-status?status=$value'),
@@ -84,12 +81,9 @@ class PtypeListScreen extends StatelessWidget {
           final zh = ptypeMapping.allZh[index];
           final value = ptypeMapping.getValue(zh);
           return ListTile(
-            leading:
-                const Icon(Icons.vpn_key, color: AppColors.primary),
             title: Text(zh),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
-              // Navigate to novels tab with ptype filter
               context.go('/novels?ptype=$value');
             },
           );
