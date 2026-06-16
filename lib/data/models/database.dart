@@ -920,8 +920,8 @@ class AppDatabase extends _$AppDatabase {
       await file.delete();
     }
 
-    // Copy bundled database
-    await _copyBundledDatabase(dbPath);
+    // Recreate from chunks
+    await _createMergedDatabase(dbPath);
   }
 }
 
@@ -930,19 +930,94 @@ LazyDatabase _openConnection() {
     final dbFolder = await getApplicationDocumentsDirectory();
     final dbPath = p.join(dbFolder.path, 'novel_hub.sqlite');
     final file = File(dbPath);
-
-    // If database doesn't exist, copy from bundled asset
+    
+    // If merged database doesn't exist, create it from chunks
     if (!await file.exists()) {
-      await _copyBundledDatabase(dbPath);
+      await _createMergedDatabase(dbPath);
     }
-
+    
     return NativeDatabase.createInBackground(file);
   });
 }
 
-Future<void> _copyBundledDatabase(String targetPath) async {
-  // Load bundled database from assets
-  final data = await rootBundle.load('assets/db/novel_hub.sqlite');
+Future<void> _createMergedDatabase(String targetPath) async {
+  final chunksDir = p.join(File(targetPath).parent.path, 'chunks');
+  
+  // Copy chunks from assets if needed
+  for (final chunkName in ['cold', 'warm', 'hot']) {
+    final chunkPath = p.join(chunksDir, '${chunkName}_chunk.sqlite');
+    if (!await File(chunkPath).exists()) {
+      await _copyBundledChunk(chunkName, chunkPath);
+    }
+  }
+  
+  // Use cold chunk as base
+  final coldPath = p.join(chunksDir, 'cold_chunk.sqlite');
+  final warmPath = p.join(chunksDir, 'warm_chunk.sqlite');
+  final hotPath = p.join(chunksDir, 'hot_chunk.sqlite');
+  
+  // Copy cold chunk as the main database
+  await File(coldPath).copy(targetPath);
+  
+  // Open the database and merge data from warm and hot chunks
+  final db = NativeDatabase.createInBackground(File(targetPath));
+  
+  try {
+    // Attach warm and hot chunks
+    await db.runCustom("ATTACH '${warmPath}' AS warm");
+    await db.runCustom("ATTACH '${hotPath}' AS hot");
+    
+    // Insert data from warm chunk (ignore duplicates)
+    await db.runCustom('''
+      INSERT OR IGNORE INTO novels SELECT * FROM warm.novels
+    ''');
+    await db.runCustom('''
+      INSERT OR IGNORE INTO authors SELECT * FROM warm.authors
+    ''');
+    await db.runCustom('''
+      INSERT OR IGNORE INTO tags SELECT * FROM warm.tags
+    ''');
+    await db.runCustom('''
+      INSERT OR IGNORE INTO contests SELECT * FROM warm.contests
+    ''');
+    await db.runCustom('''
+      INSERT OR IGNORE INTO novel_tags SELECT * FROM warm.novel_tags
+    ''');
+    
+    // Insert data from hot chunk (ignore duplicates)
+    await db.runCustom('''
+      INSERT OR IGNORE INTO novels SELECT * FROM hot.novels
+    ''');
+    await db.runCustom('''
+      INSERT OR IGNORE INTO authors SELECT * FROM hot.authors
+    ''');
+    await db.runCustom('''
+      INSERT OR IGNORE INTO tags SELECT * FROM hot.tags
+    ''');
+    await db.runCustom('''
+      INSERT OR IGNORE INTO contests SELECT * FROM hot.contests
+    ''');
+    await db.runCustom('''
+      INSERT OR IGNORE INTO novel_tags SELECT * FROM hot.novel_tags
+    ''');
+    
+    // Detach chunks
+    await db.runCustom("DETACH warm");
+    await db.runCustom("DETACH hot");
+  } finally {
+    await db.close();
+  }
+}
+
+Future<void> _copyBundledChunk(String chunkName, String targetPath) async {
+  // Ensure directory exists
+  final dir = File(targetPath).parent;
+  if (!await dir.exists()) {
+    await dir.create(recursive: true);
+  }
+  
+  // Load bundled chunk from assets
+  final data = await rootBundle.load('assets/chunks/${chunkName}_chunk.sqlite');
   final bytes = data.buffer.asUint8List();
 
   // Write to target path
