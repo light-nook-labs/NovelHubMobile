@@ -328,7 +328,7 @@ class _QuickNavCard extends StatelessWidget {
           const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.category, color: AppColors.primary),
-            title: Text('类型${stats != null ? '（${stats!['genres'] ?? 0}）' : ''}'),
+            title: Text('小说分类${stats != null ? '（${stats!['genres'] ?? 0}）' : ''}'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.go('/novels'),
           ),
@@ -342,7 +342,7 @@ class _QuickNavCard extends StatelessWidget {
           const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.vpn_key, color: AppColors.primary),
-            title: Text('权限${stats != null ? '（${stats!['ptypes'] ?? 0}）' : ''}'),
+            title: Text('类型${stats != null ? '（${stats!['ptypes'] ?? 0}）' : ''}'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.go('/novels'),
           ),
