@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../data/repositories/providers.dart';
 import '../../data/models/database.dart';
 import '../../shared/utils/mappings.dart';
 import '../../app/theme.dart';
-
-part 'rankings_screen.g.dart';
 
 enum RankingType {
   click('点击', Icons.touch_app, 'click_num'),
@@ -98,161 +95,242 @@ class _RankingsScreenState extends ConsumerState<RankingsScreen>
   }
 }
 
-class _RankingList extends ConsumerWidget {
+class _RankingList extends ConsumerStatefulWidget {
   final RankingType type;
 
   const _RankingList({required this.type});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final novelsAsync = ref.watch(rankingProvider(type.field));
-    final authorsAsync = ref.watch(authorsProvider);
+  ConsumerState<_RankingList> createState() => _RankingListState();
+}
 
-    return novelsAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Error: $err')),
-      data: (novels) {
-        if (novels.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(type.icon, size: 48, color: Colors.grey.withValues(alpha: 0.3)),
-                const SizedBox(height: 16),
-                const Text('暂无数据'),
-              ],
-            ),
-          );
-        }
-        return authorsAsync.when(
-          loading: () => _buildTable(context, novels, {}),
-          error: (_, __) => _buildTable(context, novels, {}),
-          data: (authors) {
-            final authorMap = {for (var a in authors) a.id: a.name};
-            return _buildTable(context, novels, authorMap);
-          },
-        );
-      },
-    );
+class _RankingListState extends ConsumerState<_RankingList> {
+  final _scrollController = ScrollController();
+  final _pageSize = 48;
+  int _currentPage = 0;
+  bool _hasMore = true;
+  bool _isLoadingMore = false;
+  List<Novel> _novels = [];
+  Map<int, String> _authorMap = {};
+  bool _showBackToTop = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+    _loadInitialData();
   }
 
-  Widget _buildTable(BuildContext context, List<Novel> novels, Map<int, String> authorMap) {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: novels.length,
-      itemBuilder: (context, index) {
-        final novel = novels[index];
-        final rank = index + 1;
-        final value = _getValue(novel);
-        final authorName = novel.authorId != null ? authorMap[novel.authorId] ?? '未知' : '未知';
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
-        return InkWell(
-          onTap: () => context.push('/novel/${novel.id}'),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Rank
-                _buildRank(rank),
-                const SizedBox(width: 10),
-                // Cover
-                _buildCover(novel),
-                const SizedBox(width: 10),
-                // Novel info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Title + ID
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final titleText = _wrapChineseText(novel.title, 10);
-                          return RichText(
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                            text: TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: titleText,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                    color: Theme.of(context).textTheme.bodyLarge?.color,
-                                    height: 1.3,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: ' #${novel.id}',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey[500],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 2),
-                      // Author
-                      Text(
-                        authorName,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey[500],
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      // Badges
-                      Wrap(
-                        spacing: 4,
-                        runSpacing: 4,
+  void _onScroll() {
+    setState(() {
+      _showBackToTop = _scrollController.offset > 500;
+    });
+
+    if (_scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 200 &&
+        !_isLoadingMore &&
+        _hasMore) {
+      _loadMore();
+    }
+  }
+
+  Future<void> _loadInitialData() async {
+    final db = ref.read(databaseProvider);
+    final authors = await db.getAllAuthors(limit: 10000);
+    setState(() {
+      _authorMap = {for (var a in authors) a.id: a.name};
+    });
+    await _loadMore();
+  }
+
+  Future<void> _loadMore() async {
+    if (_isLoadingMore) return;
+    setState(() => _isLoadingMore = true);
+
+    final db = ref.read(databaseProvider);
+    final newNovels = await db.getNovelsSorted(
+      widget.type.field,
+      descending: true,
+      limit: _pageSize,
+      offset: _currentPage * _pageSize,
+    );
+
+    setState(() {
+      _currentPage++;
+      _novels.addAll(newNovels);
+      _hasMore = newNovels.length == _pageSize;
+      _isLoadingMore = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_novels.isEmpty && _isLoadingMore) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_novels.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(widget.type.icon,
+                size: 48, color: Colors.grey.withValues(alpha: 0.3)),
+            const SizedBox(height: 16),
+            const Text('暂无数据'),
+          ],
+        ),
+      );
+    }
+
+    return Stack(
+      children: [
+        ListView.builder(
+          controller: _scrollController,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          itemCount: _novels.length + (_hasMore ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index == _novels.length) {
+              return const Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            final novel = _novels[index];
+            final rank = index + 1;
+            final value = _getValue(novel);
+            final authorName = novel.authorId != null
+                ? _authorMap[novel.authorId] ?? '未知'
+                : '未知';
+
+            return InkWell(
+              onTap: () => context.push('/novel/${novel.id}'),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    _buildRank(rank),
+                    const SizedBox(width: 10),
+                    _buildCover(novel),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildBadge(
-                            statusMapping.getZh(novel.status),
-                            _getStatusColor(novel.status),
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final titleText =
+                                  _wrapChineseText(novel.title, 10);
+                              return RichText(
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                text: TextSpan(
+                                  children: [
+                                    TextSpan(
+                                      text: titleText,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: Theme.of(context)
+                                            .textTheme
+                                            .bodyLarge
+                                            ?.color,
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                    TextSpan(
+                                      text: ' #${novel.id}',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey[500],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
                           ),
-                          _buildBadge(
-                            genreMapping.getZh(novel.genre),
-                            AppColors.primary,
+                          const SizedBox(height: 2),
+                          Text(
+                            authorName,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey[500],
+                            ),
                           ),
-                          _buildBadge(
-                            ptypeMapping.getZh(novel.ptype),
-                            AppColors.secondary,
+                          const SizedBox(height: 4),
+                          Wrap(
+                            spacing: 4,
+                            runSpacing: 4,
+                            children: [
+                              _buildBadge(
+                                statusMapping.getZh(novel.status),
+                                _getStatusColor(novel.status),
+                              ),
+                              _buildBadge(
+                                genreMapping.getZh(novel.genre),
+                                AppColors.primary,
+                              ),
+                              _buildBadge(
+                                ptypeMapping.getZh(novel.ptype),
+                                AppColors.secondary,
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Value
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      _formatNumber(value),
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
                     ),
-                    Text(
-                      type.label.replaceAll('榜', ''),
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.grey[500],
-                      ),
+                    const SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          _formatNumber(value),
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        Text(
+                          widget.type.label,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
+            );
+          },
+        ),
+        if (_showBackToTop)
+          Positioned(
+            right: 16,
+            bottom: 16,
+            child: FloatingActionButton.small(
+              onPressed: () {
+                _scrollController.animateTo(
+                  0,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                );
+              },
+              child: const Icon(Icons.arrow_upward),
             ),
           ),
-        );
-      },
+      ],
     );
   }
 
@@ -361,7 +439,7 @@ class _RankingList extends ConsumerWidget {
   }
 
   int _getValue(Novel novel) {
-    return switch (type) {
+    return switch (widget.type) {
       RankingType.click => novel.clickNum ?? 0,
       RankingType.word => novel.wordNum ?? 0,
       RankingType.praise => novel.praiseNum ?? 0,
@@ -410,10 +488,4 @@ class _RankingList extends ConsumerWidget {
     if ('，。！？、；：""''（）【】《》'.contains(char)) return true;
     return false;
   }
-}
-
-@riverpod
-Future<List<Novel>> ranking(RankingRef ref, String field) async {
-  final db = ref.watch(databaseProvider);
-  return db.getNovelsSorted(field, descending: true, limit: 100);
 }

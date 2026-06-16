@@ -9,13 +9,68 @@ import '../../app/theme.dart';
 
 part 'contests_screen.g.dart';
 
-class ContestsScreen extends ConsumerWidget {
+class ContestsScreen extends ConsumerStatefulWidget {
   const ContestsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final contestsAsync = ref.watch(contestsProvider);
+  ConsumerState<ContestsScreen> createState() => _ContestsScreenState();
+}
 
+class _ContestsScreenState extends ConsumerState<ContestsScreen> {
+  final _scrollController = ScrollController();
+  final _pageSize = 48;
+  int _currentPage = 0;
+  bool _hasMore = true;
+  bool _isLoadingMore = false;
+  List<Contest> _contests = [];
+  bool _showBackToTop = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+    _loadMore();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    setState(() {
+      _showBackToTop = _scrollController.offset > 500;
+    });
+
+    if (_scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 200 &&
+        !_isLoadingMore &&
+        _hasMore) {
+      _loadMore();
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_isLoadingMore) return;
+    setState(() => _isLoadingMore = true);
+
+    final db = ref.read(databaseProvider);
+    final newContests = await db.getAllContests(
+      limit: _pageSize,
+      offset: _currentPage * _pageSize,
+    );
+
+    setState(() {
+      _currentPage++;
+      _contests.addAll(newContests);
+      _hasMore = newContests.length == _pageSize;
+      _isLoadingMore = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('比赛'),
@@ -24,49 +79,70 @@ class ContestsScreen extends ConsumerWidget {
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      body: contestsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
-        data: (contests) {
-          if (contests.isEmpty) {
-            return const Center(child: Text('暂无数据'));
-          }
-          return GridView.builder(
-            padding: const EdgeInsets.all(12),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 3,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-            ),
-            itemCount: contests.length,
-            itemBuilder: (context, index) {
-              final contest = contests[index];
-              return Card(
-                child: InkWell(
-                  onTap: () => context.push('/contest/${contest.id}'),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Text(
-                        contest.name,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
+      body: _contests.isEmpty && _isLoadingMore
+          ? const Center(child: CircularProgressIndicator())
+          : _contests.isEmpty
+              ? const Center(child: Text('暂无数据'))
+              : Stack(
+                  children: [
+                    GridView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(12),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 3,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
                       ),
+                      itemCount: _contests.length + (_hasMore ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == _contests.length) {
+                          return const Center(
+                              child: CircularProgressIndicator());
+                        }
+                        final contest = _contests[index];
+                        return Card(
+                          child: InkWell(
+                            onTap: () => context.push('/contest/${contest.id}'),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Center(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 12),
+                                child: Text(
+                                  contest.name,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  ),
+                    if (_showBackToTop)
+                      Positioned(
+                        right: 16,
+                        bottom: 16,
+                        child: FloatingActionButton.small(
+                          onPressed: () {
+                            _scrollController.animateTo(
+                              0,
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeOut,
+                            );
+                          },
+                          child: const Icon(Icons.arrow_upward),
+                        ),
+                      ),
+                  ],
                 ),
-              );
-            },
-          );
-        },
-      ),
     );
   }
 }
