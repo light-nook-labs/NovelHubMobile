@@ -24,29 +24,28 @@ flutter build apk --release
 
 ```bash
 # Delete old release
-gh release delete v0.1.0-beta.3 --yes 2>/dev/null || true
+gh release delete v0.1.0-beta.4 --yes 2>/dev/null || true
 
 # Delete old tag
-git tag -d v0.1.0-beta.3 2>/dev/null || true
-git push origin :refs/tags/v0.1.0-beta.3 2>/dev/null || true
+git tag -d v0.1.0-beta.4 2>/dev/null || true
+git push origin :refs/tags/v0.1.0-beta.4 2>/dev/null || true
 
 # Create new tag
-git tag v0.1.0-beta.4
-git push origin v0.1.0-beta.4
+git tag v0.1.0-beta.5
+git push origin v0.1.0-beta.5
 
 # Create prerelease
-gh release create v0.1.0-beta.4 \
+gh release create v0.1.0-beta.5 \
   --prerelease \
-  --title "v0.1.0-beta.4 - Database Sync" \
-  --notes "## Novel Hub Mobile v0.1.0-beta.4
+  --title "v0.1.0-beta.5 - Bundled Chunks" \
+  --notes "## Novel Hub Mobile v0.1.0-beta.5
 
 ### Changes
 
-- Removed JSONL-based sync
-- Added database file import functionality
-- Sync now downloads SQLite chunks from GitHub
-- Import allows loading local SQLite files
-- Bundled cold chunk (240k novels) with app
+- Bundled all three chunks (cold, warm, hot) as default dataset
+- Removed old database file
+- Fixed Navigator error in settings screen
+- No need to download data on first launch
 
 ### Features
 
