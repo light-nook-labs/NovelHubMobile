@@ -13,16 +13,17 @@ Mobile app for [Novel Hub](https://github.com/light-nook-labs/novel_hub) — off
 
 | Feature | Web (Django) | Mobile | Notes |
 |---------|-------------|--------|-------|
-| Novel list + filter | ✅ | ✅ | 4-column grid, inline filters |
-| Novel detail | ✅ | ✅ | Cover right, info left |
-| Rankings (6 dimensions) | ✅ | ✅ | Table view with tabs |
+| Novel list + filter | ✅ | ✅ | 4-column grid, header tabs for ptype |
+| Novel detail | ✅ | ✅ | Cover right, info left, copy title, SFACG link |
+| Rankings (6 dimensions) | ✅ | ✅ | Rank-style list with tabs |
 | Search | ✅ | ✅ | Full screen, debounced |
-| Banner showcase | ✅ | ✅ | Hero banner + carousel + dedicated page |
-| Author list + detail | ✅ | ✅ | |
-| Tag list + detail | ✅ | ✅ | |
-| Contest list + detail | ✅ | ✅ | |
-| Genre/Status/Ptype browse | ✅ | ✅ | Via filters |
+| Banner showcase | ✅ | ✅ | Hero carousel (5) + dedicated tab |
+| Author list + detail | ✅ | ✅ | Sorted by total clicks |
+| Tag list + detail | ✅ | ✅ | 3-column grid |
+| Contest list + detail | ✅ | ✅ | 2-column grid |
+| Genre/Status/Ptype browse | ✅ | ✅ | List pages + filtered novels |
 | Dark mode | ✅ | ✅ | |
+| Load more | ✅ | ✅ | 48 per page, back-to-top button |
 
 ## Tech Stack
 
@@ -31,6 +32,7 @@ Mobile app for [Novel Hub](https://github.com/light-nook-labs/novel_hub) — off
 - **Database**: drift (SQLite)
 - **HTTP**: dio
 - **Routing**: go_router
+- **Image**: cached_network_image
 - **Window**: window_manager (desktop testing)
 
 ## Key Commands
@@ -47,32 +49,49 @@ flutter build linux --debug                          # Build for testing
 ## Navigation Structure
 
 **Bottom Nav (5 tabs):**
-- 首页 (Home)
-- 小说 (Novels)
-- 背投 (Banners)
-- 排行 (Rankings)
-- 设置 (Settings)
+- 首页 (Home) - `/`
+- 小说 (Novels) - `/novels`
+- 背投 (Banners) - `/banners`
+- 排行 (Rankings) - `/rankings`
+- 设置 (Settings) - `/settings`
 
 **Header Nav:**
 - Search bar in AppBar → opens full screen search page
 
+**Novels Screen Header Tabs:**
+- 全部/其他/免费/签约/VIP (ptype filter)
+
+**Rankings Screen Header Tabs:**
+- 点击/字数/收藏/点赞/长评/短评
+
 **Full Screen Pages (no bottom nav):**
-- Novel detail
-- Search
-- Authors/Tags/Contests list & detail
+- Novel detail - `/novel/:id`
+- Search - `/search`
+- Authors list - `/authors`
+- Author detail - `/author/:id`
+- Tags list - `/tags`
+- Tag detail - `/tag/:id`
+- Contests list - `/contests`
+- Contest detail - `/contest/:id`
+- Genre list - `/genres`
+- Status list - `/statuses`
+- Ptype list - `/ptypes`
+- Novels by genre - `/novels-by-genre`
+- Novels by status - `/novels-by-status`
 
 ## Default Sorting
 
 Matching novel_hub web defaults:
 - **Novel list**: `click_num` DESC
 - **Rankings**: `click_num` DESC (default tab)
+- **Authors**: Total `click_num` DESC
 - **Home latest**: `click_num` DESC
 
 ## Enum Mappings
 
 From `novel_hub/utils/mappings.py` (index 1 = OTHER/fallback):
 
-### Genre (类型)
+### Genre (小说分类)
 | Value | Chinese |
 |-------|---------|
 | 1 | 其他 |
@@ -151,12 +170,15 @@ release.tar.gz
 
 **Runtime path**: `~/.local/share/novel_hub_mobile/novel_hub.sqlite`
 
+**Database provider**: KeepAlive singleton (no multiple instances)
+
 ## UI Conventions
 
 **Layout:**
 - Novel grid: 4 columns (matching web `grid-cols-4`)
 - Novel card: 4:5 cover ratio, title + status badge
 - Detail page: Info left, cover right
+- Novel rank list: Reusable component for consistent layout
 
 **Colors:**
 - No cold colors (blue, indigo, cyan, purple, fuchsia)
@@ -164,9 +186,10 @@ release.tar.gz
 - Status colors: Green(ongoing), Grey(stopped), Blue(completed)
 
 **Typography:**
-- Title: 10-11px bold
+- Title: 14px bold
 - Body: 12-13px
-- Badge: 8-9px
+- Badge: 10px
+- Chinese text wraps after ~10 characters
 
 **Window (desktop testing):**
 - Width: 390px (mobile)
@@ -190,17 +213,20 @@ lib/
 │       ├── jsonl_parser.dart
 │       └── sync_service.dart
 ├── features/
-│   ├── home/               # hero banner, stats, latest
-│   ├── novels/             # list (4-col grid), detail
+│   ├── home/               # hero banner carousel, quick nav
+│   ├── novels/             # list (4-col grid), detail, by-genre, by-status
 │   ├── authors/            # list, detail
 │   ├── tags/               # list, detail
 │   ├── contests/           # list, detail
-│   ├── rankings/           # 6 tabs, table view
+│   ├── banner/             # banner tab (dedicated)
+│   ├── browse/             # enum list screens
+│   ├── rankings/           # 6 tabs, rank-style list
 │   ├── search/             # full screen search
 │   └── settings/           # sync, reset
 └── shared/
     ├── widgets/
-    │   └── novel_card.dart
+    │   ├── novel_card.dart
+    │   └── novel_rank_list.dart  # Reusable rank-style list
     └── utils/
         └── mappings.dart   # enum mappings
 ```
@@ -214,6 +240,7 @@ lib/
 - **last_update**: ISO 8601 with timezone
 - **Enum values**: Index 1 is always OTHER/fallback (not 0)
 - **nid < 10000**: Test data, may have bugs; use meta_13.jsonl for real data
+- **Database singleton**: Use `@Riverpod(keepAlive: true)` to prevent multiple instances
 
 ## Testing
 
