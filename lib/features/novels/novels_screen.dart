@@ -7,6 +7,7 @@ import '../../data/repositories/providers.dart';
 import '../../data/models/database.dart';
 import '../../shared/widgets/novel_card.dart';
 import '../../shared/utils/mappings.dart';
+import '../../app/theme.dart';
 
 part 'novels_screen.g.dart';
 
@@ -20,6 +21,7 @@ class NovelsScreen extends ConsumerStatefulWidget {
 class _NovelsScreenState extends ConsumerState<NovelsScreen> {
   int? _selectedGenre;
   int? _selectedStatus;
+  int? _selectedPtype;
   String _sortBy = 'last_update';
   bool _descending = true;
 
@@ -29,6 +31,7 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen> {
       filteredNovelsProvider(
         genre: _selectedGenre,
         status: _selectedStatus,
+        ptype: _selectedPtype,
         sortBy: _sortBy,
         descending: _descending,
       ),
@@ -37,17 +40,11 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('小说列表'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: () => _showFilterSheet(context),
-          ),
-        ],
       ),
       body: Column(
         children: [
-          // Filter chips
-          _buildFilterChips(),
+          // Filters (matching web design)
+          _buildFilters(),
           // Novel grid
           Expanded(
             child: novelsAsync.when(
@@ -55,7 +52,16 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen> {
               error: (err, stack) => Center(child: Text('Error: $err')),
               data: (novels) {
                 if (novels.isEmpty) {
-                  return const Center(child: Text('暂无数据，请先同步'));
+                  return const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.book, size: 48, color: Colors.grey),
+                        SizedBox(height: 16),
+                        Text('暂无数据'),
+                      ],
+                    ),
+                  );
                 }
                 return _buildNovelGrid(novels);
               },
@@ -66,54 +72,168 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen> {
     );
   }
 
-  Widget _buildFilterChips() {
-    return SizedBox(
-      height: 50,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        children: [
-          FilterChip(
-            label: Text(
-              _selectedGenre == null
-                  ? '全部类型'
-                  : genreMapping.getZh(_selectedGenre!),
-            ),
-            selected: _selectedGenre != null,
-            onSelected: (selected) {
-              setState(() => _selectedGenre = selected ? 1 : null);
-            },
+  Widget _buildFilters() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        border: Border(
+          bottom: BorderSide(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
           ),
-          const SizedBox(width: 8),
-          ...genreMapping.allZh.map((zh) {
-            final value = genreMapping.getValue(zh);
-            return Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: FilterChip(
-                label: Text(zh),
-                selected: _selectedGenre == value,
-                onSelected: (selected) {
-                  setState(() => _selectedGenre = selected ? value : null);
-                },
-              ),
-            );
-          }),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Genre filters
+          _buildFilterRow(
+            label: '分类',
+            items: genreMapping.allZh.map((zh) {
+              final value = genreMapping.getValue(zh);
+              return FilterItem(label: zh, value: value);
+            }).toList(),
+            selectedValue: _selectedGenre,
+            onChanged: (value) => setState(() => _selectedGenre = value),
+          ),
+          const SizedBox(height: 8),
+
+          // Status filters
+          _buildFilterRow(
+            label: '状态',
+            items: statusMapping.allZh.map((zh) {
+              final value = statusMapping.getValue(zh);
+              return FilterItem(label: zh, value: value);
+            }).toList(),
+            selectedValue: _selectedStatus,
+            onChanged: (value) => setState(() => _selectedStatus = value),
+          ),
+          const SizedBox(height: 8),
+
+          // Ptype filters
+          _buildFilterRow(
+            label: '类型',
+            items: ptypeMapping.allZh.map((zh) {
+              final value = ptypeMapping.getValue(zh);
+              return FilterItem(label: zh, value: value);
+            }).toList(),
+            selectedValue: _selectedPtype,
+            onChanged: (value) => setState(() => _selectedPtype = value),
+          ),
+          const SizedBox(height: 8),
+
+          // Sort options
+          _buildSortRow(),
         ],
       ),
+    );
+  }
+
+  Widget _buildFilterRow({
+    required String label,
+    required List<FilterItem> items,
+    required int? selectedValue,
+    required ValueChanged<int?> onChanged,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 40,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              _FilterChip(
+                label: '全部',
+                isSelected: selectedValue == null,
+                onTap: () => onChanged(null),
+              ),
+              ...items.map((item) => _FilterChip(
+                label: item.label,
+                isSelected: selectedValue == item.value,
+                onTap: () => onChanged(item.value),
+              )),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSortRow() {
+    final sortOptions = [
+      {'key': 'last_update', 'label': '更新时间'},
+      {'key': 'click_num', 'label': '点击量'},
+      {'key': 'word_num', 'label': '字数'},
+      {'key': 'like_num', 'label': '收藏'},
+      {'key': 'praise_num', 'label': '点赞'},
+    ];
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(
+          width: 40,
+          child: Text(
+            '排序',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: sortOptions.map((option) {
+              final key = option['key']!;
+              final label = option['label']!;
+              return _FilterChip(
+                label: label,
+                isSelected: _sortBy == key,
+                onTap: () {
+                  setState(() {
+                    if (_sortBy == key) {
+                      _descending = !_descending;
+                    } else {
+                      _sortBy = key;
+                      _descending = true;
+                    }
+                  });
+                },
+              );
+            }).toList(),
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildNovelGrid(List<Novel> novels) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final crossAxisCount = constraints.maxWidth > 600 ? 4 : 3;
+        // 4 columns on mobile (matching web: grid-cols-4)
+        final crossAxisCount = 4;
         return GridView.builder(
           padding: const EdgeInsets.all(12),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            childAspectRatio: 0.5,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
+            childAspectRatio: 0.55, // Adjusted for 4:5 cover + title
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
           ),
           itemCount: novels.length,
           itemBuilder: (context, index) {
@@ -127,126 +247,70 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen> {
       },
     );
   }
+}
 
-  void _showFilterSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setSheetState) {
-          return Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('排序方式', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    _SortChip(
-                      label: '更新时间',
-                      value: 'last_update',
-                      current: _sortBy,
-                      onSelected: (v) => setSheetState(() => _sortBy = v),
-                    ),
-                    _SortChip(
-                      label: '点击量',
-                      value: 'click_num',
-                      current: _sortBy,
-                      onSelected: (v) => setSheetState(() => _sortBy = v),
-                    ),
-                    _SortChip(
-                      label: '字数',
-                      value: 'word_num',
-                      current: _sortBy,
-                      onSelected: (v) => setSheetState(() => _sortBy = v),
-                    ),
-                    _SortChip(
-                      label: '点赞',
-                      value: 'like_num',
-                      current: _sortBy,
-                      onSelected: (v) => setSheetState(() => _sortBy = v),
-                    ),
-                    _SortChip(
-                      label: '收藏',
-                      value: 'praise_num',
-                      current: _sortBy,
-                      onSelected: (v) => setSheetState(() => _sortBy = v),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Text(
-                      '排序方向',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const Spacer(),
-                    SegmentedButton<bool>(
-                      segments: const [
-                        ButtonSegment(value: true, label: Text('降序')),
-                        ButtonSegment(value: false, label: Text('升序')),
-                      ],
-                      selected: {_descending},
-                      onSelectionChanged: (v) =>
-                          setSheetState(() => _descending = v.first),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      setState(() {});
-                    },
-                    child: const Text('应用'),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+class FilterItem {
+  final String label;
+  final int value;
+
+  const FilterItem({required this.label, required this.value});
+}
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _FilterChip({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: 0.2)
+              : Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.primary.withValues(alpha: 0.5)
+                : Theme.of(context).dividerColor.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? AppColors.primary : null,
+          ),
+        ),
       ),
     );
   }
 }
 
-class _SortChip extends StatelessWidget {
-  final String label;
-  final String value;
-  final String current;
-  final ValueChanged<String> onSelected;
-
-  const _SortChip({
-    required this.label,
-    required this.value,
-    required this.current,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ChoiceChip(
-      label: Text(label),
-      selected: current == value,
-      onSelected: (_) => onSelected(value),
-    );
-  }
-}
-
-/// Filtered novels provider.
 @riverpod
 Future<List<Novel>> filteredNovels(
   FilteredNovelsRef ref, {
   int? genre,
   int? status,
+  int? ptype,
   String sortBy = 'last_update',
   bool descending = true,
 }) async {
   final db = ref.watch(databaseProvider);
-  return db.getNovelsSorted(sortBy, descending: descending, limit: 100);
+  // TODO: Apply genre/status/ptype filters in query
+  return db.getNovelsSorted(
+    sortBy,
+    descending: descending,
+    limit: 100,
+  );
 }

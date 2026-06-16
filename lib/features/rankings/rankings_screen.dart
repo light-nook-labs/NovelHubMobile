@@ -88,35 +88,164 @@ class _RankingList extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(type.icon, size: 64, color: Colors.grey.withValues(alpha: 0.3)),
+                Icon(type.icon, size: 48, color: Colors.grey.withValues(alpha: 0.3)),
                 const SizedBox(height: 16),
-                const Text('暂无数据，请先同步'),
+                const Text('暂无数据'),
               ],
             ),
           );
         }
-        return _buildList(context, novels);
+        return _buildTable(context, novels);
       },
     );
   }
 
-  Widget _buildList(BuildContext context, List<Novel> novels) {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: novels.length,
-      itemBuilder: (context, index) {
-        final novel = novels[index];
-        final rank = index + 1;
-        final value = _getValue(novel);
+  Widget _buildTable(BuildContext context, List<Novel> novels) {
+    return SingleChildScrollView(
+      child: Table(
+        columnWidths: const {
+          0: FixedColumnWidth(40),  // Rank
+          1: FlexColumnWidth(),     // Title
+          2: FixedColumnWidth(70),  // Value
+        },
+        children: [
+          // Header
+          TableRow(
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            ),
+            children: [
+              _buildHeaderCell('#'),
+              _buildHeaderCell('标题'),
+              _buildHeaderCell(type.label.replaceAll('榜', '')),
+            ],
+          ),
+          // Data rows
+          ...List.generate(novels.length, (index) {
+            final novel = novels[index];
+            final rank = index + 1;
+            final value = _getValue(novel);
 
-        return _RankingTile(
-          rank: rank,
-          novel: novel,
-          value: value,
-          type: type,
-          onTap: () => context.push('/novel/${novel.id}'),
-        );
-      },
+            return TableRow(
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
+                  ),
+                ),
+              ),
+              children: [
+                _buildRankCell(rank),
+                _buildTitleCell(context, novel),
+                _buildValueCell(value),
+              ],
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderCell(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: Colors.grey,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRankCell(int rank) {
+    final isTop3 = rank <= 3;
+    final color = switch (rank) {
+      1 => const Color(0xFFFFD700), // Gold
+      2 => const Color(0xFFC0C0C0), // Silver
+      3 => const Color(0xFFCD7F32), // Bronze
+      _ => Colors.grey,
+    };
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      child: Center(
+        child: isTop3
+            ? Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: color, width: 1.5),
+                ),
+                child: Center(
+                  child: Text(
+                    '$rank',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              )
+            : Text(
+                '$rank',
+                style: const TextStyle(
+                  color: Colors.grey,
+                  fontSize: 12,
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildTitleCell(BuildContext context, Novel novel) {
+    return InkWell(
+      onTap: () => context.push('/novel/${novel.id}'),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              novel.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            if (novel.authorId != null)
+              Text(
+                '作者ID: ${novel.authorId}',
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: Colors.grey,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildValueCell(int value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      child: Text(
+        _formatNumber(value),
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.bold,
+          color: AppColors.primary,
+        ),
+        textAlign: TextAlign.right,
+      ),
     );
   }
 
@@ -129,85 +258,6 @@ class _RankingList extends ConsumerWidget {
       RankingType.review => novel.reviewNum ?? 0,
       RankingType.comment => novel.commentNum ?? 0,
     };
-  }
-}
-
-class _RankingTile extends StatelessWidget {
-  final int rank;
-  final Novel novel;
-  final int value;
-  final RankingType type;
-  final VoidCallback onTap;
-
-  const _RankingTile({
-    required this.rank,
-    required this.novel,
-    required this.value,
-    required this.type,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      onTap: onTap,
-      leading: _buildRankBadge(context),
-      title: Text(
-        novel.title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Text(
-        novel.cover != null ? '作者ID: ${novel.authorId ?? "未知"}' : '',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: Theme.of(context).textTheme.bodySmall,
-      ),
-      trailing: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Icon(type.icon, size: 14, color: AppColors.primary),
-          const SizedBox(height: 2),
-          Text(
-            _formatNumber(value),
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRankBadge(BuildContext context) {
-    final isTop3 = rank <= 3;
-    final color = switch (rank) {
-      1 => const Color(0xFFFFD700), // Gold
-      2 => const Color(0xFFC0C0C0), // Silver
-      3 => const Color(0xFFCD7F32), // Bronze
-      _ => Colors.grey,
-    };
-
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        color: isTop3 ? color.withValues(alpha: 0.2) : null,
-        shape: BoxShape.circle,
-        border: isTop3 ? Border.all(color: color, width: 2) : null,
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        '$rank',
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          color: isTop3 ? color : Colors.grey,
-          fontSize: isTop3 ? 16 : 14,
-        ),
-      ),
-    );
   }
 
   String _formatNumber(int num) {
