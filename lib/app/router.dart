@@ -34,6 +34,11 @@ final router = GoRouter(
               const NoTransitionPage(child: NovelsScreen()),
         ),
         GoRoute(
+          path: '/banners',
+          pageBuilder: (context, state) =>
+              const NoTransitionPage(child: BannerScreen()),
+        ),
+        GoRoute(
           path: '/rankings',
           pageBuilder: (context, state) =>
               const NoTransitionPage(child: RankingsScreen()),
@@ -58,11 +63,6 @@ final router = GoRouter(
       path: '/search',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const SearchScreen(),
-    ),
-    GoRoute(
-      path: '/banners',
-      parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => const BannerScreen(),
     ),
     GoRoute(
       path: '/authors',
@@ -130,6 +130,11 @@ class MainShell extends StatelessWidget {
             label: '小说',
           ),
           NavigationDestination(
+            icon: Icon(Icons.star_outline),
+            selectedIcon: Icon(Icons.star),
+            label: '推荐',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.leaderboard_outlined),
             selectedIcon: Icon(Icons.leaderboard),
             label: '排行',
@@ -147,8 +152,9 @@ class MainShell extends StatelessWidget {
   int _getSelectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
     if (location.startsWith('/novels')) return 1;
-    if (location.startsWith('/rankings')) return 2;
-    if (location.startsWith('/settings')) return 3;
+    if (location.startsWith('/banners')) return 2;
+    if (location.startsWith('/rankings')) return 3;
+    if (location.startsWith('/settings')) return 4;
     return 0;
   }
 
@@ -159,8 +165,10 @@ class MainShell extends StatelessWidget {
       case 1:
         context.go('/novels');
       case 2:
-        context.go('/rankings');
+        context.go('/banners');
       case 3:
+        context.go('/rankings');
+      case 4:
         context.go('/settings');
     }
   }

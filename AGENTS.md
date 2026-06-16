@@ -46,9 +46,10 @@ flutter build linux --debug                          # Build for testing
 
 ## Navigation Structure
 
-**Bottom Nav (4 tabs):**
+**Bottom Nav (5 tabs):**
 - 首页 (Home)
 - 小说 (Novels)
+- 推荐 (Banners)
 - 排行 (Rankings)
 - 设置 (Settings)
 
@@ -58,7 +59,6 @@ flutter build linux --debug                          # Build for testing
 **Full Screen Pages (no bottom nav):**
 - Novel detail
 - Search
-- Banner list (all banner novels)
 - Authors/Tags/Contests list & detail
 
 ## Default Sorting
