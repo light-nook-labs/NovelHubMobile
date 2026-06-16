@@ -165,29 +165,34 @@ class _RankingList extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Title + ID
-                      RichText(
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        text: TextSpan(
-                          children: [
-                            TextSpan(
-                              text: novel.title,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: Theme.of(context).textTheme.bodyLarge?.color,
-                                height: 1.3,
-                              ),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final titleText = _wrapChineseText(novel.title, 10);
+                          return RichText(
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: titleText,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                                    height: 1.3,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: ' #${novel.id}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                              ],
                             ),
-                            TextSpan(
-                              text: ' #${novel.id}',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey[500],
-                              ),
-                            ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
                       const SizedBox(height: 2),
                       // Author
@@ -370,6 +375,40 @@ class _RankingList extends ConsumerWidget {
     if (num >= 100000000) return '${(num / 100000000).toStringAsFixed(1)}亿';
     if (num >= 10000) return '${(num / 10000).toStringAsFixed(1)}万';
     return num.toString();
+  }
+
+  String _wrapChineseText(String text, int maxCharsPerLine) {
+    final buffer = StringBuffer();
+    int count = 0;
+
+    for (int i = 0; i < text.length; i++) {
+      final char = text[i];
+      buffer.write(char);
+
+      // Check if character is CJK or punctuation (counts as 2 width units)
+      final isWide = _isChineseChar(char);
+      count += isWide ? 2 : 1;
+
+      if (count >= maxCharsPerLine * 2 && i < text.length - 1) {
+        buffer.write('\n');
+        count = 0;
+      }
+    }
+
+    return buffer.toString();
+  }
+
+  bool _isChineseChar(String char) {
+    final code = char.codeUnitAt(0);
+    // CJK Unified Ideographs
+    if (code >= 0x4E00 && code <= 0x9FFF) return true;
+    // CJK punctuation
+    if (code >= 0x3000 && code <= 0x303F) return true;
+    // Fullwidth forms
+    if (code >= 0xFF00 && code <= 0xFFEF) return true;
+    // Common Chinese punctuation
+    if ('，。！？、；：""''（）【】《》'.contains(char)) return true;
+    return false;
   }
 }
 
