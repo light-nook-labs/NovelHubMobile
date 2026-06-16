@@ -12,7 +12,6 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final syncInfo = ref.watch(lastSyncInfoProvider);
-    final stats = ref.watch(statisticsProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('设置')),
@@ -56,43 +55,6 @@ class SettingsScreen extends ConsumerWidget {
                   onTap: () => _loadTestData(context, ref),
                 ),
               ],
-            ),
-          ),
-
-          // Statistics section
-          _SectionHeader(title: '数据统计'),
-          Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: stats.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-              error: (err, _) => Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text('Error: $err'),
-              ),
-              data: (data) => Column(
-                children: [
-                  _StatTile(
-                    icon: Icons.book,
-                    label: '小说总数',
-                    value: '${data['novels'] ?? 0}',
-                  ),
-                  const Divider(height: 1),
-                  _StatTile(
-                    icon: Icons.person,
-                    label: '作者数量',
-                    value: '${data['authors'] ?? 0}',
-                  ),
-                  const Divider(height: 1),
-                  _StatTile(
-                    icon: Icons.tag,
-                    label: '标签数量',
-                    value: '${data['tags'] ?? 0}',
-                  ),
-                ],
-              ),
             ),
           ),
 
@@ -281,32 +243,6 @@ class _SectionHeader extends StatelessWidget {
           color: AppColors.primary,
           fontWeight: FontWeight.bold,
         ),
-      ),
-    );
-  }
-}
-
-class _StatTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _StatTile({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: AppColors.primary),
-      title: Text(label),
-      trailing: Text(
-        value,
-        style: Theme.of(
-          context,
-        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
       ),
     );
   }
