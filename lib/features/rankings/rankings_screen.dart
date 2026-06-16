@@ -106,6 +106,7 @@ class _RankingList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final novelsAsync = ref.watch(rankingProvider(type.field));
+    final authorsAsync = ref.watch(authorsProvider);
 
     return novelsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -123,12 +124,19 @@ class _RankingList extends ConsumerWidget {
             ),
           );
         }
-        return _buildTable(context, novels);
+        return authorsAsync.when(
+          loading: () => _buildTable(context, novels, {}),
+          error: (_, __) => _buildTable(context, novels, {}),
+          data: (authors) {
+            final authorMap = {for (var a in authors) a.id: a.name};
+            return _buildTable(context, novels, authorMap);
+          },
+        );
       },
     );
   }
 
-  Widget _buildTable(BuildContext context, List<Novel> novels) {
+  Widget _buildTable(BuildContext context, List<Novel> novels, Map<int, String> authorMap) {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: novels.length,
@@ -136,6 +144,7 @@ class _RankingList extends ConsumerWidget {
         final novel = novels[index];
         final rank = index + 1;
         final value = _getValue(novel);
+        final authorName = novel.authorId != null ? authorMap[novel.authorId] ?? '未知' : '未知';
 
         return InkWell(
           onTap: () => context.push('/novel/${novel.id}'),
@@ -187,7 +196,7 @@ class _RankingList extends ConsumerWidget {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            '未知',
+                            authorName,
                             style: TextStyle(
                               fontSize: 11,
                               color: Colors.grey[500],
