@@ -8,6 +8,7 @@ import '../features/rankings/rankings_screen.dart';
 import '../features/authors/authors_screen.dart';
 import '../features/tags/tags_screen.dart';
 import '../features/contests/contests_screen.dart';
+import '../features/banner/banner_screen.dart';
 import '../features/search/search_screen.dart';
 import '../features/settings/settings_screen.dart';
 
@@ -57,6 +58,11 @@ final router = GoRouter(
       path: '/search',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const SearchScreen(),
+    ),
+    GoRoute(
+      path: '/banners',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const BannerScreen(),
     ),
     GoRoute(
       path: '/authors',

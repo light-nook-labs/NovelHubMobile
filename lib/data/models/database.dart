@@ -352,6 +352,25 @@ class AppDatabase extends _$AppDatabase {
     return query.get();
   }
 
+  Future<List<Novel>> getBannerNovelsPaginated({
+    required int offset,
+    required int limit,
+  }) async {
+    final query = select(novels)
+      ..where((t) => t.hasBanner.equals(true))
+      ..orderBy([(t) => OrderingTerm.desc(t.clickNum)])
+      ..limit(limit, offset: offset);
+    return query.get();
+  }
+
+  Future<int> getBannerNovelCount() async {
+    final query = selectOnly(novels)
+      ..where(novels.hasBanner.equals(true))
+      ..addColumns([countAll()]);
+    final result = await query.getSingle();
+    return result.read(countAll()) ?? 0;
+  }
+
   // ===== Statistics =====
 
   Future<Map<String, int>> getStatistics() async {

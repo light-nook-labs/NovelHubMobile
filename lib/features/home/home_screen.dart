@@ -82,7 +82,27 @@ class HomeScreen extends ConsumerWidget {
               error: (_, __) => const SizedBox.shrink(),
               data: (novels) {
                 if (novels.length <= 1) return const SizedBox.shrink();
-                return _BannerShowcase(novels: novels.skip(1).toList());
+                return Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '推荐小说',
+                          style:
+                              Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                        ),
+                        TextButton(
+                          onPressed: () => context.push('/banners'),
+                          child: const Text('查看全部'),
+                        ),
+                      ],
+                    ),
+                    _BannerShowcase(novels: novels.skip(1).toList()),
+                  ],
+                );
               },
             ),
             const SizedBox(height: 12),

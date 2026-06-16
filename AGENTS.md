@@ -17,7 +17,7 @@ Mobile app for [Novel Hub](https://github.com/light-nook-labs/novel_hub) — off
 | Novel detail | ✅ | ✅ | Cover right, info left |
 | Rankings (6 dimensions) | ✅ | ✅ | Table view with tabs |
 | Search | ✅ | ✅ | Full screen, debounced |
-| Banner showcase | ✅ | ✅ | Hero banner + carousel |
+| Banner showcase | ✅ | ✅ | Hero banner + carousel + dedicated page |
 | Author list + detail | ✅ | ✅ | |
 | Tag list + detail | ✅ | ✅ | |
 | Contest list + detail | ✅ | ✅ | |
@@ -58,6 +58,7 @@ flutter build linux --debug                          # Build for testing
 **Full Screen Pages (no bottom nav):**
 - Novel detail
 - Search
+- Banner list (all banner novels)
 - Authors/Tags/Contests list & detail
 
 ## Default Sorting
