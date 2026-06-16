@@ -7,7 +7,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../data/repositories/providers.dart';
 import '../../data/services/sync_service.dart';
 import '../../data/models/database.dart';
-import '../../shared/widgets/novel_card.dart';
 import '../../app/theme.dart';
 
 part 'home_screen.g.dart';
@@ -20,7 +19,6 @@ class HomeScreen extends ConsumerWidget {
     final stats = ref.watch(statisticsProvider);
     final syncInfo = ref.watch(lastSyncInfoProvider);
     final bannerNovels = ref.watch(bannerNovelsProvider);
-    final latestNovels = ref.watch(novelsProvider(limit: 10));
 
     return Scaffold(
       appBar: AppBar(
@@ -60,91 +58,25 @@ class HomeScreen extends ConsumerWidget {
           ref.invalidate(statisticsProvider);
           ref.invalidate(lastSyncInfoProvider);
           ref.invalidate(bannerNovelsProvider);
-          ref.invalidate(novelsProvider);
         },
         child: ListView(
           padding: const EdgeInsets.all(12),
           children: [
-            // Hero Banner (below search bar)
+            // Hero Banner Carousel (first 5 banner novels)
             bannerNovels.when(
               loading: () => const SizedBox.shrink(),
               error: (_, __) => const SizedBox.shrink(),
               data: (novels) {
                 if (novels.isEmpty) return const SizedBox.shrink();
-                return _HeroBanner(novel: novels.first);
-              },
-            ),
-            const SizedBox(height: 12),
-
-            // Banner novels carousel
-            bannerNovels.when(
-              loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
-              data: (novels) {
-                if (novels.length <= 1) return const SizedBox.shrink();
-                return _BannerShowcase(novels: novels.skip(1).toList());
+                final displayNovels =
+                    novels.length > 5 ? novels.sublist(0, 5) : novels;
+                return _HeroBannerCarousel(novels: displayNovels);
               },
             ),
             const SizedBox(height: 12),
 
             // Statistics
             _StatsCard(stats: stats),
-            const SizedBox(height: 12),
-
-            // Latest novels
-            Text(
-              '最新小说',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            latestNovels.when(
-              loading: () => const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(32),
-                  child: CircularProgressIndicator(),
-                ),
-              ),
-              error: (err, stack) => Text('Error: $err'),
-              data: (novels) {
-                if (novels.isEmpty) {
-                  return const Card(
-                    child: Padding(
-                      padding: EdgeInsets.all(32),
-                      child: Center(
-                        child: Column(
-                          children: [
-                            Icon(Icons.cloud_download,
-                                size: 48, color: AppColors.primary),
-                            SizedBox(height: 16),
-                            Text('暂无数据，点击同步按钮下载'),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                }
-                return SizedBox(
-                  height: 240,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: novels.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 10),
-                    itemBuilder: (context, index) {
-                      final novel = novels[index];
-                      return SizedBox(
-                        width: 100,
-                        child: NovelCard(
-                          novel: novel,
-                          onTap: () => context.push('/novel/${novel.id}'),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
             const SizedBox(height: 12),
 
             // Quick Navigation
@@ -233,149 +165,126 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-class _HeroBanner extends StatelessWidget {
-  final BannerNovel novel;
+class _HeroBannerCarousel extends StatefulWidget {
+  final List<BannerNovel> novels;
 
-  const _HeroBanner({required this.novel});
+  const _HeroBannerCarousel({required this.novels});
+
+  @override
+  State<_HeroBannerCarousel> createState() => _HeroBannerCarouselState();
+}
+
+class _HeroBannerCarouselState extends State<_HeroBannerCarousel> {
+  final _controller = PageController(viewportFraction: 0.92);
+  int _currentPage = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final bannerUrl =
-        'https://rs.sfacg.com/web/novel/images/images/beitouNew/${novel.id}.jpg';
-
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        GestureDetector(
-          onTap: () => context.push('/novel/${novel.id}'),
-          child: Container(
-            height: 150,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: AppColors.primary.withValues(alpha: 0.1),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: CachedNetworkImage(
-              imageUrl: bannerUrl,
-              fit: BoxFit.cover,
-              alignment: Alignment.centerRight,
-              errorWidget: (_, __, ___) => Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [AppColors.primary, AppColors.accent],
-                  ),
+        SizedBox(
+          height: 180,
+          child: PageView.builder(
+            controller: _controller,
+            itemCount: widget.novels.length,
+            onPageChanged: (index) => setState(() => _currentPage = index),
+            itemBuilder: (context, index) {
+              final novel = widget.novels[index];
+              final bannerUrl =
+                  'https://rs.sfacg.com/web/novel/images/images/beitouNew/${novel.id}.jpg';
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    GestureDetector(
+                      onTap: () => context.push('/novel/${novel.id}'),
+                      child: Container(
+                        height: 140,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: CachedNetworkImage(
+                          imageUrl: bannerUrl,
+                          fit: BoxFit.cover,
+                          alignment: Alignment.centerRight,
+                          errorWidget: (_, __, ___) => Container(
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [AppColors.primary, AppColors.accent],
+                              ),
+                            ),
+                            child: const Center(
+                              child: Icon(Icons.book,
+                                  size: 48, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    GestureDetector(
+                      onTap: () => context.push('/novel/${novel.id}'),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            novel.title,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            novel.author,
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                child: const Center(
-                  child: Icon(Icons.book, size: 48, color: Colors.white),
-                ),
-              ),
-            ),
+              );
+            },
           ),
         ),
         const SizedBox(height: 8),
-        GestureDetector(
-          onTap: () => context.push('/novel/${novel.id}'),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                novel.title,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                novel.author,
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 12,
+        // Page indicators
+        if (widget.novels.length > 1)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(
+              widget.novels.length,
+              (index) => Container(
+                width: 6,
+                height: 6,
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _currentPage == index
+                      ? AppColors.primary
+                      : Colors.grey[300],
                 ),
               ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _BannerShowcase extends StatelessWidget {
-  final List<BannerNovel> novels;
-
-  const _BannerShowcase({required this.novels});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 180,
-      child: PageView.builder(
-        controller: PageController(viewportFraction: 0.9),
-        itemCount: novels.length,
-        itemBuilder: (context, index) {
-          final novel = novels[index];
-          final bannerUrl =
-              'https://rs.sfacg.com/web/novel/images/images/beitouNew/${novel.id}.jpg';
-
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                GestureDetector(
-                  onTap: () => context.push('/novel/${novel.id}'),
-                  child: Container(
-                    height: 120,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: CachedNetworkImage(
-                      imageUrl: bannerUrl,
-                      fit: BoxFit.cover,
-                      alignment: Alignment.centerRight,
-                      errorWidget: (_, __, ___) => const Center(
-                        child: Icon(Icons.book, size: 48, color: AppColors.primary),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                GestureDetector(
-                  onTap: () => context.push('/novel/${novel.id}'),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        novel.title,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        novel.author,
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 10,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
             ),
-          );
-        },
-      ),
+          ),
+      ],
     );
   }
 }
