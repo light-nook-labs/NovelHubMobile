@@ -17,6 +17,7 @@ class NovelDetailScreen extends ConsumerWidget {
     final novelAsync = ref.watch(novelProvider(novelId));
     final tagsAsync = ref.watch(novelTagsProvider(novelId));
     final authorAsync = ref.watch(novelAuthorProvider(novelId));
+    final rankingsAsync = ref.watch(novelRankingsProvider(novelId));
 
     return Scaffold(
       appBar: AppBar(
@@ -33,7 +34,7 @@ class NovelDetailScreen extends ConsumerWidget {
           if (novel == null) {
             return const Center(child: Text('小说不存在'));
           }
-          return _buildContent(context, novel, tagsAsync, authorAsync);
+          return _buildContent(context, novel, tagsAsync, authorAsync, rankingsAsync);
         },
       ),
     );
@@ -44,6 +45,7 @@ class NovelDetailScreen extends ConsumerWidget {
     Novel novel,
     AsyncValue<List<Tag>> tagsAsync,
     AsyncValue<Author?> authorAsync,
+    AsyncValue<Map<String, int>> rankingsAsync,
   ) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -142,7 +144,11 @@ class NovelDetailScreen extends ConsumerWidget {
           const SizedBox(height: 20),
 
           // Stats grid (2 cols)
-          _StatsGrid(novel: novel),
+          rankingsAsync.when(
+            loading: () => _StatsGrid(novel: novel, rankings: const {}),
+            error: (_, __) => _StatsGrid(novel: novel, rankings: const {}),
+            data: (rankings) => _StatsGrid(novel: novel, rankings: rankings),
+          ),
           const SizedBox(height: 16),
 
           // Dates
@@ -356,8 +362,9 @@ class _TagChip extends StatelessWidget {
 
 class _StatsGrid extends StatelessWidget {
   final Novel novel;
+  final Map<String, int> rankings;
 
-  const _StatsGrid({required this.novel});
+  const _StatsGrid({required this.novel, required this.rankings});
 
   @override
   Widget build(BuildContext context) {
@@ -373,36 +380,42 @@ class _StatsGrid extends StatelessWidget {
           icon: Icons.text_fields,
           label: '字数',
           value: novel.wordNum,
+          rank: rankings['word_num'],
           color: AppColors.primary,
         ),
         _StatItem(
           icon: Icons.touch_app,
           label: '点击',
           value: novel.clickNum,
+          rank: rankings['click_num'],
           color: AppColors.accent,
         ),
         _StatItem(
           icon: Icons.favorite,
           label: '收藏',
           value: novel.likeNum,
+          rank: rankings['like_num'],
           color: Colors.pink,
         ),
         _StatItem(
           icon: Icons.thumb_up,
           label: '点赞',
           value: novel.praiseNum,
+          rank: rankings['praise_num'],
           color: AppColors.primary,
         ),
         _StatItem(
           icon: Icons.rate_review,
           label: '长评',
           value: novel.reviewNum,
+          rank: rankings['review_num'],
           color: Colors.teal,
         ),
         _StatItem(
           icon: Icons.comment,
           label: '短评',
           value: novel.commentNum,
+          rank: rankings['comment_num'],
           color: Colors.brown,
         ),
       ],
@@ -414,12 +427,14 @@ class _StatItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final int? value;
+  final int? rank;
   final Color color;
 
   const _StatItem({
     required this.icon,
     required this.label,
     required this.value,
+    this.rank,
     required this.color,
   });
 
@@ -463,6 +478,15 @@ class _StatItem extends StatelessWidget {
               ],
             ),
           ),
+          if (rank != null)
+            Text(
+              '#$rank',
+              style: TextStyle(
+                color: Colors.grey[400],
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
         ],
       ),
     );

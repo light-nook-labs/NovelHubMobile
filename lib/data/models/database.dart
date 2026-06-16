@@ -421,6 +421,46 @@ class AppDatabase extends _$AppDatabase {
     return {'novels': novelCount, 'authors': authorCount, 'tags': tagCount};
   }
 
+  // ===== Novel rankings =====
+
+  Future<Map<String, int>> getNovelRankings(int novelId) async {
+    final novel = await getNovel(novelId);
+    if (novel == null) return {};
+
+    final rankings = <String, int>{};
+    final fields = [
+      ('word_num', novels.wordNum),
+      ('click_num', novels.clickNum),
+      ('like_num', novels.likeNum),
+      ('praise_num', novels.praiseNum),
+      ('review_num', novels.reviewNum),
+      ('comment_num', novels.commentNum),
+    ];
+
+    for (final (name, column) in fields) {
+      final value = switch (name) {
+        'word_num' => novel.wordNum,
+        'click_num' => novel.clickNum,
+        'like_num' => novel.likeNum,
+        'praise_num' => novel.praiseNum,
+        'review_num' => novel.reviewNum,
+        'comment_num' => novel.commentNum,
+        _ => null,
+      };
+
+      if (value != null && value > 0) {
+        final query = selectOnly(novels)
+          ..where(column.isBiggerThanValue(value))
+          ..addColumns([countAll()]);
+        final result = await query.getSingle();
+        final count = result.read(countAll()) ?? 0;
+        rankings[name] = count + 1;
+      }
+    }
+
+    return rankings;
+  }
+
   // ===== Reset to bundled database =====
 
   Future<void> resetToDefault() async {

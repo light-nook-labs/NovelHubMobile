@@ -128,6 +128,16 @@ Future<Author?> novelAuthor(NovelAuthorRef ref, int novelId) async {
   return db.getNovelAuthor(novelId);
 }
 
+/// Novel rankings (for each metric).
+@riverpod
+Future<Map<String, int>> novelRankings(
+  NovelRankingsRef ref,
+  int novelId,
+) async {
+  final db = ref.watch(databaseProvider);
+  return db.getNovelRankings(novelId);
+}
+
 /// Database statistics.
 @riverpod
 Future<Map<String, int>> statistics(StatisticsRef ref) async {
