@@ -196,6 +196,12 @@ release.tar.gz
 - Height: 90% screen height
 - GTK configured in `linux/runner/my_application.cc`
 
+**Reusable Components:**
+- `common_widgets.dart`: SearchBarWidget, BackToTopButton, EmptyState, LoadingState, CoverImage, BadgeWidget, StatusBadge, GenreBadge, PtypeBadge, FilterChipWidget, StatItem, formatNumber
+- `spacing.dart`: AppSpacing, AppTextStyles, AppDecorations
+- `novel_rank_list.dart`: NovelRankList, NovelRankRow, NovelFilterBottomSheet
+- `novel_card.dart`: NovelCard
+
 ## Project Structure
 
 ```
@@ -226,9 +232,11 @@ lib/
 └── shared/
     ├── widgets/
     │   ├── novel_card.dart
-    │   └── novel_rank_list.dart  # Reusable rank-style list
+    │   ├── novel_rank_list.dart  # Reusable rank-style list
+    │   └── common_widgets.dart   # Reusable UI components
     └── utils/
-        └── mappings.dart   # enum mappings
+        ├── mappings.dart   # enum mappings
+        └── spacing.dart    # Consistent spacing system
 ```
 
 ## Common Pitfalls
