@@ -185,6 +185,7 @@ class _BannerCard extends StatelessWidget {
                 child: CachedNetworkImage(
                   imageUrl: bannerUrl,
                   fit: BoxFit.cover,
+                  alignment: Alignment.centerRight,
                   errorWidget: (_, __, ___) => Container(
                     decoration: const BoxDecoration(
                       gradient: LinearGradient(

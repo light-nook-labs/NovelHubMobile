@@ -258,6 +258,7 @@ class _HeroBanner extends StatelessWidget {
             child: CachedNetworkImage(
               imageUrl: bannerUrl,
               fit: BoxFit.cover,
+              alignment: Alignment.centerRight,
               errorWidget: (_, __, ___) => Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
@@ -338,6 +339,7 @@ class _BannerShowcase extends StatelessWidget {
                     child: CachedNetworkImage(
                       imageUrl: bannerUrl,
                       fit: BoxFit.cover,
+                      alignment: Alignment.centerRight,
                       errorWidget: (_, __, ___) => const Center(
                         child: Icon(Icons.book, size: 48, color: AppColors.primary),
                       ),
