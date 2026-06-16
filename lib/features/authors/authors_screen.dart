@@ -14,7 +14,7 @@ class AuthorsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authorsAsync = ref.watch(authorsProvider);
+    final authorsAsync = ref.watch(authorsWithStatsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -31,21 +31,73 @@ class AuthorsScreen extends ConsumerWidget {
           if (authors.isEmpty) {
             return const Center(child: Text('暂无数据'));
           }
-          return ListView.builder(
+          return ListView.separated(
             itemCount: authors.length,
+            separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (context, index) {
               final author = authors[index];
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                  child: Text(
-                    author.name.isNotEmpty ? author.name[0] : '?',
-                    style: const TextStyle(color: AppColors.primary),
+              return InkWell(
+                onTap: () => context.push('/author/${author.id}'),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  child: Row(
+                    children: [
+                      // Author info
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Author name
+                            Text(
+                              author.name,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (author.topNovelTitle != null) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                author.topNovelTitle!,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[500],
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Stats
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '${author.bannerCount}/${author.novelCount}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          Text(
+                            '背投/作品',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                title: Text(author.name),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push('/author/${author.id}'),
               );
             },
           );

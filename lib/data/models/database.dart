@@ -65,6 +65,22 @@ class BannerNovel {
   });
 }
 
+class AuthorWithStats {
+  final int id;
+  final String name;
+  final String? topNovelTitle;
+  final int novelCount;
+  final int bannerCount;
+
+  AuthorWithStats({
+    required this.id,
+    required this.name,
+    this.topNovelTitle,
+    required this.novelCount,
+    required this.bannerCount,
+  });
+}
+
 @DriftDatabase(tables: [Authors, Tags, Contests, Novels, NovelTags])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -413,6 +429,48 @@ class AppDatabase extends _$AppDatabase {
       ..orderBy([(t) => OrderingTerm.desc(t.lastUpdate)])
       ..limit(limit, offset: offset);
     return query.get();
+  }
+
+  Future<List<AuthorWithStats>> getAuthorsWithStats({int limit = 1000}) async {
+    final authorList = await (select(authors)
+          ..orderBy([(t) => OrderingTerm.asc(t.name)])
+          ..limit(limit))
+        .get();
+
+    final result = <AuthorWithStats>[];
+    for (final author in authorList) {
+      // Get novel count
+      final novelCountQuery = selectOnly(novels)
+        ..where(novels.authorId.equals(author.id))
+        ..addColumns([countAll()]);
+      final novelCountResult = await novelCountQuery.getSingle();
+      final novelCount = novelCountResult.read(countAll()) ?? 0;
+
+      // Get banner count
+      final bannerCountQuery = selectOnly(novels)
+        ..where(novels.authorId.equals(author.id) &
+            novels.hasBanner.equals(true))
+        ..addColumns([countAll()]);
+      final bannerCountResult = await bannerCountQuery.getSingle();
+      final bannerCount = bannerCountResult.read(countAll()) ?? 0;
+
+      // Get top novel (by click_num)
+      final topNovelQuery = select(novels)
+        ..where((t) => t.authorId.equals(author.id))
+        ..orderBy([(t) => OrderingTerm.desc(t.clickNum)])
+        ..limit(1);
+      final topNovel = await topNovelQuery.getSingleOrNull();
+
+      result.add(AuthorWithStats(
+        id: author.id,
+        name: author.name,
+        topNovelTitle: topNovel?.title,
+        novelCount: novelCount,
+        bannerCount: bannerCount,
+      ));
+    }
+
+    return result;
   }
 
   // ===== Tag queries =====
