@@ -222,6 +222,8 @@ class SettingsScreen extends ConsumerWidget {
 
     if (!context.mounted) return;
 
+    // Show dialog and get navigator to pop later
+    final navigator = Navigator.of(context);
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -234,7 +236,7 @@ class SettingsScreen extends ConsumerWidget {
 
       if (chunksToUpdate.isEmpty) {
         if (!context.mounted) return;
-        Navigator.pop(context);
+        navigator.pop();
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('数据已是最新')));
@@ -252,7 +254,7 @@ class SettingsScreen extends ConsumerWidget {
 
         if (!result.success) {
           if (!context.mounted) return;
-          Navigator.pop(context);
+          navigator.pop();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('同步失败: ${result.error}')),
           );
@@ -261,7 +263,7 @@ class SettingsScreen extends ConsumerWidget {
       }
 
       if (!context.mounted) return;
-      Navigator.pop(context);
+      navigator.pop();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('同步成功: ${chunksToUpdate.length} 个数据块')),
@@ -273,7 +275,9 @@ class SettingsScreen extends ConsumerWidget {
       });
     } catch (e) {
       if (!context.mounted) return;
-      Navigator.pop(context);
+      try {
+        navigator.pop();
+      } catch (_) {}
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('错误: $e')));
@@ -302,6 +306,8 @@ class SettingsScreen extends ConsumerWidget {
 
       if (!context.mounted) return;
 
+      // Show dialog and get navigator to pop later
+      final navigator = Navigator.of(context);
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -316,7 +322,7 @@ class SettingsScreen extends ConsumerWidget {
       await file.copy(chunkPath);
 
       if (!context.mounted) return;
-      Navigator.pop(context);
+      navigator.pop();
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('导入成功')),
@@ -328,7 +334,10 @@ class SettingsScreen extends ConsumerWidget {
       });
     } catch (e) {
       if (!context.mounted) return;
-      Navigator.pop(context);
+      // Try to pop dialog if it's showing
+      try {
+        Navigator.of(context).pop();
+      } catch (_) {}
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('导入失败: $e')));
