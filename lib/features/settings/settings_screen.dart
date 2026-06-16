@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../data/repositories/providers.dart';
 import '../../app/theme.dart';
 import '../../app/theme_provider.dart';
+import '../../app/settings_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -16,12 +17,13 @@ class SettingsScreen extends ConsumerWidget {
     final syncInfo = ref.watch(lastSyncInfoProvider);
     final stats = ref.watch(statisticsProvider);
     final themeMode = ref.watch(themeModeNotifierProvider);
+    final hideOther = ref.watch(hideOtherNotifierProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('设置')),
       body: ListView(
         children: [
-          // Theme section
+          // Appearance section
           _SectionHeader(title: '外观'),
           Card(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -33,6 +35,21 @@ class SettingsScreen extends ConsumerWidget {
                     ref
                         .read(themeModeNotifierProvider.notifier)
                         .setThemeMode(mode);
+                  },
+                ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  secondary: const Icon(
+                    Icons.visibility_off,
+                    color: AppColors.primary,
+                  ),
+                  title: const Text('隐藏"其他"选项'),
+                  subtitle: const Text('隐藏分类、状态、类型中的"其他"选项'),
+                  value: hideOther,
+                  onChanged: (value) {
+                    ref
+                        .read(hideOtherNotifierProvider.notifier)
+                        .setHideOther(value);
                   },
                 ),
               ],

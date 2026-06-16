@@ -8,6 +8,7 @@ import '../../data/models/database.dart';
 import '../../shared/widgets/novel_card.dart';
 import '../../shared/utils/mappings.dart';
 import '../../app/theme.dart';
+import '../../app/settings_provider.dart';
 import '../../shared/widgets/common_widgets.dart';
 import '../../shared/utils/spacing.dart';
 
@@ -41,13 +42,18 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
 
   late TabController _tabController;
 
-  static const _ptypeTabs = [
-    {'label': '全部', 'value': null},
-    {'label': '其他', 'value': 1},
-    {'label': '免费', 'value': 2},
-    {'label': '签约', 'value': 3},
-    {'label': 'VIP', 'value': 4},
-  ];
+  List<Map<String, dynamic>> _getPtypeTabs(bool hideOther) {
+    final tabs = [
+      {'label': '全部', 'value': null},
+      {'label': '免费', 'value': 2},
+      {'label': '签约', 'value': 3},
+      {'label': 'VIP', 'value': 4},
+    ];
+    if (!hideOther) {
+      tabs.add({'label': '其他', 'value': 1});
+    }
+    return tabs;
+  }
 
   @override
   void initState() {
@@ -55,17 +61,36 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
     _selectedGenre = widget.initialGenre;
     _selectedStatus = widget.initialStatus;
 
+    // Tab controller will be initialized in build with correct tab count
+    _tabController = TabController(
+      length: 5, // Will be updated in didChangeDependencies
+      vsync: this,
+    );
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final hideOther = ref.read(hideOtherNotifierProvider);
+    final ptypeTabs = _getPtypeTabs(hideOther);
+
     // Set initial ptype tab
     int initialTabIndex = 0;
     if (widget.initialPtype != null) {
-      final index = _ptypeTabs.indexWhere(
+      final index = ptypeTabs.indexWhere(
         (tab) => tab['value'] == widget.initialPtype,
       );
       if (index >= 0) initialTabIndex = index;
     }
 
+    _tabController.dispose();
     _tabController = TabController(
-      length: _ptypeTabs.length,
+      length: ptypeTabs.length,
       vsync: this,
       initialIndex: initialTabIndex,
     );
@@ -82,10 +107,20 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
     super.dispose();
   }
 
-  int? get _selectedPtype => _ptypeTabs[_tabController.index]['value'] as int?;
+  int? get _selectedPtype {
+    final hideOther = ref.read(hideOtherNotifierProvider);
+    final ptypeTabs = _getPtypeTabs(hideOther);
+    if (_tabController.index < ptypeTabs.length) {
+      return ptypeTabs[_tabController.index]['value'] as int?;
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final hideOther = ref.watch(hideOtherNotifierProvider);
+    final ptypeTabs = _getPtypeTabs(hideOther);
+
     final novelsAsync = ref.watch(
       filteredNovelsProvider(
         genre: _selectedGenre,
@@ -127,9 +162,17 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
             fontWeight: FontWeight.bold,
           ),
           unselectedLabelStyle: const TextStyle(fontSize: 13),
-          tabs: _ptypeTabs
-              .map((tab) => Tab(text: tab['label'] as String))
-              .toList(),
+          tabs: ptypeTabs.map((tab) {
+            final isOther = tab['value'] == 1;
+            return Tab(
+              child: Text(
+                tab['label'] as String,
+                style: isOther
+                    ? const TextStyle(fontSize: 11, fontStyle: FontStyle.italic)
+                    : null,
+              ),
+            );
+          }).toList(),
         ),
       ),
       body: novelsAsync.when(
