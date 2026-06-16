@@ -187,9 +187,10 @@ class _HeroBannerCarouselState extends State<_HeroBannerCarousel> {
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
-          height: 180,
+          height: 170,
           child: PageView.builder(
             controller: _controller,
             itemCount: widget.novels.length,
@@ -201,80 +202,77 @@ class _HeroBannerCarouselState extends State<_HeroBannerCarousel> {
 
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    GestureDetector(
-                      onTap: () => context.push('/novel/${novel.id}'),
-                      child: Container(
-                        height: 140,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: CachedNetworkImage(
-                          imageUrl: bannerUrl,
-                          fit: BoxFit.cover,
-                          alignment: Alignment.centerRight,
-                          errorWidget: (_, __, ___) => Container(
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [AppColors.primary, AppColors.accent],
+                child: GestureDetector(
+                  onTap: () => context.push('/novel/${novel.id}'),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: CachedNetworkImage(
+                            imageUrl: bannerUrl,
+                            fit: BoxFit.cover,
+                            alignment: Alignment.centerRight,
+                            width: double.infinity,
+                            errorWidget: (_, __, ___) => Container(
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    AppColors.primary,
+                                    AppColors.accent
+                                  ],
+                                ),
+                              ),
+                              child: const Center(
+                                child: Icon(Icons.book,
+                                    size: 48, color: Colors.white),
                               ),
                             ),
-                            child: const Center(
-                              child: Icon(Icons.book,
-                                  size: 48, color: Colors.white),
-                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    GestureDetector(
-                      onTap: () => context.push('/novel/${novel.id}'),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            novel.title,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            novel.author,
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
+                      const SizedBox(height: 4),
+                      Text(
+                        novel.title,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
+                      Text(
+                        novel.author,
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
           ),
         ),
-        const SizedBox(height: 8),
-        // Page indicators
-        if (widget.novels.length > 1)
+        if (widget.novels.length > 1) ...[
+          const SizedBox(height: 6),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(
               widget.novels.length,
               (index) => Container(
-                width: 6,
-                height: 6,
-                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: 5,
+                height: 5,
+                margin: const EdgeInsets.symmetric(horizontal: 2),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: _currentPage == index
@@ -284,6 +282,7 @@ class _HeroBannerCarouselState extends State<_HeroBannerCarousel> {
               ),
             ),
           ),
+        ],
       ],
     );
   }
