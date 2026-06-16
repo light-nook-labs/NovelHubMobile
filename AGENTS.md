@@ -19,8 +19,8 @@ Mobile app for [Novel Hub](https://github.com/light-nook-labs/novel_hub) — off
 | Search | ✅ | ✅ | Full screen, debounced |
 | Banner showcase | ✅ | ✅ | Hero carousel (5) + dedicated tab |
 | Author list + detail | ✅ | ✅ | Sorted by total clicks |
-| Tag list + detail | ✅ | ✅ | 3-column grid |
-| Contest list + detail | ✅ | ✅ | 2-column grid |
+| Tag list + detail | ✅ | ✅ | 3-column grid with novel count |
+| Contest list + detail | ✅ | ✅ | 2-column grid with novel count |
 | Genre/Status/Ptype browse | ✅ | ✅ | List pages + filtered novels |
 | Dark mode | ✅ | ✅ | |
 | Load more | ✅ | ✅ | 48 per page, back-to-top button |
