@@ -26,7 +26,7 @@ class GenreListScreen extends StatelessWidget {
             leading: const Icon(Icons.category, color: AppColors.primary),
             title: Text(zh),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/novels?genre=$value'),
+            onTap: () => context.push('/novels-by-genre?genre=$value'),
           );
         },
       ),
@@ -57,7 +57,7 @@ class StatusListScreen extends StatelessWidget {
                 color: AppColors.primary),
             title: Text(zh),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/novels?status=$value'),
+            onTap: () => context.push('/novels-by-status?status=$value'),
           );
         },
       ),

@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import '../features/home/home_screen.dart';
 import '../features/novels/novels_screen.dart';
+import '../features/novels/novels_by_genre_screen.dart';
+import '../features/novels/novels_by_status_screen.dart';
 import '../features/novels/novel_detail_screen.dart';
 import '../features/rankings/rankings_screen.dart';
 import '../features/authors/authors_screen.dart';
@@ -120,6 +122,26 @@ final router = GoRouter(
       path: '/ptypes',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const PtypeListScreen(),
+    ),
+    GoRoute(
+      path: '/novels-by-genre',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        final genre = state.uri.queryParameters['genre'];
+        return NovelsByGenreScreen(
+          initialGenre: genre != null ? int.tryParse(genre) : null,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/novels-by-status',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        final status = state.uri.queryParameters['status'];
+        return NovelsByStatusScreen(
+          initialStatus: status != null ? int.tryParse(status) : null,
+        );
+      },
     ),
     GoRoute(
       path: '/contest/:id',
