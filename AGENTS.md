@@ -275,6 +275,28 @@ lib/
 - **nid < 10000**: Test data, may have bugs; use meta_13.jsonl for real data
 - **Database singleton**: Use `@Riverpod(keepAlive: true)` to prevent multiple instances
 
+## Git Rules
+
+**NEVER use `git add .` or `git add -A`** — always specify files or directories explicitly:
+
+```bash
+# ✅ Correct
+git add lib/features/novels/novels_screen.dart
+git add lib/shared/widgets/
+git add AGENTS.md
+
+# ❌ Wrong
+git add .
+git add -A
+git add --all
+```
+
+This prevents accidentally committing:
+- Untracked debug/temp files
+- Large binary files
+- Sensitive configuration
+- Unintended changes
+
 ## Testing
 
 **Quick test with real data:**
