@@ -198,6 +198,18 @@ Data is split into chunks based on activity level:
 - All indexes created at build time for fast queries
 - Authors sorted by `top_novel_clicks DESC` (no runtime aggregation)
 
+### Authors Table Schema
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | INTEGER PK | Auto-increment |
+| name | TEXT UNIQUE | Author name |
+| novel_count | INTEGER | Total novels by this author |
+| banner_count | INTEGER | Novels with banner |
+| top_novel_id | INTEGER | ID of top novel (by clicks) |
+| top_novel_title | TEXT | Title of top novel |
+| top_novel_clicks | INTEGER | Clicks of top novel |
+
 ## UI Conventions
 
 **Layout:**
