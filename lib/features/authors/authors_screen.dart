@@ -43,9 +43,11 @@ class _AuthorsScreenState extends ConsumerState<AuthorsScreen> {
 
   void _onScroll() {
     // Show back to top button when scrolled down
-    setState(() {
-      _showBackToTop = _scrollController.offset > 500;
-    });
+    if (mounted) {
+      setState(() {
+        _showBackToTop = _scrollController.offset > 500;
+      });
+    }
 
     // Load more when near bottom
     if (_scrollController.position.pixels >=
@@ -58,7 +60,7 @@ class _AuthorsScreenState extends ConsumerState<AuthorsScreen> {
 
   Future<void> _loadMore() async {
     if (_isLoadingMore) return;
-    setState(() => _isLoadingMore = true);
+    if (mounted) setState(() => _isLoadingMore = true);
 
     final db = ref.read(databaseProvider);
     final newAuthors = await db.getAuthorsWithStats(
@@ -66,12 +68,14 @@ class _AuthorsScreenState extends ConsumerState<AuthorsScreen> {
       offset: _currentPage * _pageSize,
     );
 
-    setState(() {
-      _currentPage++;
-      _authors.addAll(newAuthors);
-      _hasMore = newAuthors.length == _pageSize;
-      _isLoadingMore = false;
-    });
+    if (mounted) {
+      setState(() {
+        _currentPage++;
+        _authors.addAll(newAuthors);
+        _hasMore = newAuthors.length == _pageSize;
+        _isLoadingMore = false;
+      });
+    }
   }
 
   @override

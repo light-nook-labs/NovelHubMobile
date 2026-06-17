@@ -8,6 +8,8 @@ import '../../data/models/database.dart';
 import '../../shared/widgets/novel_rank_list.dart';
 import '../../shared/widgets/common_widgets.dart';
 import '../../shared/utils/spacing.dart';
+import '../../app/theme.dart';
+import '../../app/settings_provider.dart';
 
 part 'tags_screen.g.dart';
 
@@ -20,55 +22,56 @@ class TagsScreen extends ConsumerStatefulWidget {
 
 class _TagsScreenState extends ConsumerState<TagsScreen> {
   final _scrollController = ScrollController();
-  final _pageSize = 48;
-  int _currentPage = 0;
-  bool _hasMore = true;
-  bool _isLoadingMore = false;
+  final _searchController = TextEditingController();
   List<TagWithCount> _tags = [];
+  List<TagWithCount> _filteredTags = [];
+  bool _isLoading = true;
   bool _showBackToTop = false;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    _loadMore();
+    _loadTags();
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
   void _onScroll() {
-    setState(() {
-      _showBackToTop = _scrollController.offset > 500;
-    });
-
-    if (_scrollController.position.pixels >=
-            _scrollController.position.maxScrollExtent - 200 &&
-        !_isLoadingMore &&
-        _hasMore) {
-      _loadMore();
+    if (mounted) {
+      setState(() {
+        _showBackToTop = _scrollController.offset > 500;
+      });
     }
   }
 
-  Future<void> _loadMore() async {
-    if (_isLoadingMore) return;
-    setState(() => _isLoadingMore = true);
-
-    final db = ref.read(databaseProvider);
-    final newTags = await db.getTagsWithCount(
-      limit: _pageSize,
-      offset: _currentPage * _pageSize,
-    );
-
+  void _filterTags(String query) {
     setState(() {
-      _currentPage++;
-      _tags.addAll(newTags);
-      _hasMore = newTags.length == _pageSize;
-      _isLoadingMore = false;
+      if (query.isEmpty) {
+        _filteredTags = _tags;
+      } else {
+        _filteredTags = _tags
+            .where((tag) => tag.name.toLowerCase().contains(query.toLowerCase()))
+            .toList();
+      }
     });
+  }
+
+  Future<void> _loadTags() async {
+    final db = ref.read(databaseProvider);
+    final tags = await db.getTagsWithCount(limit: 10000);
+    if (mounted) {
+      setState(() {
+        _tags = tags;
+        _filteredTags = tags;
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -81,69 +84,105 @@ class _TagsScreenState extends ConsumerState<TagsScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      body: _tags.isEmpty && _isLoadingMore
+      body: _isLoading
           ? const LoadingState(message: '加载标签列表...')
           : _tags.isEmpty
           ? const EmptyState(icon: Icons.tag, message: '暂无标签数据')
-          : Stack(
+          : Column(
               children: [
-                GridView.builder(
-                  controller: _scrollController,
-                  padding: AppSpacing.paddingM,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    childAspectRatio: 2.2,
-                    crossAxisSpacing: AppSpacing.gridSpacingSmall,
-                    mainAxisSpacing: AppSpacing.gridSpacingSmall,
-                  ),
-                  itemCount: _tags.length + (_hasMore ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (index == _tags.length) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    final tag = _tags[index];
-                    return Card(
-                      child: InkWell(
-                        onTap: () => context.push('/tag/${tag.id}'),
+                // Search bar
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: _filterTags,
+                    decoration: InputDecoration(
+                      hintText: '搜索标签...',
+                      prefixIcon: const Icon(Icons.search, size: 20),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 20),
+                              onPressed: () {
+                                _searchController.clear();
+                                _filterTags('');
+                              },
+                            )
+                          : null,
+                      border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 6,
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  tag.name,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                '${tag.novelCount} 本',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                        borderSide: BorderSide.none,
                       ),
-                    );
-                  },
+                      filled: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
                 ),
-                BackToTopButton(
-                  scrollController: _scrollController,
-                  show: _showBackToTop,
+                // Grid
+                Expanded(
+                  child: _filteredTags.isEmpty
+                      ? const EmptyState(icon: Icons.search_off, message: '未找到匹配的标签')
+                      : Stack(
+                          children: [
+                            GridView.builder(
+                              controller: _scrollController,
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                childAspectRatio: 1.6,
+                                crossAxisSpacing: 8,
+                                mainAxisSpacing: 8,
+                              ),
+                              itemCount: _filteredTags.length,
+                              itemBuilder: (context, index) {
+                                final tag = _filteredTags[index];
+                                return Card(
+                                  child: InkWell(
+                                    onTap: () => context.push('/tag/${tag.id}'),
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 4,
+                                      ),
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              tag.name,
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ),
+                                          Text(
+                                            '${tag.novelCount}',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            BackToTopButton(
+                              scrollController: _scrollController,
+                              show: _showBackToTop,
+                            ),
+                          ],
+                        ),
                 ),
               ],
             ),
@@ -151,15 +190,36 @@ class _TagsScreenState extends ConsumerState<TagsScreen> {
   }
 }
 
-class TagDetailScreen extends ConsumerWidget {
+class TagDetailScreen extends ConsumerStatefulWidget {
   final int tagId;
 
   const TagDetailScreen({super.key, required this.tagId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final tagAsync = ref.watch(tagProvider(tagId));
+  ConsumerState<TagDetailScreen> createState() => _TagDetailScreenState();
+}
+
+class _TagDetailScreenState extends ConsumerState<TagDetailScreen> {
+  int? _selectedGenre;
+  int? _selectedStatus;
+  int? _selectedYear;
+  int? _selectedMinWordNum;
+  int? _selectedMaxWordNum;
+  String _sortBy = 'click_num';
+  bool _descending = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final tagAsync = ref.watch(tagProvider(widget.tagId));
     final db = ref.read(databaseProvider);
+    final hideOther = ref.watch(hideOtherNotifierProvider);
+
+    final hasFilters =
+        _selectedGenre != null ||
+        _selectedStatus != null ||
+        _selectedYear != null ||
+        _selectedMinWordNum != null ||
+        _selectedMaxWordNum != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -172,17 +232,68 @@ class TagDetailScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        actions: [
+          IconButton(
+            icon: Icon(
+              Icons.tune,
+              color: hasFilters ? AppColors.primary : null,
+            ),
+            onPressed: () => _showFilterBottomSheet(context, hideOther),
+          ),
+        ],
       ),
       body: NovelRankList(
         loadNovels: (offset, limit) => db.getNovelsByTag(
-          tagId,
+          widget.tagId,
           limit: limit,
           offset: offset,
-          sortBy: 'click_num',
-          descending: true,
+          sortBy: _sortBy,
+          descending: _descending,
         ),
         showRank: true,
-        valueLabel: '点击',
+        valueLabel: _getValueLabel(),
+      ),
+    );
+  }
+
+  String _getValueLabel() {
+    return switch (_sortBy) {
+      'word_num' => '字数',
+      'like_num' => '收藏',
+      'praise_num' => '点赞',
+      'review_num' => '长评',
+      'comment_num' => '短评',
+      _ => '点击',
+    };
+  }
+
+  void _showFilterBottomSheet(BuildContext context, bool hideOther) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => NovelFilterBottomSheet(
+        selectedGenre: _selectedGenre,
+        selectedStatus: _selectedStatus,
+        selectedYear: _selectedYear,
+        selectedMinWordNum: _selectedMinWordNum,
+        selectedMaxWordNum: _selectedMaxWordNum,
+        sortBy: _sortBy,
+        descending: _descending,
+        hideOther: hideOther,
+        onApply: (genre, status, year, minWordNum, maxWordNum, sortBy, descending) {
+          setState(() {
+            _selectedGenre = genre;
+            _selectedStatus = status;
+            _selectedYear = year;
+            _selectedMinWordNum = minWordNum;
+            _selectedMaxWordNum = maxWordNum;
+            _sortBy = sortBy;
+            _descending = descending;
+          });
+        },
       ),
     );
   }

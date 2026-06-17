@@ -41,15 +41,15 @@ Future<ReleaseInfo?> checkUpdate(CheckUpdateRef ref) async {
   return syncService.checkForUpdate();
 }
 
-/// Last sync info.
-@riverpod
+/// Last sync info - cached until manually invalidated.
+@Riverpod(keepAlive: true)
 Future<SyncInfo?> lastSyncInfo(LastSyncInfoRef ref) async {
   final syncService = ref.watch(syncServiceProvider);
   return syncService.getLastSyncInfo();
 }
 
-/// Novel count.
-@riverpod
+/// Novel count - cached until manually invalidated.
+@Riverpod(keepAlive: true)
 Future<int> novelCount(NovelCountRef ref) async {
   final db = ref.watch(databaseProvider);
   return db.getNovelCount();
@@ -121,6 +121,16 @@ Future<List<Tag>> novelTags(NovelTagsRef ref, int novelId) async {
   return db.getNovelTags(novelId);
 }
 
+/// Batch novel tags - for loading tags for multiple novels at once.
+@riverpod
+Future<Map<int, List<Tag>>> novelTagsBatch(
+  NovelTagsBatchRef ref,
+  List<int> novelIds,
+) async {
+  final db = ref.watch(databaseProvider);
+  return db.getNovelTagsBatch(novelIds);
+}
+
 /// Novel author.
 @riverpod
 Future<Author?> novelAuthor(NovelAuthorRef ref, int novelId) async {
@@ -135,8 +145,8 @@ Future<List<Author>> authors(AuthorsRef ref) async {
   return db.getAllAuthors(limit: 10000);
 }
 
-/// All authors with stats.
-@riverpod
+/// All authors with stats - cached until manually invalidated.
+@Riverpod(keepAlive: true)
 Future<List<AuthorWithStats>> authorsWithStats(AuthorsWithStatsRef ref) async {
   final db = ref.watch(databaseProvider);
   return db.getAuthorsWithStats(limit: 10000);
@@ -152,9 +162,75 @@ Future<Map<String, int>> novelRankings(
   return db.getNovelRankings(novelId);
 }
 
-/// Database statistics.
-@riverpod
+/// Database statistics - cached until manually invalidated.
+/// This is the most expensive query, so we cache it heavily.
+@Riverpod(keepAlive: true)
 Future<Map<String, int>> statistics(StatisticsRef ref) async {
   final db = ref.watch(databaseProvider);
   return db.getStatistics();
+}
+
+/// Banner novels - cached until manually invalidated.
+@Riverpod(keepAlive: true)
+Future<List<BannerNovel>> bannerNovels(BannerNovelsRef ref) async {
+  final db = ref.watch(databaseProvider);
+  return db.getBannerNovels();
+}
+
+/// Database merge time - cached until manually invalidated.
+@Riverpod(keepAlive: true)
+Future<DateTime?> dbMergeTime(DbMergeTimeRef ref) async {
+  return getDbMergeTime();
+}
+
+/// All tags with count - cached until manually invalidated.
+@Riverpod(keepAlive: true)
+Future<List<TagWithCount>> tagsWithCount(TagsWithCountRef ref) async {
+  final db = ref.watch(databaseProvider);
+  return db.getTagsWithCount(limit: 10000);
+}
+
+/// All contests with count - cached until manually invalidated.
+@Riverpod(keepAlive: true)
+Future<List<ContestWithCount>> contestsWithCount(ContestsWithCountRef ref) async {
+  final db = ref.watch(databaseProvider);
+  return db.getContestsWithCount(limit: 10000);
+}
+
+/// Genre counts - cached until manually invalidated.
+@Riverpod(keepAlive: true)
+Future<Map<int, int>> genreCounts(GenreCountsRef ref) async {
+  final db = ref.watch(databaseProvider);
+  return db.getGenreCounts();
+}
+
+/// Status counts - cached until manually invalidated.
+@Riverpod(keepAlive: true)
+Future<Map<int, int>> statusCounts(StatusCountsRef ref) async {
+  final db = ref.watch(databaseProvider);
+  return db.getStatusCounts();
+}
+
+/// Ptype counts - cached until manually invalidated.
+@Riverpod(keepAlive: true)
+Future<Map<int, int>> ptypeCounts(PtypeCountsRef ref) async {
+  final db = ref.watch(databaseProvider);
+  return db.getPtypeCounts();
+}
+
+/// Cached sorted novels for rankings.
+/// First page (top 48) is cached for faster initial load.
+@Riverpod(keepAlive: true)
+Future<List<Novel>> topNovelsByField(
+  TopNovelsByFieldRef ref,
+  String field, {
+  bool descending = true,
+  int limit = 48,
+}) async {
+  final db = ref.watch(databaseProvider);
+  return db.getNovelsSorted(
+    field,
+    descending: descending,
+    limit: limit,
+  );
 }

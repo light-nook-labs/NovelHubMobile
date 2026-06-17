@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../data/models/database.dart';
 import '../../shared/widgets/novel_card.dart';
+import '../../shared/widgets/novel_rank_list.dart';
 import '../../shared/utils/mappings.dart';
 import '../../app/theme.dart';
+import '../../app/settings_provider.dart';
 import 'novels_screen.dart';
 
 class NovelsByStatusScreen extends ConsumerStatefulWidget {
@@ -29,13 +31,12 @@ class _NovelsByStatusScreenState extends ConsumerState<NovelsByStatusScreen>
 
   static const _statusTabs = [
     {'label': '全部', 'value': null},
-    {'label': '其他', 'value': 1},
     {'label': '已完结', 'value': 2},
     {'label': '连载中', 'value': 3},
     {'label': '断更', 'value': 4},
     {'label': '断更A', 'value': 5},
     {'label': '完结A', 'value': 6},
-    {'label': '下架', 'value': 7},
+    {'label': '其他', 'value': 1},
   ];
 
   @override
@@ -125,9 +126,17 @@ class _NovelsByStatusScreenState extends ConsumerState<NovelsByStatusScreen>
             fontWeight: FontWeight.bold,
           ),
           unselectedLabelStyle: const TextStyle(fontSize: 13),
-          tabs: _statusTabs
-              .map((tab) => Tab(text: tab['label'] as String))
-              .toList(),
+          tabs: _statusTabs.map((tab) {
+            final isOther = tab['value'] == 1;
+            return Tab(
+              child: Text(
+                tab['label'] as String,
+                style: isOther
+                    ? const TextStyle(fontSize: 11, fontStyle: FontStyle.italic)
+                    : null,
+              ),
+            );
+          }).toList(),
         ),
       ),
       body: novelsAsync.when(
@@ -153,6 +162,7 @@ class _NovelsByStatusScreenState extends ConsumerState<NovelsByStatusScreen>
   }
 
   void _showFilterBottomSheet(BuildContext context) {
+    final hideOther = ref.read(hideOtherNotifierProvider);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -164,6 +174,7 @@ class _NovelsByStatusScreenState extends ConsumerState<NovelsByStatusScreen>
         selectedYear: _selectedYear,
         sortBy: _sortBy,
         descending: _descending,
+        hideOther: hideOther,
         onApply: (genre, year, sortBy, descending) {
           setState(() {
             _selectedGenre = genre;
@@ -177,20 +188,15 @@ class _NovelsByStatusScreenState extends ConsumerState<NovelsByStatusScreen>
   }
 
   Widget _buildNovelGrid(List<Novel> novels) {
-    return GridView.builder(
-      padding: const EdgeInsets.all(12),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        childAspectRatio: 0.55,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-      ),
+    return ListView.builder(
       itemCount: novels.length,
       itemBuilder: (context, index) {
         final novel = novels[index];
-        return NovelCard(
+        return NovelRankRow(
           novel: novel,
-          onTap: () => context.push('/novel/${novel.id}'),
+          rank: index + 1,
+          showRank: false,
+          valueLabel: '点击',
         );
       },
     );
@@ -202,6 +208,7 @@ class _FilterBottomSheet extends StatefulWidget {
   final int? selectedYear;
   final String sortBy;
   final bool descending;
+  final bool hideOther;
   final Function(int?, int?, String, bool) onApply;
 
   const _FilterBottomSheet({
@@ -209,6 +216,7 @@ class _FilterBottomSheet extends StatefulWidget {
     required this.selectedYear,
     required this.sortBy,
     required this.descending,
+    required this.hideOther,
     required this.onApply,
   });
 
@@ -282,7 +290,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                 children: [
                   _buildSection(
                     title: '分类',
-                    options: genreMapping.allZh.map((zh) {
+                    options: genreMapping.getAllZh(hideOther: widget.hideOther).map((zh) {
                       final value = genreMapping.getValue(zh);
                       return _Option(label: zh, value: value);
                     }).toList(),

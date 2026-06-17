@@ -89,6 +89,7 @@ class _BannerScreenState extends ConsumerState<BannerScreen> {
       limit: _pageSize,
     );
 
+    if (!mounted) return;
     setState(() {
       _currentPage++;
       _novels.addAll(newNovels);

@@ -163,11 +163,10 @@ class SyncService {
         final batch = allNovels.sublist(i, end);
 
         final companions = batch.map((novel) {
-          final authorId = authorMap[novel.author];
           final contestId = novel.contest != null
               ? contestMap[novel.contest]
               : null;
-          return JsonlParser.toCompanion(novel, authorId, contestId);
+          return JsonlParser.toCompanion(novel, novel.author, contestId);
         }).toList();
 
         await _db.upsertNovelsBatch(companions);
@@ -263,11 +262,10 @@ class SyncService {
 
       // 5. Upsert novels
       final companions = allNovels.map((novel) {
-        final authorId = authorMap[novel.author];
         final contestId = novel.contest != null
             ? contestMap[novel.contest]
             : null;
-        return JsonlParser.toCompanion(novel, authorId, contestId);
+        return JsonlParser.toCompanion(novel, novel.author, contestId);
       }).toList();
       await _db.upsertNovelsBatch(companions);
 
@@ -374,11 +372,10 @@ class SyncService {
         final batch = allNovels.sublist(i, end);
 
         final companions = batch.map((novel) {
-          final authorId = authorMap[novel.author];
           final contestId = novel.contest != null
               ? contestMap[novel.contest]
               : null;
-          return JsonlParser.toCompanion(novel, authorId, contestId);
+          return JsonlParser.toCompanion(novel, novel.author, contestId);
         }).toList();
 
         await _db.upsertNovelsBatch(companions);

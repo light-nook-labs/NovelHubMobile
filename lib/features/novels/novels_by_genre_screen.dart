@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../data/models/database.dart';
 import '../../shared/widgets/novel_card.dart';
+import '../../shared/widgets/novel_rank_list.dart';
 import '../../shared/utils/mappings.dart';
 import '../../app/theme.dart';
+import '../../app/settings_provider.dart';
 import 'novels_screen.dart';
 
 class NovelsByGenreScreen extends ConsumerStatefulWidget {
@@ -25,55 +27,82 @@ class _NovelsByGenreScreenState extends ConsumerState<NovelsByGenreScreen>
   String _sortBy = 'click_num';
   bool _descending = true;
 
-  late TabController _tabController;
+  TabController? _tabController;
+  bool _lastHideOther = true;
 
-  static const _genreTabs = [
-    {'label': '全部', 'value': null},
-    {'label': '其他', 'value': 1},
-    {'label': '魔幻', 'value': 2},
-    {'label': '玄幻', 'value': 3},
-    {'label': '古风', 'value': 4},
-    {'label': '科幻', 'value': 5},
-    {'label': '校园', 'value': 6},
-    {'label': '都市', 'value': 7},
-    {'label': '游戏', 'value': 8},
-    {'label': '同人', 'value': 9},
-    {'label': '悬疑', 'value': 10},
-  ];
+  List<Map<String, dynamic>> _getGenreTabs(bool hideOther) {
+    final tabs = [
+      {'label': '全部', 'value': null},
+      {'label': '魔幻', 'value': 2},
+      {'label': '玄幻', 'value': 3},
+      {'label': '古风', 'value': 4},
+      {'label': '科幻', 'value': 5},
+      {'label': '校园', 'value': 6},
+      {'label': '都市', 'value': 7},
+      {'label': '游戏', 'value': 8},
+      {'label': '同人', 'value': 9},
+      {'label': '悬疑', 'value': 10},
+    ];
+    if (!hideOther) {
+      tabs.add({'label': '其他', 'value': 1});
+    }
+    return tabs;
+  }
 
-  @override
-  void initState() {
-    super.initState();
+  void _ensureTabController(bool hideOther) {
+    if (_tabController != null && hideOther == _lastHideOther) return;
+
+    final genreTabs = _getGenreTabs(hideOther);
+
     int initialTabIndex = 0;
     if (widget.initialGenre != null) {
-      final index = _genreTabs.indexWhere(
+      final index = genreTabs.indexWhere(
         (tab) => tab['value'] == widget.initialGenre,
       );
       if (index >= 0) initialTabIndex = index;
     }
 
+    _tabController?.dispose();
     _tabController = TabController(
-      length: _genreTabs.length,
+      length: genreTabs.length,
       vsync: this,
       initialIndex: initialTabIndex,
     );
-    _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) {
+    _tabController!.addListener(() {
+      if (!_tabController!.indexIsChanging) {
         setState(() {});
       }
     });
+    _lastHideOther = hideOther;
+  }
+
+  @override
+  void initState() {
+    super.initState();
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _tabController?.dispose();
     super.dispose();
   }
 
-  int? get _selectedGenre => _genreTabs[_tabController.index]['value'] as int?;
+  int? get _selectedGenre {
+    final hideOther = ref.read(hideOtherNotifierProvider);
+    final genreTabs = _getGenreTabs(hideOther);
+    final index = _tabController?.index ?? 0;
+    if (index < genreTabs.length) {
+      return genreTabs[index]['value'] as int?;
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final hideOther = ref.watch(hideOtherNotifierProvider);
+    _ensureTabController(hideOther);
+    final genreTabs = _getGenreTabs(hideOther);
+
     final novelsAsync = ref.watch(
       filteredNovelsProvider(
         genre: _selectedGenre,
@@ -127,9 +156,17 @@ class _NovelsByGenreScreenState extends ConsumerState<NovelsByGenreScreen>
             fontWeight: FontWeight.bold,
           ),
           unselectedLabelStyle: const TextStyle(fontSize: 13),
-          tabs: _genreTabs
-              .map((tab) => Tab(text: tab['label'] as String))
-              .toList(),
+          tabs: genreTabs.map((tab) {
+            final isOther = tab['value'] == 1;
+            return Tab(
+              child: Text(
+                tab['label'] as String,
+                style: isOther
+                    ? const TextStyle(fontSize: 11, fontStyle: FontStyle.italic)
+                    : null,
+              ),
+            );
+          }).toList(),
         ),
       ),
       body: novelsAsync.when(
@@ -155,6 +192,7 @@ class _NovelsByGenreScreenState extends ConsumerState<NovelsByGenreScreen>
   }
 
   void _showFilterBottomSheet(BuildContext context) {
+    final hideOther = ref.read(hideOtherNotifierProvider);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -166,6 +204,7 @@ class _NovelsByGenreScreenState extends ConsumerState<NovelsByGenreScreen>
         selectedYear: _selectedYear,
         sortBy: _sortBy,
         descending: _descending,
+        hideOther: hideOther,
         onApply: (status, year, sortBy, descending) {
           setState(() {
             _selectedStatus = status;
@@ -179,20 +218,15 @@ class _NovelsByGenreScreenState extends ConsumerState<NovelsByGenreScreen>
   }
 
   Widget _buildNovelGrid(List<Novel> novels) {
-    return GridView.builder(
-      padding: const EdgeInsets.all(12),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        childAspectRatio: 0.55,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-      ),
+    return ListView.builder(
       itemCount: novels.length,
       itemBuilder: (context, index) {
         final novel = novels[index];
-        return NovelCard(
+        return NovelRankRow(
           novel: novel,
-          onTap: () => context.push('/novel/${novel.id}'),
+          rank: index + 1,
+          showRank: false,
+          valueLabel: '点击',
         );
       },
     );
@@ -204,6 +238,7 @@ class _FilterBottomSheet extends StatefulWidget {
   final int? selectedYear;
   final String sortBy;
   final bool descending;
+  final bool hideOther;
   final Function(int?, int?, String, bool) onApply;
 
   const _FilterBottomSheet({
@@ -211,6 +246,7 @@ class _FilterBottomSheet extends StatefulWidget {
     required this.selectedYear,
     required this.sortBy,
     required this.descending,
+    required this.hideOther,
     required this.onApply,
   });
 
@@ -284,7 +320,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                 children: [
                   _buildSection(
                     title: '状态',
-                    options: statusMapping.allZh.map((zh) {
+                    options: statusMapping.getAllZh(hideOther: widget.hideOther).map((zh) {
                       final value = statusMapping.getValue(zh);
                       return _Option(label: zh, value: value);
                     }).toList(),

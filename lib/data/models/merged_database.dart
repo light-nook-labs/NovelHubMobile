@@ -57,13 +57,13 @@ class MergedDatabase {
 
   /// Create merged views for querying
   Future<void> _createMergedViews() async {
-    // Create a view that unions all novels from all chunks
+    // Create a view that unions all novels from all chunks (use UNION to deduplicate)
     await _connection.runCustom('''
       CREATE VIEW IF NOT EXISTS merged_novels AS
       SELECT * FROM hot.novels
-      UNION ALL
+      UNION
       SELECT * FROM warm.novels
-      UNION ALL
+      UNION
       SELECT * FROM cold.novels
     ''');
 
@@ -71,9 +71,9 @@ class MergedDatabase {
     await _connection.runCustom('''
       CREATE VIEW IF NOT EXISTS merged_tags AS
       SELECT * FROM hot.tags
-      UNION ALL
+      UNION
       SELECT * FROM warm.tags
-      UNION ALL
+      UNION
       SELECT * FROM cold.tags
     ''');
 
@@ -81,9 +81,9 @@ class MergedDatabase {
     await _connection.runCustom('''
       CREATE VIEW IF NOT EXISTS merged_novel_tags AS
       SELECT * FROM hot.novel_tags
-      UNION ALL
+      UNION
       SELECT * FROM warm.novel_tags
-      UNION ALL
+      UNION
       SELECT * FROM cold.novel_tags
     ''');
 
@@ -91,9 +91,9 @@ class MergedDatabase {
     await _connection.runCustom('''
       CREATE VIEW IF NOT EXISTS merged_authors AS
       SELECT * FROM hot.authors
-      UNION ALL
+      UNION
       SELECT * FROM warm.authors
-      UNION ALL
+      UNION
       SELECT * FROM cold.authors
     ''');
 
@@ -101,9 +101,9 @@ class MergedDatabase {
     await _connection.runCustom('''
       CREATE VIEW IF NOT EXISTS merged_contests AS
       SELECT * FROM hot.contests
-      UNION ALL
+      UNION
       SELECT * FROM warm.contests
-      UNION ALL
+      UNION
       SELECT * FROM cold.contests
     ''');
   }
@@ -121,20 +121,32 @@ class MergedDatabase {
     String? orderBy,
   }) async {
     var sql = 'SELECT * FROM merged_novels';
+    final params = <dynamic>[];
 
     if (orderBy != null) {
-      sql += ' ORDER BY $orderBy';
+      // Whitelist allowed order by columns to prevent SQL injection
+      final allowedColumns = [
+        'click_num', 'word_num', 'like_num', 'praise_num',
+        'review_num', 'comment_num', 'last_update', 'id', 'title'
+      ];
+      final parts = orderBy.split(' ');
+      if (parts.isNotEmpty && allowedColumns.contains(parts[0])) {
+        final direction = parts.length > 1 && parts[1].toUpperCase() == 'ASC' ? 'ASC' : 'DESC';
+        sql += ' ORDER BY ${parts[0]} $direction';
+      }
     }
 
     if (limit != null) {
-      sql += ' LIMIT $limit';
+      sql += ' LIMIT ?';
+      params.add(limit);
     }
 
     if (offset != null) {
-      sql += ' OFFSET $offset';
+      sql += ' OFFSET ?';
+      params.add(offset);
     }
 
-    final result = await _connection.runSelect(sql, []);
+    final result = await _connection.runSelect(sql, params);
     return result.map((row) => NovelRow.fromMap(row)).toList();
   }
 
@@ -144,17 +156,20 @@ class MergedDatabase {
     int? limit,
     int? offset,
   }) async {
-    var sql = 'SELECT * FROM merged_novels WHERE status = $status';
+    var sql = 'SELECT * FROM merged_novels WHERE status = ?';
+    final params = <dynamic>[status];
 
     if (limit != null) {
-      sql += ' LIMIT $limit';
+      sql += ' LIMIT ?';
+      params.add(limit);
     }
 
     if (offset != null) {
-      sql += ' OFFSET $offset';
+      sql += ' OFFSET ?';
+      params.add(offset);
     }
 
-    final result = await _connection.runSelect(sql, []);
+    final result = await _connection.runSelect(sql, params);
     return result.map((row) => NovelRow.fromMap(row)).toList();
   }
 
@@ -217,8 +232,8 @@ class NovelRow {
   final int? reviewNum;
   final int? contestId;
   final String? cover;
-  final DateTime? lastUpdate;
-  final DateTime dbUpdate;
+  final String? lastUpdate;
+  final String? dbUpdate;
 
   NovelRow({
     required this.id,
@@ -257,10 +272,8 @@ class NovelRow {
       reviewNum: map['review_num'] as int?,
       contestId: map['contest_id'] as int?,
       cover: map['cover'] as String?,
-      lastUpdate: map['last_update'] != null
-          ? DateTime.tryParse(map['last_update'] as String)
-          : null,
-      dbUpdate: DateTime.tryParse(map['db_update'] as String) ?? DateTime.now(),
+      lastUpdate: map['last_update'] as String?,
+      dbUpdate: map['db_update'] as String?,
     );
   }
 }

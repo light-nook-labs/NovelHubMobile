@@ -68,7 +68,10 @@ final router = GoRouter(
       path: '/novel/:id',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
-        final id = int.parse(state.pathParameters['id']!);
+        final id = int.tryParse(state.pathParameters['id'] ?? '');
+        if (id == null) {
+          return const Scaffold(body: Center(child: Text('无效的ID')));
+        }
         return NovelDetailScreen(novelId: id);
       },
     ),
@@ -86,7 +89,10 @@ final router = GoRouter(
       path: '/author/:id',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
-        final id = int.parse(state.pathParameters['id']!);
+        final id = int.tryParse(state.pathParameters['id'] ?? '');
+        if (id == null) {
+          return const Scaffold(body: Center(child: Text('无效的ID')));
+        }
         return AuthorDetailScreen(authorId: id);
       },
     ),
@@ -99,7 +105,10 @@ final router = GoRouter(
       path: '/tag/:id',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
-        final id = int.parse(state.pathParameters['id']!);
+        final id = int.tryParse(state.pathParameters['id'] ?? '');
+        if (id == null) {
+          return const Scaffold(body: Center(child: Text('无效的ID')));
+        }
         return TagDetailScreen(tagId: id);
       },
     ),
@@ -147,7 +156,10 @@ final router = GoRouter(
       path: '/contest/:id',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
-        final id = int.parse(state.pathParameters['id']!);
+        final id = int.tryParse(state.pathParameters['id'] ?? '');
+        if (id == null) {
+          return const Scaffold(body: Center(child: Text('无效的ID')));
+        }
         return ContestDetailScreen(contestId: id);
       },
     ),
