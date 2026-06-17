@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../data/models/database.dart';
+import '../../data/repositories/providers.dart';
 import '../../shared/widgets/novel_card.dart';
 import '../../shared/widgets/novel_rank_list.dart';
 import '../../shared/utils/mappings.dart';
@@ -193,6 +194,8 @@ class _NovelsByGenreScreenState extends ConsumerState<NovelsByGenreScreen>
 
   void _showFilterBottomSheet(BuildContext context) {
     final hideOther = ref.read(hideOtherNotifierProvider);
+    final availableYearsAsync = ref.read(availableYearsProvider);
+    final availableYears = availableYearsAsync.valueOrNull ?? [];
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -205,6 +208,7 @@ class _NovelsByGenreScreenState extends ConsumerState<NovelsByGenreScreen>
         sortBy: _sortBy,
         descending: _descending,
         hideOther: hideOther,
+        availableYears: availableYears,
         onApply: (status, year, sortBy, descending) {
           setState(() {
             _selectedStatus = status;
@@ -239,6 +243,7 @@ class _FilterBottomSheet extends StatefulWidget {
   final String sortBy;
   final bool descending;
   final bool hideOther;
+  final List<int> availableYears;
   final Function(int?, int?, String, bool) onApply;
 
   const _FilterBottomSheet({
@@ -247,6 +252,7 @@ class _FilterBottomSheet extends StatefulWidget {
     required this.sortBy,
     required this.descending,
     required this.hideOther,
+    required this.availableYears,
     required this.onApply,
   });
 
@@ -259,11 +265,6 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
   late int? _year;
   late String _sortBy;
   late bool _descending;
-
-  List<int> get _years {
-    final currentYear = DateTime.now().year;
-    return List.generate(7, (i) => currentYear - i);
-  }
 
   @override
   void initState() {
@@ -333,7 +334,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                   const SizedBox(height: 24),
                   _buildSection(
                     title: '更新年份',
-                    options: _years
+                    options: widget.availableYears
                         .map((y) => _Option(label: '$y年', value: y))
                         .toList(),
                     selectedValue: _year,

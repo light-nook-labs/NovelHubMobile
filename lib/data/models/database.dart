@@ -938,6 +938,25 @@ class AppDatabase extends _$AppDatabase {
 
   // ===== Enum count queries =====
 
+  Future<List<int>> getAvailableYears() async {
+    final query = selectOnly(novels)
+      ..addColumns([novels.lastUpdate])
+      ..where(novels.lastUpdate.isNotNull());
+    final results = await query.get();
+    final years = <int>{};
+    for (final row in results) {
+      final lastUpdate = row.read(novels.lastUpdate);
+      if (lastUpdate != null && lastUpdate.length >= 4) {
+        final year = int.tryParse(lastUpdate.substring(0, 4));
+        if (year != null) {
+          years.add(year);
+        }
+      }
+    }
+    final sortedYears = years.toList()..sort((a, b) => b.compareTo(a));
+    return sortedYears;
+  }
+
   Future<Map<int, int>> getGenreCounts() async {
     final query = selectOnly(novels)
       ..addColumns([novels.genre, countAll()])

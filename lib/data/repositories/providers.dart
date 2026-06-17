@@ -218,6 +218,13 @@ Future<Map<int, int>> ptypeCounts(PtypeCountsRef ref) async {
   return db.getPtypeCounts();
 }
 
+/// Available years from novels - cached until manually invalidated.
+@Riverpod(keepAlive: true)
+Future<List<int>> availableYears(AvailableYearsRef ref) async {
+  final db = ref.watch(databaseProvider);
+  return db.getAvailableYears();
+}
+
 /// Cached sorted novels for rankings.
 /// First page (top 48) is cached for faster initial load.
 @Riverpod(keepAlive: true)
