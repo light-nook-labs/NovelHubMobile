@@ -47,11 +47,11 @@ CHUNKS = {
 
 
 def create_database(db_path: str, is_hot: bool = False) -> sqlite3.Connection:
-    """Create SQLite database with schema.
+    """Create SQLite database with schema and indexes.
     
     Args:
         db_path: Path to the database file
-        is_hot: If True, create indexes for frequently queried fields
+        is_hot: If True, create more indexes for frequent queries
     """
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -79,11 +79,16 @@ def create_database(db_path: str, is_hot: bool = False) -> sqlite3.Connection:
         )
     ''')
     
-    # Create authors table
+    # Create authors table (with pre-computed stats)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS authors (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL UNIQUE
+            name TEXT NOT NULL UNIQUE,
+            novel_count INTEGER DEFAULT 0,
+            banner_count INTEGER DEFAULT 0,
+            top_novel_id INTEGER,
+            top_novel_title TEXT,
+            top_novel_clicks INTEGER DEFAULT 0
         )
     ''')
     
@@ -114,21 +119,24 @@ def create_database(db_path: str, is_hot: bool = False) -> sqlite3.Connection:
         )
     ''')
     
-    # Create indexes based on chunk type
-    if is_hot:
-        # Hot chunk needs more indexes for frequent queries
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_novels_status ON novels(status)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_novels_genre ON novels(genre)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_novels_ptype ON novels(ptype)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_novels_click_num ON novels(click_num DESC)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_novels_last_update ON novels(last_update DESC)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_novels_has_banner ON novels(has_banner)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_novel_tags_novel_id ON novel_tags(novel_id)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_novel_tags_tag_id ON novel_tags(tag_id)')
-    else:
-        # Cold/warm chunks need minimal indexes
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_novels_status ON novels(status)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_novels_click_num ON novels(click_num DESC)')
+    # Create ALL indexes upfront (database is read-only in app)
+    # Novel indexes
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_novels_status ON novels(status)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_novels_genre ON novels(genre)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_novels_ptype ON novels(ptype)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_novels_click_num ON novels(click_num DESC)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_novels_author ON novels(author)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_novels_has_banner ON novels(has_banner)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_novels_last_update ON novels(last_update DESC)')
+    
+    # Tag indexes
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_novel_tags_novel_id ON novel_tags(novel_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_novel_tags_tag_id ON novel_tags(tag_id)')
+    
+    # Author indexes
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_authors_name ON authors(name)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_authors_clicks ON authors(top_novel_clicks DESC)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_authors_novel_count ON authors(novel_count DESC)')
     
     conn.commit()
     return conn
@@ -288,6 +296,43 @@ def process_jsonl_files(jsonl_dir: str, output_dir: str) -> dict:
                 except Exception as e:
                     print(f'  Warning: Error processing line {line_num}: {e}')
                     continue
+    
+    # Pre-compute author stats for each chunk
+    print()
+    print('Pre-computing author statistics...')
+    for chunk_name, conn in connections.items():
+        cursor = conn.cursor()
+        
+        # Update author stats
+        cursor.execute('''
+            UPDATE authors SET 
+                novel_count = (
+                    SELECT COUNT(*) FROM novels WHERE novels.author = authors.name
+                ),
+                banner_count = (
+                    SELECT COUNT(*) FROM novels WHERE novels.author = authors.name AND has_banner = 1
+                ),
+                top_novel_id = (
+                    SELECT id FROM novels 
+                    WHERE novels.author = authors.name 
+                    ORDER BY click_num DESC LIMIT 1
+                ),
+                top_novel_title = (
+                    SELECT title FROM novels 
+                    WHERE novels.author = authors.name 
+                    ORDER BY click_num DESC LIMIT 1
+                ),
+                top_novel_clicks = (
+                    SELECT COALESCE(MAX(click_num), 0) FROM novels 
+                    WHERE novels.author = authors.name
+                )
+        ''')
+        
+        # Delete authors with no novels
+        cursor.execute('DELETE FROM authors WHERE novel_count = 0 OR novel_count IS NULL')
+        
+        conn.commit()
+        print(f'  {chunk_name}: {cursor.rowcount} authors cleaned')
     
     # Commit and close connections
     for chunk_name, conn in connections.items():

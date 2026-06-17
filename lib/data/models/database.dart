@@ -11,6 +11,11 @@ part 'database.g.dart';
 class Authors extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text().withLength(min: 1, max: 200)();
+  IntColumn get novelCount => integer().withDefault(const Constant(0))();
+  IntColumn get bannerCount => integer().withDefault(const Constant(0))();
+  IntColumn get topNovelId => integer().nullable()();
+  TextColumn get topNovelTitle => text().nullable()();
+  IntColumn get topNovelClicks => integer().withDefault(const Constant(0))();
 }
 
 class Tags extends Table {
@@ -68,6 +73,7 @@ class AuthorWithStats {
   final String? topNovelTitle;
   final int novelCount;
   final int bannerCount;
+  final int topNovelClicks;
 
   AuthorWithStats({
     required this.id,
@@ -75,6 +81,7 @@ class AuthorWithStats {
     this.topNovelTitle,
     required this.novelCount,
     required this.bannerCount,
+    required this.topNovelClicks,
   });
 }
 
@@ -540,72 +547,23 @@ class AppDatabase extends _$AppDatabase {
     int limit = 1000,
     int offset = 0,
   }) async {
-    // Get all authors
-    final allAuthors = await select(authors).get();
+    // Use pre-computed stats from authors table (built into the database)
+    final query = select(authors)
+      ..orderBy([(t) => OrderingTerm.desc(t.topNovelClicks)])
+      ..limit(limit, offset: offset);
     
-    // Get novel counts for each author using a single query
-    final novelCountQuery = selectOnly(novels)
-      ..addColumns([novels.author, novels.id.count()])
-      ..where(novels.author.isNotNull())
-      ..groupBy([novels.author]);
-    final novelCountResults = await novelCountQuery.get();
+    final results = await query.get();
     
-    final novelCountMap = <String, int>{};
-    for (final row in novelCountResults) {
-      final authorName = row.read(novels.author);
-      if (authorName != null) {
-        novelCountMap[authorName] = row.read(novels.id.count()) ?? 0;
-      }
-    }
-    
-    // Get top novel for each author (by click_num)
-    final topNovelMap = <String, String>{};
-    for (final author in allAuthors) {
-      final topNovel = await (select(novels)
-        ..where((t) => t.author.equals(author.name))
-        ..orderBy([(t) => OrderingTerm.desc(t.clickNum)])
-        ..limit(1)
-      ).getSingleOrNull();
-      if (topNovel != null) {
-        topNovelMap[author.name] = topNovel.title;
-      }
-    }
-    
-    // Get banner counts
-    final bannerCountQuery = selectOnly(novels)
-      ..addColumns([novels.author, novels.id.count()])
-      ..where(novels.author.isNotNull() & novels.hasBanner.equals(true))
-      ..groupBy([novels.author]);
-    final bannerCountResults = await bannerCountQuery.get();
-    
-    final bannerCountMap = <String, int>{};
-    for (final row in bannerCountResults) {
-      final authorName = row.read(novels.author);
-      if (authorName != null) {
-        bannerCountMap[authorName] = row.read(novels.id.count()) ?? 0;
-      }
-    }
-    
-    // Build results
-    final results = allAuthors.map((author) {
+    return results.map((author) {
       return AuthorWithStats(
         id: author.id,
         name: author.name,
-        topNovelTitle: topNovelMap[author.name],
-        novelCount: novelCountMap[author.name] ?? 0,
-        bannerCount: bannerCountMap[author.name] ?? 0,
+        topNovelTitle: author.topNovelTitle,
+        novelCount: author.novelCount,
+        bannerCount: author.bannerCount,
+        topNovelClicks: author.topNovelClicks,
       );
     }).toList();
-    
-    // Sort by novel count (descending)
-    results.sort((a, b) => b.novelCount.compareTo(a.novelCount));
-    
-    // Apply offset and limit
-    final end = offset + limit;
-    return results.sublist(
-      offset,
-      end > results.length ? results.length : end,
-    );
   }
 
   // ===== Tag queries =====
