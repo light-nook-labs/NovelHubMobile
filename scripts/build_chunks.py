@@ -19,6 +19,14 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+from validators import (
+    should_skip_novel,
+    get_status_id,
+    get_genre_id,
+    get_ptype_id,
+    normalize_tags,
+)
+
 # Chunk configuration
 CHUNKS = {
     'cold': {
@@ -35,38 +43,7 @@ CHUNKS = {
     },
 }
 
-# Status mapping
-STATUS_MAP = {
-    '其他': 1,
-    '已完结': 2,
-    '连载中': 3,
-    '断更': 4,
-    '断更A': 5,
-    '完结A': 6,
-    '下架': 7,
-}
 
-# Genre mapping
-GENRE_MAP = {
-    '其他': 1,
-    '魔幻': 2,
-    '玄幻': 3,
-    '古风': 4,
-    '科幻': 5,
-    '校园': 6,
-    '都市': 7,
-    '游戏': 8,
-    '同人': 9,
-    '悬疑': 10,
-}
-
-# Ptype mapping
-PTYPE_MAP = {
-    '其他': 1,
-    '免费': 2,
-    '签约': 3,
-    'VIP': 4,
-}
 
 
 def create_database(db_path: str, is_hot: bool = False) -> sqlite3.Connection:
@@ -161,10 +138,10 @@ def insert_novel(conn: sqlite3.Connection, novel: dict) -> None:
     """Insert a novel into the database."""
     cursor = conn.cursor()
     
-    # Get mapped values
-    status = STATUS_MAP.get(novel.get('status', '其他'), 1)
-    genre = GENRE_MAP.get(novel.get('genre', '其他'), 1)
-    ptype = PTYPE_MAP.get(novel.get('ptype', '其他'), 1)
+    # Get mapped values using validators
+    status = get_status_id(novel.get('status', '其他'))
+    genre = get_genre_id(novel.get('genre', '其他'))
+    ptype = get_ptype_id(novel.get('ptype', '其他'))
     
     # Handle author
     author_name = novel.get('author')
@@ -207,8 +184,9 @@ def insert_novel(conn: sqlite3.Connection, novel: dict) -> None:
         novel.get('last_update'),
     ))
     
-    # Handle tags
-    for tag_name in novel.get('tags', []):
+    # Handle tags (normalize to handle nested lists)
+    tags = normalize_tags(novel.get('tags', []))
+    for tag_name in tags:
         cursor.execute('INSERT OR IGNORE INTO tags (name) VALUES (?)', (tag_name,))
         cursor.execute('SELECT id FROM tags WHERE name = ?', (tag_name,))
         tag_id = cursor.fetchone()[0]
@@ -263,6 +241,7 @@ def process_jsonl_files(jsonl_dir: str, output_dir: str) -> dict:
     # Process all JSONL files
     total_processed = 0
     skipped = 0
+    skip_reasons = {}
     
     jsonl_files = sorted(Path(jsonl_dir).glob('*.jsonl'))
     print(f'Found {len(jsonl_files)} JSONL files')
@@ -279,12 +258,20 @@ def process_jsonl_files(jsonl_dir: str, output_dir: str) -> dict:
                 
                 try:
                     novel = json.loads(line)
+                    
+                    # Skip novels with invalid enum values (其他/下架)
+                    skip_reason = should_skip_novel(novel)
+                    if skip_reason:
+                        skipped += 1
+                        skip_reasons[skip_reason] = skip_reasons.get(skip_reason, 0) + 1
+                        continue
+                    
                     status = novel.get('status', '其他')
                     
                     # Get chunk category
                     chunk_name = get_chunk_category(status)
                     
-                    # Skip excluded data
+                    # Skip excluded data (should not happen after should_skip_novel)
                     if chunk_name is None:
                         skipped += 1
                         continue
@@ -310,6 +297,7 @@ def process_jsonl_files(jsonl_dir: str, output_dir: str) -> dict:
     return {
         'total_processed': total_processed,
         'skipped': skipped,
+        'skip_reasons': skip_reasons,
         'stats': stats,
     }
 
@@ -350,7 +338,14 @@ def main():
     print('=' * 60)
     print()
     print(f'Total processed: {result["total_processed"]:,}')
-    print(f'Skipped (下架): {result["skipped"]:,}')
+    print(f'Skipped: {result["skipped"]:,}')
+    
+    if result['skip_reasons']:
+        print()
+        print('Skip reasons:')
+        for reason, count in sorted(result['skip_reasons'].items(), key=lambda x: -x[1]):
+            print(f'  {reason}: {count:,}')
+    
     print()
     
     total_size = 0

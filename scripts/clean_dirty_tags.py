@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
-"""清理数据库中的脏数据标签（未拆分的JSON数组格式标签）
-将 ["仙侠", "女性主角"] 这样的脏数据拆分为单独的标签关联
+"""清理数据库中的脏数据标签
+处理两种情况:
+1. 未拆分的JSON数组格式标签: ["仙侠", "女性主角"] -> 拆分为单独的标签关联
+2. 嵌套列表格式标签: [["tag1", "tag2"]] -> 拆分为单独的标签关联
 """
 
 import sqlite3
 import json
 import os
 import sys
+
+from validators import normalize_tags
 
 def clean_dirty_tags(db_path):
     """清理数据库中的脏数据标签"""
@@ -15,7 +19,7 @@ def clean_dirty_tags(db_path):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
-    # 1. 找到脏数据标签（JSON数组格式）
+    # 1. 找到脏数据标签（JSON数组格式，包括嵌套列表）
     cursor.execute("SELECT id, name FROM tags WHERE name LIKE '[%'")
     dirty_tags = cursor.fetchall()
     
@@ -50,8 +54,18 @@ def clean_dirty_tags(db_path):
                 total_deleted += 1
                 continue
             
-            # 3. 为每个标签名查找或创建正确的标签
-            for single_tag_name in tag_list:
+            # 3. 使用normalize_tags处理嵌套列表
+            normalized_tags = normalize_tags(tag_list)
+            
+            if not normalized_tags:
+                # 没有有效的标签，删除关联和标签
+                cursor.execute("DELETE FROM novel_tags WHERE tag_id = ?", (tag_id,))
+                cursor.execute("DELETE FROM tags WHERE id = ?", (tag_id,))
+                total_deleted += 1
+                continue
+            
+            # 4. 为每个标签名查找或创建正确的标签
+            for single_tag_name in normalized_tags:
                 single_tag_name = single_tag_name.strip()
                 if not single_tag_name:
                     continue
@@ -68,7 +82,7 @@ def clean_dirty_tags(db_path):
                     correct_tag_id = cursor.lastrowid
                     print(f"    创建新标签: {single_tag_name} (ID={correct_tag_id})")
                 
-                # 4. 为每个小说添加正确的标签关联（如果不存在）
+                # 5. 为每个小说添加正确的标签关联（如果不存在）
                 for novel_id in novel_ids:
                     cursor.execute("""
                         INSERT OR IGNORE INTO novel_tags (novel_id, tag_id)
@@ -77,10 +91,10 @@ def clean_dirty_tags(db_path):
                     if cursor.rowcount > 0:
                         total_fixed += 1
             
-            # 5. 删除脏数据标签的关联
+            # 6. 删除脏数据标签的关联
             cursor.execute("DELETE FROM novel_tags WHERE tag_id = ?", (tag_id,))
             
-            # 6. 删除脏数据标签
+            # 7. 删除脏数据标签
             cursor.execute("DELETE FROM tags WHERE id = ?", (tag_id,))
             total_deleted += 1
             
