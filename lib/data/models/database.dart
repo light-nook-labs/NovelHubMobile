@@ -980,7 +980,7 @@ class AppDatabase extends _$AppDatabase {
 
 bool _dbInitialized = false;
 const _dbVersionKey = 'novel_hub_db_version';
-const _currentDbVersion = '1.0.0'; // Update this when bundled chunks change
+const _currentDbVersion = '2.0.0'; // Update this when bundled chunks change
 
 /// Initialize the database from bundled chunks. Call this in main() before runApp().
 /// Only copies and merges chunks on first launch or when version changes.
@@ -1103,11 +1103,19 @@ Future<void> _copyBundledChunk(String chunkName, String targetPath) async {
     await dir.create(recursive: true);
   }
   
-  // Load bundled chunk from assets
+  // Try loading compressed .gz file first (smaller app size)
+  try {
+    final gzData = await rootBundle.load('assets/chunks/${chunkName}_chunk.sqlite.gz');
+    final compressedBytes = gzData.buffer.asUint8List();
+    final decompressedBytes = gzip.decode(compressedBytes);
+    final file = File(targetPath);
+    await file.writeAsBytes(decompressedBytes, flush: true);
+    return;
+  } catch (_) {}
+  
+  // Fall back to uncompressed .sqlite file
   final data = await rootBundle.load('assets/chunks/${chunkName}_chunk.sqlite');
   final bytes = data.buffer.asUint8List();
-
-  // Write to target path
   final file = File(targetPath);
   await file.writeAsBytes(bytes, flush: true);
 }
