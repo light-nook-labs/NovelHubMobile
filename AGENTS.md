@@ -147,16 +147,16 @@ Data is split into chunks based on activity level:
 
 | Chunk | Status | Records | Size (compressed) | Update Frequency |
 |-------|--------|---------|-------------------|------------------|
-| Cold | 断更, 已完结 | ~241k | ~38MB | Never |
-| Warm | 完结A, 断更A | ~2k | ~844KB | Quarterly |
-| Hot | 连载中 | ~3k | ~1.8MB | Monthly |
+| Cold | 断更, 已完结 | ~241k | ~58MB | Never |
+| Warm | 完结A, 断更A | ~2k | ~1.4MB | Quarterly |
+| Hot | 连载中 | ~3k | ~2.1MB | Monthly |
 
 **下架 (removed) and 其他 (other) data is excluded** as it has no value.
 
 **App bundling:**
-- App includes: Cold chunk (~38MB compressed .gz)
-- First launch download: Warm + Hot chunks (~2.6MB)
-- Monthly update: Hot chunk (~1.8MB)
+- App includes: Cold chunk (~58MB compressed .gz)
+- First launch download: Warm + Hot chunks (~3.5MB)
+- Monthly update: Hot chunk (~2.1MB)
 
 ### Novel Data Schema (JSONL)
 
