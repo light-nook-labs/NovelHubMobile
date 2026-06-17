@@ -552,6 +552,7 @@ class NovelFilterBottomSheet extends StatefulWidget {
   final String sortBy;
   final bool descending;
   final bool hideOther;
+  final List<int> availableYears;
   final Function(int?, int?, int?, int?, int?, String, bool) onApply;
 
   const NovelFilterBottomSheet({
@@ -564,6 +565,7 @@ class NovelFilterBottomSheet extends StatefulWidget {
     required this.sortBy,
     required this.descending,
     required this.hideOther,
+    required this.availableYears,
     required this.onApply,
   });
 
@@ -591,11 +593,6 @@ class _NovelFilterBottomSheetState extends State<NovelFilterBottomSheet> {
     4000000,
     5000000,
   ];
-
-  List<int> get _years {
-    final currentYear = DateTime.now().year;
-    return List.generate(7, (i) => currentYear - i);
-  }
 
   @override
   void initState() {
@@ -684,7 +681,7 @@ class _NovelFilterBottomSheetState extends State<NovelFilterBottomSheet> {
                   const SizedBox(height: 24),
                   _buildSection(
                     title: '更新年份',
-                    options: _years
+                    options: widget.availableYears
                         .map((y) => _Option(label: '$y年', value: y))
                         .toList(),
                     selectedValue: _year,

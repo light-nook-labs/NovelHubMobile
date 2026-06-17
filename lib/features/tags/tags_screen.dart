@@ -268,6 +268,8 @@ class _TagDetailScreenState extends ConsumerState<TagDetailScreen> {
   }
 
   void _showFilterBottomSheet(BuildContext context, bool hideOther) {
+    final availableYearsAsync = ref.read(availableYearsProvider);
+    final availableYears = availableYearsAsync.valueOrNull ?? [];
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -283,6 +285,7 @@ class _TagDetailScreenState extends ConsumerState<TagDetailScreen> {
         sortBy: _sortBy,
         descending: _descending,
         hideOther: hideOther,
+        availableYears: availableYears,
         onApply: (genre, status, year, minWordNum, maxWordNum, sortBy, descending) {
           setState(() {
             _selectedGenre = genre;

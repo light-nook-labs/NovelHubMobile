@@ -182,6 +182,8 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
 
   void _showFilterBottomSheet(BuildContext context) {
     final hideOther = ref.read(hideOtherNotifierProvider);
+    final availableYearsAsync = ref.read(availableYearsProvider);
+    final availableYears = availableYearsAsync.valueOrNull ?? [];
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -197,6 +199,7 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
         sortBy: _sortBy,
         descending: _descending,
         hideOther: hideOther,
+        availableYears: availableYears,
         onApply:
             (genre, status, year, minWordNum, maxWordNum, sortBy, descending) {
               setState(() {
