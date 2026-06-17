@@ -980,7 +980,7 @@ class AppDatabase extends _$AppDatabase {
 
 bool _dbInitialized = false;
 const _dbVersionKey = 'novel_hub_db_version';
-const _currentDbVersion = '2.0.0'; // Update this when bundled chunks change
+const _currentDbVersion = '2.1.0'; // Update this when bundled chunks change
 
 /// Initialize the database from bundled chunks. Call this in main() before runApp().
 /// Only copies and merges chunks on first launch or when version changes.
@@ -1074,23 +1074,53 @@ Future<void> _createMergedDatabase(String targetPath) async {
     db.execute("ATTACH '${warmPath}' AS warm");
     db.execute("ATTACH '${hotPath}' AS hot");
     
-    // Insert data from warm chunk (replace if exists - warm has newer data)
+    // Insert novels from warm and hot chunks (novels are unique by id)
     db.execute('INSERT OR REPLACE INTO novels SELECT * FROM warm.novels');
-    db.execute('INSERT OR REPLACE INTO authors SELECT * FROM warm.authors');
-    db.execute('INSERT OR REPLACE INTO tags SELECT * FROM warm.tags');
-    db.execute('INSERT OR REPLACE INTO contests SELECT * FROM warm.contests');
-    db.execute('INSERT OR REPLACE INTO novel_tags SELECT * FROM warm.novel_tags');
-    
-    // Insert data from hot chunk (replace if exists - hot has newest data)
     db.execute('INSERT OR REPLACE INTO novels SELECT * FROM hot.novels');
-    db.execute('INSERT OR REPLACE INTO authors SELECT * FROM hot.authors');
+    
+    // Insert other tables
+    db.execute('INSERT OR REPLACE INTO tags SELECT * FROM warm.tags');
     db.execute('INSERT OR REPLACE INTO tags SELECT * FROM hot.tags');
+    db.execute('INSERT OR REPLACE INTO contests SELECT * FROM warm.contests');
     db.execute('INSERT OR REPLACE INTO contests SELECT * FROM hot.contests');
+    db.execute('INSERT OR REPLACE INTO novel_tags SELECT * FROM warm.novel_tags');
     db.execute('INSERT OR REPLACE INTO novel_tags SELECT * FROM hot.novel_tags');
+    
+    // Merge authors: insert if not exists, don't overwrite
+    db.execute('INSERT OR IGNORE INTO authors (name) SELECT name FROM warm.authors');
+    db.execute('INSERT OR IGNORE INTO authors (name) SELECT name FROM hot.authors');
     
     // Detach chunks
     db.execute("DETACH warm");
     db.execute("DETACH hot");
+    
+    // Recompute author stats on merged database
+    db.execute('''
+        UPDATE authors SET 
+            novel_count = (
+                SELECT COUNT(*) FROM novels WHERE novels.author = authors.name
+            ),
+            banner_count = (
+                SELECT COUNT(*) FROM novels WHERE novels.author = authors.name AND has_banner = 1
+            ),
+            top_novel_id = (
+                SELECT id FROM novels 
+                WHERE novels.author = authors.name 
+                ORDER BY click_num DESC LIMIT 1
+            ),
+            top_novel_title = (
+                SELECT title FROM novels 
+                WHERE novels.author = authors.name 
+                ORDER BY click_num DESC LIMIT 1
+            ),
+            top_novel_clicks = (
+                SELECT COALESCE(MAX(click_num), 0) FROM novels 
+                WHERE novels.author = authors.name
+            )
+    ''');
+    
+    // Delete authors with no novels
+    db.execute('DELETE FROM authors WHERE novel_count = 0 OR novel_count IS NULL');
   } finally {
     db.dispose();
   }
