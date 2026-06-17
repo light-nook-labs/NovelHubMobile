@@ -260,22 +260,157 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
   late String _sortBy;
   late bool _descending;
 
-  static const _wordNumBreakpoints = [
-    50000,
-    100000,
-    200000,
-    500000,
-    1000000,
-    2000000,
-    3000000,
-    4000000,
-    5000000,
-  ];
-
   List<int> get _years {
     final currentYear = DateTime.now().year;
     return List.generate(7, (i) => currentYear - i);
   }
+
+  @override
+  void initState() {
+    super.initState();
+    _status = widget.selectedStatus;
+    _year = widget.selectedYear;
+    _sortBy = widget.sortBy;
+    _descending = widget.descending;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      minChildSize: 0.4,
+      maxChildSize: 0.8,
+      expand: false,
+      builder: (context, scrollController) {
+        return Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    '筛选与排序',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _status = null;
+                        _year = null;
+                        _sortBy = 'click_num';
+                        _descending = true;
+                      });
+                    },
+                    child: const Text('重置'),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                controller: scrollController,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  _buildSection(
+                    title: '状态',
+                    options: statusMapping.getAllZh(hideOther: widget.hideOther).map((zh) {
+                      final value = statusMapping.getValue(zh);
+                      return _Option(label: zh, value: value);
+                    }).toList(),
+                    selectedValue: _status,
+                    onChanged: (v) => setState(() => _status = v),
+                  ),
+                  const SizedBox(height: 24),
+                  _buildSection(
+                    title: '更新年份',
+                    options: _years
+                        .map((y) => _Option(label: '$y年', value: y))
+                        .toList(),
+                    selectedValue: _year,
+                    onChanged: (v) => setState(() => _year = v),
+                  ),
+                  const SizedBox(height: 24),
+                  _buildSortSection(),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () {
+                    widget.onApply(_status, _year, _sortBy, _descending);
+                    Navigator.pop(context);
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Text('应用'),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildSection({
+    required String title,
+    required List<_Option> options,
+    required int? selectedValue,
+    required ValueChanged<int?> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _buildChip(
+              label: '全部',
+              isSelected: selectedValue == null,
+              onTap: () => onChanged(null),
+            ),
+            ...options.map(
+              (option) => _buildChip(
+                label: option.label,
+                isSelected: selectedValue == option.value,
+                onTap: () => onChanged(option.value),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSortSection() {
+    final sortOptions = [
+      {'key': 'click_num', 'label': '点击量'},
+      {'key': 'word_num', 'label': '字数'},
+      {'key': 'like_num', 'label': '收藏'},
+      {'key': 'praise_num', 'label': '点赞'},
+      {'key': 'last_update', 'label': '更新时间'},
+    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
