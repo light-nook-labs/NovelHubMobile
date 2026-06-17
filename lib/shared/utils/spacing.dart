@@ -144,9 +144,9 @@ class AppTextStyles {
 
 /// Consistent decoration styles
 class AppDecorations {
-  // Card decoration
-  static BoxDecoration cardDecoration = BoxDecoration(
-    color: Colors.white,
+  // Card decoration - use theme-aware color
+  static BoxDecoration cardDecoration(BuildContext context) => BoxDecoration(
+    color: Theme.of(context).cardColor,
     borderRadius: AppSpacing.radiusL,
     boxShadow: [
       BoxShadow(

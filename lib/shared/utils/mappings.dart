@@ -7,7 +7,9 @@ class EnumMapping {
   final Map<String, int> _zhToValue;
   final Map<int, String> _valueToZh;
 
-  const EnumMapping(this.name, this._zhToValue) : _valueToZh = const {};
+  const EnumMapping(this.name, _zhToValue)
+      : _zhToValue = _zhToValue,
+        _valueToZh = const {};
 
   EnumMapping._(this.name, this._zhToValue, this._valueToZh);
 
@@ -21,7 +23,32 @@ class EnumMapping {
   int getValue(String zh) => _zhToValue[zh] ?? 1;
   String getZh(int value) => _valueToZh[value] ?? '其他';
 
-  List<String> get allZh => _zhToValue.keys.toList();
+  /// Returns all Chinese labels with "其他" at the end.
+  List<String> get allZh {
+    final list = _zhToValue.keys.toList();
+    // Move "其他" to the end if it exists
+    if (list.contains('其他')) {
+      list.remove('其他');
+      list.add('其他');
+    }
+    return list;
+  }
+
+  /// Returns all Chinese labels, optionally hiding "其他".
+  List<String> getAllZh({bool hideOther = false}) {
+    final list = _zhToValue.keys.toList();
+    if (hideOther) {
+      list.remove('其他');
+    } else {
+      // Move "其他" to the end
+      if (list.contains('其他')) {
+        list.remove('其他');
+        list.add('其他');
+      }
+    }
+    return list;
+  }
+
   List<int> get allValue => _valueToZh.keys.toList();
 }
 
@@ -40,14 +67,13 @@ final genreMapping = EnumMapping.create('genre', {
 });
 
 /// Status mappings (from novel_hub/utils/mappings.py)
-/// 1=其他, 2=已完结, 3=连载中, 4=断更, 5=断更A, 6=完结A, 7=下架
+/// 1=其他, 2=已完结, 3=连载中, 4=断更, 5=断更A, 6=完结A
 final statusMapping = EnumMapping.create('status', {
   '已完结': 2,
   '连载中': 3,
   '断更': 4,
   '断更A': 5,
   '完结A': 6,
-  '下架': 7,
 });
 
 /// Ptype mappings (from novel_hub/utils/mappings.py)

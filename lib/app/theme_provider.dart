@@ -10,6 +10,7 @@ class ThemeModeNotifier extends _$ThemeModeNotifier {
 
   @override
   ThemeMode build() {
+    // Use synchronous access if available, otherwise load async
     _loadThemeMode();
     return ThemeMode.system;
   }

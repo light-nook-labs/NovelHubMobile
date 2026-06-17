@@ -385,7 +385,7 @@ class _DatesSection extends StatelessWidget {
 class _DateRow extends StatelessWidget {
   final IconData icon;
   final String label;
-  final DateTime? date;
+  final String? date;
 
   const _DateRow({required this.icon, required this.label, required this.date});
 
@@ -412,7 +412,12 @@ class _DateRow extends StatelessWidget {
     );
   }
 
-  String _formatDate(DateTime dt) {
-    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+  String _formatDate(String dateStr) {
+    try {
+      final date = DateTime.parse(dateStr);
+      return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return dateStr;
+    }
   }
 }

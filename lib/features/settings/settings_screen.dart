@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../data/repositories/providers.dart';
 import '../../data/services/chunked_sync_service.dart';
@@ -17,7 +19,6 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final stats = ref.watch(statisticsProvider);
     final themeMode = ref.watch(themeModeNotifierProvider);
     final hideOther = ref.watch(hideOtherNotifierProvider);
 
@@ -96,64 +97,49 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
 
-          // Statistics section
-          _SectionHeader(title: '数据统计'),
+          // Feedback section
+          _SectionHeader(title: '反馈与支持'),
           Card(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: stats.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-              error: (_, __) => const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(child: Text('加载失败')),
-              ),
-              data: (data) => Column(
-                children: [
-                  _StatTile(
-                    icon: Icons.book,
-                    label: '小说总数',
-                    value: '${data['novels'] ?? 0}',
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(
+                    Icons.bug_report,
+                    color: AppColors.primary,
                   ),
-                  const Divider(height: 1),
-                  _StatTile(
-                    icon: Icons.person,
-                    label: '作者数量',
-                    value: '${data['authors'] ?? 0}',
+                  title: const Text('报告 Bug'),
+                  subtitle: const Text('在 GitHub Issues 提交问题'),
+                  trailing: const Icon(Icons.open_in_new),
+                  onTap: () => _launchUrl(
+                    'https://github.com/light-nook-labs/NovelHubMobile/issues/new?template=bug_report.yml',
                   ),
-                  const Divider(height: 1),
-                  _StatTile(
-                    icon: Icons.tag,
-                    label: '标签数量',
-                    value: '${data['tags'] ?? 0}',
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(
+                    Icons.lightbulb,
+                    color: AppColors.primary,
                   ),
-                  const Divider(height: 1),
-                  _StatTile(
-                    icon: Icons.emoji_events,
-                    label: '比赛数量',
-                    value: '${data['contests'] ?? 0}',
+                  title: const Text('功能建议'),
+                  subtitle: const Text('在 GitHub Issues 提交建议'),
+                  trailing: const Icon(Icons.open_in_new),
+                  onTap: () => _launchUrl(
+                    'https://github.com/light-nook-labs/NovelHubMobile/issues/new?template=feature_request.yml',
                   ),
-                  const Divider(height: 1),
-                  _StatTile(
-                    icon: Icons.category,
-                    label: '小说分类',
-                    value: '${data['genres'] ?? 0}',
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(
+                    Icons.description,
+                    color: AppColors.primary,
                   ),
-                  const Divider(height: 1),
-                  _StatTile(
-                    icon: Icons.signal_wifi_statusbar_4_bar,
-                    label: '状态类型',
-                    value: '${data['statuses'] ?? 0}',
-                  ),
-                  const Divider(height: 1),
-                  _StatTile(
-                    icon: Icons.vpn_key,
-                    label: '小说类型',
-                    value: '${data['ptypes'] ?? 0}',
-                  ),
-                ],
-              ),
+                  title: const Text('导出日志'),
+                  subtitle: const Text('导出应用日志用于调试'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _exportLogs(context),
+                ),
+              ],
             ),
           ),
 
@@ -217,7 +203,7 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   void _startSync(BuildContext context, WidgetRef ref) async {
-    final dio = Dio();
+    final dio = ref.read(dioProvider);
     final syncService = ChunkedSyncService(dio);
 
     if (!context.mounted) return;
@@ -272,6 +258,7 @@ class SettingsScreen extends ConsumerWidget {
       // Refresh statistics
       Future.microtask(() {
         ref.invalidate(statisticsProvider);
+        ref.invalidate(dbMergeTimeProvider);
       });
     } catch (e) {
       if (!context.mounted) return;
@@ -315,7 +302,7 @@ class SettingsScreen extends ConsumerWidget {
       );
 
       // Copy file to chunks directory
-      final dio = Dio();
+      final dio = ref.read(dioProvider);
       final syncService = ChunkedSyncService(dio);
       final chunkPath = await syncService.getChunkPath('hot');
 
@@ -331,6 +318,7 @@ class SettingsScreen extends ConsumerWidget {
       // Refresh statistics
       Future.microtask(() {
         ref.invalidate(statisticsProvider);
+        ref.invalidate(dbMergeTimeProvider);
       });
     } catch (e) {
       if (!context.mounted) return;
@@ -361,7 +349,7 @@ class SettingsScreen extends ConsumerWidget {
               Navigator.pop(dialogContext);
 
               // Delete all chunks
-              final dio = Dio();
+              final dio = ref.read(dioProvider);
               final syncService = ChunkedSyncService(dio);
               for (final chunkName in ['cold', 'warm', 'hot']) {
                 final path = await syncService.getChunkPath(chunkName);
@@ -377,6 +365,10 @@ class SettingsScreen extends ConsumerWidget {
               if (context.mounted) {
                 Future.microtask(() {
                   ref.invalidate(statisticsProvider);
+                  ref.invalidate(dbMergeTimeProvider);
+                  ref.invalidate(bannerNovelsProvider);
+                  ref.invalidate(authorsWithStatsProvider);
+                  ref.invalidate(novelCountProvider);
                 });
                 ScaffoldMessenger.of(
                   context,
@@ -388,6 +380,37 @@ class SettingsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _exportLogs(BuildContext context) async {
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final logFile = File('${appDir.path}/novel_hub.log');
+      
+      // Create a sample log file if it doesn't exist
+      if (!await logFile.exists()) {
+        await logFile.writeAsString(
+          'Novel Hub Mobile Log\n'
+          'Created: ${DateTime.now().toIso8601String()}\n'
+          'Platform: ${Platform.operatingSystem}\n'
+          'Version: 0.1.0\n',
+        );
+      }
+
+      if (!context.mounted) return;
+
+      // Share the log file
+      await Share.shareXFiles(
+        [XFile(logFile.path)],
+        subject: 'Novel Hub Mobile 日志',
+        text: 'Novel Hub Mobile 应用日志',
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('导出日志失败: $e')));
+    }
   }
 }
 
@@ -509,34 +532,6 @@ class _ThemeOption extends StatelessWidget {
           ? const Icon(Icons.check, color: AppColors.primary)
           : null,
       onTap: onTap,
-    );
-  }
-}
-
-class _StatTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _StatTile({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: AppColors.primary),
-      title: Text(label),
-      trailing: Text(
-        value,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: AppColors.primary,
-        ),
-      ),
     );
   }
 }

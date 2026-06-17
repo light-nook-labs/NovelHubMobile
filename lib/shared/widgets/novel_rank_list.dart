@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../data/models/database.dart';
+import '../../data/repositories/providers.dart';
 import '../../app/theme.dart';
 import 'common_widgets.dart';
 
-class NovelRankList extends StatefulWidget {
+class NovelRankList extends ConsumerStatefulWidget {
   final Future<List<Novel>> Function(int offset, int limit) loadNovels;
   final bool showRank;
   final String valueLabel;
@@ -19,10 +21,10 @@ class NovelRankList extends StatefulWidget {
   });
 
   @override
-  State<NovelRankList> createState() => _NovelRankListState();
+  ConsumerState<NovelRankList> createState() => _NovelRankListState();
 }
 
-class _NovelRankListState extends State<NovelRankList> {
+class _NovelRankListState extends ConsumerState<NovelRankList> {
   final _scrollController = ScrollController();
   final _pageSize = 48;
   int _currentPage = 0;
@@ -45,9 +47,10 @@ class _NovelRankListState extends State<NovelRankList> {
   }
 
   void _onScroll() {
-    setState(() {
-      _showBackToTop = _scrollController.offset > 500;
-    });
+    final shouldShow = _scrollController.offset > 500;
+    if (shouldShow != _showBackToTop) {
+      setState(() => _showBackToTop = shouldShow);
+    }
 
     if (_scrollController.position.pixels >=
             _scrollController.position.maxScrollExtent - 200 &&
@@ -93,6 +96,10 @@ class _NovelRankListState extends State<NovelRankList> {
       return const Center(child: Text('暂无数据'));
     }
 
+    // Batch load tags for all visible novels
+    final novelIds = _novels.map((n) => n.id).toList();
+    final tagsAsync = ref.watch(novelTagsBatchProvider(novelIds));
+
     return Stack(
       children: [
         ListView.builder(
@@ -107,11 +114,13 @@ class _NovelRankListState extends State<NovelRankList> {
               );
             }
             final novel = _novels[index];
+            final tags = tagsAsync.valueOrNull?[novel.id];
             return NovelRankRow(
               novel: novel,
               rank: index + 1,
               showRank: widget.showRank,
               valueLabel: widget.valueLabel,
+              tags: tags,
             );
           },
         ),
@@ -140,6 +149,7 @@ class NovelRankRow extends StatelessWidget {
   final int rank;
   final bool showRank;
   final String valueLabel;
+  final List<Tag>? tags; // Optional pre-loaded tags
 
   const NovelRankRow({
     super.key,
@@ -147,6 +157,7 @@ class NovelRankRow extends StatelessWidget {
     required this.rank,
     this.showRank = true,
     this.valueLabel = '点击',
+    this.tags,
   });
 
   @override
@@ -179,6 +190,9 @@ class NovelRankRow extends StatelessWidget {
                   const SizedBox(height: 4),
                   // Badges
                   _buildBadges(),
+                  const SizedBox(height: 4),
+                  // Tags (only if pre-loaded)
+                  if (tags != null && tags!.isNotEmpty) _buildTags(tags!),
                 ],
               ),
             ),
@@ -295,8 +309,30 @@ class NovelRankRow extends StatelessWidget {
     );
   }
 
+  Widget _buildTags(List<Tag> tags) {
+    if (tags.isEmpty) return const SizedBox.shrink();
+    return Wrap(
+      spacing: 4,
+      runSpacing: 2,
+      children: tags.take(5).map((tag) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+        decoration: BoxDecoration(
+          color: Colors.grey.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(3),
+        ),
+        child: Text(
+          tag.name,
+          style: TextStyle(
+            fontSize: 9,
+            color: Colors.grey[600],
+          ),
+        ),
+      )).toList(),
+    );
+  }
+
   Widget _buildValue() {
-    final value = novel.clickNum ?? 0;
+    final value = _getValueByLabel();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
@@ -315,120 +351,15 @@ class NovelRankRow extends StatelessWidget {
       ],
     );
   }
-}
 
-class NovelFilterBottomSheet extends StatefulWidget {
-  final String sortBy;
-  final bool descending;
-  final Function(String, bool) onApply;
-
-  const NovelFilterBottomSheet({
-    super.key,
-    required this.sortBy,
-    required this.descending,
-    required this.onApply,
-  });
-
-  @override
-  State<NovelFilterBottomSheet> createState() => _NovelFilterBottomSheetState();
-}
-
-class _NovelFilterBottomSheetState extends State<NovelFilterBottomSheet> {
-  late String _sortBy;
-  late bool _descending;
-
-  @override
-  void initState() {
-    super.initState();
-    _sortBy = widget.sortBy;
-    _descending = widget.descending;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final sortOptions = [
-      {'key': 'click_num', 'label': '点击量'},
-      {'key': 'word_num', 'label': '字数'},
-      {'key': 'like_num', 'label': '收藏'},
-      {'key': 'praise_num', 'label': '点赞'},
-      {'key': 'last_update', 'label': '更新时间'},
-    ];
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                '排序',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              TextButton.icon(
-                onPressed: () {
-                  setState(() => _descending = !_descending);
-                },
-                icon: Icon(
-                  _descending ? Icons.arrow_downward : Icons.arrow_upward,
-                  size: 16,
-                ),
-                label: Text(_descending ? '降序' : '升序'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: sortOptions.map((option) {
-              final key = option['key']!;
-              final label = option['label']!;
-              return GestureDetector(
-                onTap: () => setState(() => _sortBy = key),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _sortBy == key
-                        ? AppColors.primary
-                        : Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: _sortBy == key ? Colors.white : null,
-                      fontWeight: _sortBy == key
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: () {
-                widget.onApply(_sortBy, _descending);
-                Navigator.pop(context);
-              },
-              child: const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Text('应用'),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+  int _getValueByLabel() {
+    return switch (valueLabel) {
+      '字数' => novel.wordNum ?? 0,
+      '收藏' => novel.likeNum ?? 0,
+      '点赞' => novel.praiseNum ?? 0,
+      '长评' => novel.reviewNum ?? 0,
+      '短评' => novel.commentNum ?? 0,
+      _ => novel.clickNum ?? 0, // 默认为点击
+    };
   }
 }

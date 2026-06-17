@@ -1,8 +1,10 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../../data/repositories/providers.dart';
 import '../../data/services/sync_service.dart';
@@ -11,14 +13,19 @@ import '../../app/theme.dart';
 import '../../shared/widgets/common_widgets.dart';
 import '../../shared/utils/spacing.dart';
 
-part 'home_screen.g.dart';
-
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final syncInfo = ref.watch(lastSyncInfoProvider);
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  List<BannerNovel>? _shuffledBanners;
+
+  @override
+  Widget build(BuildContext context) {
+    final mergeTimeAsync = ref.watch(dbMergeTimeProvider);
     final bannerNovels = ref.watch(bannerNovelsProvider);
     final stats = ref.watch(statisticsProvider);
 
@@ -35,21 +42,24 @@ class HomeScreen extends ConsumerWidget {
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(statisticsProvider);
-          ref.invalidate(lastSyncInfoProvider);
+          ref.invalidate(dbMergeTimeProvider);
           ref.invalidate(bannerNovelsProvider);
+          setState(() => _shuffledBanners = null);
         },
         child: ListView(
           padding: AppSpacing.paddingM,
           children: [
-            // Hero Banner Carousel (first 5 banner novels)
+            // Hero Banner Carousel (random 5 banner novels)
             bannerNovels.when(
-              loading: () => const SizedBox.shrink(),
+              loading: () => _BannerShimmer(),
               error: (_, __) => const SizedBox.shrink(),
               data: (novels) {
                 if (novels.isEmpty) return const SizedBox.shrink();
-                final displayNovels = novels.length > 5
-                    ? novels.sublist(0, 5)
-                    : novels;
+                // Cache the shuffled result
+                if (_shuffledBanners == null || _shuffledBanners!.length != novels.length) {
+                  _shuffledBanners = List<BannerNovel>.from(novels)..shuffle(Random());
+                }
+                final displayNovels = _shuffledBanners!.take(5).toList();
                 return _HeroBannerCarousel(novels: displayNovels);
               },
             ),
@@ -64,7 +74,7 @@ class HomeScreen extends ConsumerWidget {
             AppSpacing.gapHeightM,
 
             // Sync Status
-            _SyncStatusCard(syncInfo: syncInfo),
+            _SyncStatusCard(mergeTimeAsync: mergeTimeAsync),
           ],
         ),
       ),
@@ -345,9 +355,9 @@ class _QuickNavCard extends StatelessWidget {
 }
 
 class _SyncStatusCard extends StatelessWidget {
-  final AsyncValue<SyncInfo?> syncInfo;
+  final AsyncValue<DateTime?> mergeTimeAsync;
 
-  const _SyncStatusCard({required this.syncInfo});
+  const _SyncStatusCard({required this.mergeTimeAsync});
 
   @override
   Widget build(BuildContext context) {
@@ -358,18 +368,18 @@ class _SyncStatusCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '同步状态',
+              '数据状态',
               style: Theme.of(
                 context,
               ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            syncInfo.when(
+            mergeTimeAsync.when(
               loading: () => const CircularProgressIndicator(),
               error: (err, stack) => Text('Error: $err'),
-              data: (info) {
-                if (info == null) {
-                  return const Text('尚未同步数据');
+              data: (mergeTime) {
+                if (mergeTime == null) {
+                  return const Text('尚未加载数据');
                 }
                 return Row(
                   children: [
@@ -379,14 +389,12 @@ class _SyncStatusCard extends StatelessWidget {
                       size: 16,
                     ),
                     const SizedBox(width: 8),
-                    Text('版本: ${info.version}'),
-                    if (info.syncedAt != null) ...[
-                      const Spacer(),
-                      Text(
-                        '${info.syncedAt!.month}/${info.syncedAt!.day}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
+                    const Text('数据已加载'),
+                    const Spacer(),
+                    Text(
+                      '${mergeTime.month}/${mergeTime.day} ${mergeTime.hour}:${mergeTime.minute.toString().padLeft(2, '0')}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   ],
                 );
               },
@@ -416,8 +424,71 @@ class _SyncProgressDialog extends StatelessWidget {
   }
 }
 
-@riverpod
-Future<List<BannerNovel>> bannerNovels(BannerNovelsRef ref) async {
-  final db = ref.watch(databaseProvider);
-  return db.getBannerNovels();
+class _BannerShimmer extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Shimmer.fromColors(
+      baseColor: isDark ? Colors.grey[800]! : Colors.grey[300]!,
+      highlightColor: isDark ? Colors.grey[700]! : Colors.grey[100]!,
+      child: Column(
+        children: [
+          SizedBox(
+            height: 170,
+            child: PageView.builder(
+              itemCount: 3,
+              itemBuilder: (context, index) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        height: 12,
+                        width: 120,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(height: 2),
+                      Container(
+                        height: 10,
+                        width: 80,
+                        color: Colors.white,
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(
+              3,
+              (index) => Container(
+                width: 5,
+                height: 5,
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

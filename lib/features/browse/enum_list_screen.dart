@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../data/repositories/providers.dart';
 import '../../shared/utils/mappings.dart';
 import '../../shared/widgets/common_widgets.dart';
+import '../../app/settings_provider.dart';
 
 class GenreListScreen extends ConsumerStatefulWidget {
   const GenreListScreen({super.key});
@@ -34,6 +35,9 @@ class _GenreListScreenState extends ConsumerState<GenreListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final hideOther = ref.watch(hideOtherNotifierProvider);
+    final items = genreMapping.getAllZh(hideOther: hideOther);
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('小说分类'),
@@ -45,9 +49,9 @@ class _GenreListScreenState extends ConsumerState<GenreListScreen> {
       body: _isLoading
           ? const LoadingState(message: '加载分类数据...')
           : ListView.builder(
-              itemCount: genreMapping.allZh.length,
+              itemCount: items.length,
               itemBuilder: (context, index) {
-                final zh = genreMapping.allZh[index];
+                final zh = items[index];
                 final value = genreMapping.getValue(zh);
                 final count = _counts[value] ?? 0;
                 return ListTile(
@@ -90,6 +94,9 @@ class _StatusListScreenState extends ConsumerState<StatusListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final hideOther = ref.watch(hideOtherNotifierProvider);
+    final items = statusMapping.getAllZh(hideOther: hideOther);
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('状态'),
@@ -101,9 +108,9 @@ class _StatusListScreenState extends ConsumerState<StatusListScreen> {
       body: _isLoading
           ? const LoadingState(message: '加载状态数据...')
           : ListView.builder(
-              itemCount: statusMapping.allZh.length,
+              itemCount: items.length,
               itemBuilder: (context, index) {
-                final zh = statusMapping.allZh[index];
+                final zh = items[index];
                 final value = statusMapping.getValue(zh);
                 final count = _counts[value] ?? 0;
                 return ListTile(
@@ -146,6 +153,9 @@ class _PtypeListScreenState extends ConsumerState<PtypeListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final hideOther = ref.watch(hideOtherNotifierProvider);
+    final items = ptypeMapping.getAllZh(hideOther: hideOther);
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('类型'),
@@ -157,9 +167,9 @@ class _PtypeListScreenState extends ConsumerState<PtypeListScreen> {
       body: _isLoading
           ? const LoadingState(message: '加载类型数据...')
           : ListView.builder(
-              itemCount: ptypeMapping.allZh.length,
+              itemCount: items.length,
               itemBuilder: (context, index) {
-                final zh = ptypeMapping.allZh[index];
+                final zh = items[index];
                 final value = ptypeMapping.getValue(zh);
                 final count = _counts[value] ?? 0;
                 return ListTile(
@@ -199,6 +209,7 @@ class _EnumListScreenState extends State<EnumListScreen> {
   bool _hasMore = true;
   List<String> _items = [];
   bool _showBackToTop = false;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -214,18 +225,23 @@ class _EnumListScreenState extends State<EnumListScreen> {
   }
 
   void _onScroll() {
-    setState(() {
-      _showBackToTop = _scrollController.offset > 500;
-    });
+    final shouldShow = _scrollController.offset > 500;
+    if (shouldShow != _showBackToTop) {
+      setState(() => _showBackToTop = shouldShow);
+    }
 
     if (_scrollController.position.pixels >=
             _scrollController.position.maxScrollExtent - 200 &&
+        !_isLoading &&
         _hasMore) {
       _loadMore();
     }
   }
 
   void _loadMore() {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+
     final startIndex = _currentPage * _pageSize;
     final endIndex = startIndex + _pageSize;
 
@@ -238,6 +254,7 @@ class _EnumListScreenState extends State<EnumListScreen> {
         ),
       );
       _hasMore = endIndex < widget.items.length;
+      _isLoading = false;
     });
   }
 

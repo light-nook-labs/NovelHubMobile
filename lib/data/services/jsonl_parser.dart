@@ -126,16 +126,16 @@ class JsonlParser {
   /// Convert NovelData to NovelsCompanion for database insertion.
   static NovelsCompanion toCompanion(
     NovelData data,
-    int? authorId,
+    String? author,
     int? contestId,
   ) {
     return NovelsCompanion(
       id: Value(data.nid),
       title: Value(data.title),
+      author: Value(author),
       genre: Value(data.genre),
       status: Value(data.status),
       ptype: Value(data.ptype),
-      authorId: Value(authorId),
       contestId: Value(contestId),
       hasBanner: Value(data.hasBanner),
       wordNum: Value(data.wordNum),
@@ -145,7 +145,7 @@ class JsonlParser {
       commentNum: Value(data.commentNum),
       reviewNum: Value(data.reviewNum),
       cover: Value(data.cover),
-      lastUpdate: Value(data.lastUpdate),
+      lastUpdate: Value(data.lastUpdate?.toIso8601String()),
     );
   }
 }

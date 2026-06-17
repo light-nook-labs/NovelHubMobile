@@ -13,14 +13,14 @@ Mobile app for [Novel Hub](https://github.com/light-nook-labs/novel_hub) — off
 
 | Feature | Web (Django) | Mobile | Notes |
 |---------|-------------|--------|-------|
-| Novel list + filter | ✅ | ✅ | 4-column grid, header tabs for ptype |
+| Novel list + filter | ✅ | ✅ | List view with header tabs for ptype |
 | Novel detail | ✅ | ✅ | Cover right, info left, copy title, SFACG link |
 | Rankings (6 dimensions) | ✅ | ✅ | Rank-style list with tabs |
-| Search | ✅ | ✅ | Full screen, debounced |
+| Search | ✅ | ✅ | Full screen, debounced (300ms Timer) |
 | Banner showcase | ✅ | ✅ | Hero carousel (5) + dedicated tab |
 | Author list + detail | ✅ | ✅ | Sorted by total clicks |
-| Tag list + detail | ✅ | ✅ | 3-column grid with novel count |
-| Contest list + detail | ✅ | ✅ | 2-column grid with novel count |
+| Tag list + detail | ✅ | ✅ | 3-column grid with novel count + full filter |
+| Contest list + detail | ✅ | ✅ | 2-column grid with novel count + full filter |
 | Genre/Status/Ptype browse | ✅ | ✅ | List pages + filtered novels |
 | Dark mode | ✅ | ✅ | Manual theme switching |
 | Load more | ✅ | ✅ | 48 per page, back-to-top button |
@@ -196,7 +196,7 @@ Data is split into chunks based on activity level:
 ## UI Conventions
 
 **Layout:**
-- Novel grid: 4 columns (matching web `grid-cols-4`)
+- Novel list: ListView with NovelRankRow (list view, not grid)
 - Novel card: 4:5 cover ratio, title + status badge
 - Detail page: Info left, cover right
 - Novel rank list: Reusable component for consistent layout
@@ -218,9 +218,9 @@ Data is split into chunks based on activity level:
 - GTK configured in `linux/runner/my_application.cc`
 
 **Reusable Components:**
-- `common_widgets.dart`: SearchBarWidget, BackToTopButton, EmptyState, LoadingState, CoverImage, BadgeWidget, StatusBadge, GenreBadge, PtypeBadge, FilterChipWidget, StatItem, formatNumber
+- `common_widgets.dart`: SearchBarWidget, BackToTopButton, EmptyState, LoadingState, CoverImage, BadgeWidget, StatusBadge, GenreBadge, PtypeBadge, FilterChipWidget, StatItem, formatNumber, NovelFilterBottomSheet
 - `spacing.dart`: AppSpacing, AppTextStyles, AppDecorations
-- `novel_rank_list.dart`: NovelRankList, NovelRankRow, NovelFilterBottomSheet
+- `novel_rank_list.dart`: NovelRankList, NovelRankRow
 - `novel_card.dart`: NovelCard
 
 ## Project Structure
@@ -235,18 +235,20 @@ lib/
 │   └── settings_provider.dart # settings state
 ├── data/
 │   ├── models/
-│   │   └── database.dart   # drift tables + queries
+│   │   ├── database.dart   # drift tables + queries
+│   │   └── merged_database.dart # chunk merging logic
 │   ├── repositories/
 │   │   └── providers.dart  # Riverpod providers
 │   └── services/
 │       ├── jsonl_parser.dart
-│       └── sync_service.dart
+│       ├── sync_service.dart
+│       └── chunked_sync_service.dart
 ├── features/
 │   ├── home/               # hero banner carousel, quick nav
-│   ├── novels/             # list (4-col grid), detail, by-genre, by-status
+│   ├── novels/             # list (list view), detail, by-genre, by-status
 │   ├── authors/            # list, detail
-│   ├── tags/               # list, detail
-│   ├── contests/           # list, detail
+│   ├── tags/               # list, detail with filter
+│   ├── contests/           # list, detail with filter
 │   ├── banner/             # banner tab (dedicated)
 │   ├── browse/             # enum list screens
 │   ├── rankings/           # 6 tabs, rank-style list

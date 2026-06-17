@@ -2,12 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../data/repositories/providers.dart';
 import '../../data/models/database.dart';
-import '../../shared/widgets/novel_card.dart';
+import '../../shared/widgets/novel_rank_list.dart';
 
 part 'search_screen.g.dart';
 
@@ -21,9 +20,11 @@ class SearchScreen extends ConsumerStatefulWidget {
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _controller = TextEditingController();
   String _keyword = '';
+  Timer? _debounceTimer;
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -45,13 +46,19 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     icon: const Icon(Icons.clear),
                     onPressed: () {
                       _controller.clear();
+                      _debounceTimer?.cancel();
                       setState(() => _keyword = '');
                     },
                   )
                 : null,
           ),
           onChanged: (value) {
-            setState(() => _keyword = value);
+            _debounceTimer?.cancel();
+            _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+              if (mounted) {
+                setState(() => _keyword = value);
+              }
+            });
           },
         ),
       ),
@@ -94,25 +101,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Widget _buildResults(BuildContext context, List<Novel> novels) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final crossAxisCount = constraints.maxWidth > 600 ? 4 : 3;
-        return GridView.builder(
-          padding: const EdgeInsets.all(12),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            childAspectRatio: 0.5,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-          ),
-          itemCount: novels.length,
-          itemBuilder: (context, index) {
-            final novel = novels[index];
-            return NovelCard(
-              novel: novel,
-              onTap: () => context.push('/novel/${novel.id}'),
-            );
-          },
+    return ListView.builder(
+      itemCount: novels.length,
+      itemBuilder: (context, index) {
+        final novel = novels[index];
+        return NovelRankRow(
+          novel: novel,
+          rank: index + 1,
+          showRank: false,
+          valueLabel: '点击',
         );
       },
     );

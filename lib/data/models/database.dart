@@ -3,6 +3,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:sqlite3/sqlite3.dart';
 import 'dart:io';
 
 part 'database.g.dart';
@@ -25,11 +26,11 @@ class Contests extends Table {
 class Novels extends Table {
   IntColumn get id => integer()();
   TextColumn get title => text().withLength(min: 1, max: 500)();
+  TextColumn get author => text().nullable()();
   IntColumn get genre => integer().withDefault(const Constant(1))();
   IntColumn get status => integer().withDefault(const Constant(1))();
   IntColumn get ptype => integer().withDefault(const Constant(1))();
-  IntColumn get authorId => integer().references(Authors, #id).nullable()();
-  IntColumn get contestId => integer().references(Contests, #id).nullable()();
+  IntColumn get contestId => integer().nullable()();
   BoolColumn get hasBanner => boolean().withDefault(const Constant(false))();
   IntColumn get wordNum => integer().nullable()();
   IntColumn get clickNum => integer().nullable()();
@@ -38,16 +39,16 @@ class Novels extends Table {
   IntColumn get commentNum => integer().nullable()();
   IntColumn get reviewNum => integer().nullable()();
   TextColumn get cover => text().nullable()();
-  DateTimeColumn get lastUpdate => dateTime().nullable()();
-  DateTimeColumn get dbUpdate => dateTime().withDefault(currentDateAndTime)();
+  TextColumn get lastUpdate => text().nullable()();
+  TextColumn get dbUpdate => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
 }
 
 class NovelTags extends Table {
-  IntColumn get novelId => integer().references(Novels, #id)();
-  IntColumn get tagId => integer().references(Tags, #id)();
+  IntColumn get novelId => integer()();
+  IntColumn get tagId => integer()();
 
   @override
   Set<Column> get primaryKey => {novelId, tagId};
@@ -107,6 +108,41 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   int get schemaVersion => 1;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (Migrator m) async {
+      await m.createAll();
+      // Create indexes for better query performance
+      await customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_novels_click_num ON novels(click_num)',
+      );
+      await customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_novels_genre ON novels(genre)',
+      );
+      await customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_novels_status ON novels(status)',
+      );
+      await customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_novels_ptype ON novels(ptype)',
+      );
+      await customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_novels_has_banner ON novels(has_banner)',
+      );
+      await customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_novels_author ON novels(author)',
+      );
+      await customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_novels_contest_id ON novels(contest_id)',
+      );
+      await customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_novel_tags_novel_id ON novel_tags(novel_id)',
+      );
+      await customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_novel_tags_tag_id ON novel_tags(tag_id)',
+      );
+    },
+  );
 
   // ===== Author operations =====
 
@@ -235,7 +271,7 @@ class AppDatabase extends _$AppDatabase {
   }) async {
     final query = select(novels)
       ..where((t) => t.genre.equals(genre))
-      ..orderBy([(t) => OrderingTerm.desc(t.lastUpdate)])
+      ..orderBy([(t) => OrderingTerm.desc(t.clickNum)])
       ..limit(limit, offset: offset);
     return query.get();
   }
@@ -358,8 +394,8 @@ class AppDatabase extends _$AppDatabase {
       query.where((t) => t.ptype.equals(ptype));
     }
     if (year != null) {
-      final startDate = DateTime(year, 1, 1);
-      final endDate = DateTime(year + 1, 1, 1);
+      final startDate = DateTime(year, 1, 1).toIso8601String();
+      final endDate = DateTime(year + 1, 1, 1).toIso8601String();
       query.where(
         (t) =>
             t.lastUpdate.isBiggerOrEqualValue(startDate) &
@@ -446,10 +482,28 @@ class AppDatabase extends _$AppDatabase {
     return results.map((row) => row.readTable(tags)).toList();
   }
 
+  Future<Map<int, List<Tag>>> getNovelTagsBatch(List<int> novelIds) async {
+    if (novelIds.isEmpty) return {};
+    
+    final query = select(novelTags).join([
+      innerJoin(tags, tags.id.equalsExp(novelTags.tagId)),
+    ])..where(novelTags.novelId.isIn(novelIds));
+
+    final results = await query.get();
+    final map = <int, List<Tag>>{};
+    for (final row in results) {
+      final novelId = row.readTable(novelTags).novelId;
+      final tag = row.readTable(tags);
+      map.putIfAbsent(novelId, () => []).add(tag);
+    }
+    return map;
+  }
+
   Future<Author?> getNovelAuthor(int novelId) async {
     final novel = await getNovel(novelId);
-    if (novel == null || novel.authorId == null) return null;
-    final query = select(authors)..where((t) => t.id.equals(novel.authorId!));
+    if (novel == null || novel.author == null || novel.author!.isEmpty) return null;
+    // Look up author by name from novels.author
+    final query = select(authors)..where((t) => t.name.equals(novel.author!));
     return query.getSingleOrNull();
   }
 
@@ -472,9 +526,12 @@ class AppDatabase extends _$AppDatabase {
     int limit = 50,
     int offset = 0,
   }) async {
+    // Get author name first
+    final author = await getAuthor(authorId);
+    if (author == null) return [];
     final query = select(novels)
-      ..where((t) => t.authorId.equals(authorId))
-      ..orderBy([(t) => OrderingTerm.desc(t.lastUpdate)])
+      ..where((t) => t.author.equals(author.name))
+      ..orderBy([(t) => OrderingTerm.desc(t.clickNum)])
       ..limit(limit, offset: offset);
     return query.get();
   }
@@ -483,91 +540,72 @@ class AppDatabase extends _$AppDatabase {
     int limit = 1000,
     int offset = 0,
   }) async {
-    // Get total clicks per author
-    final authorClicks = <int, int>{};
-    final authorClicksQuery = selectOnly(novels)
-      ..where(novels.authorId.isNotNull())
-      ..addColumns([novels.authorId, novels.clickNum.sum()])
-      ..groupBy([novels.authorId]);
-    final authorClicksResults = await authorClicksQuery.get();
-    for (final row in authorClicksResults) {
-      final authorId = row.read(novels.authorId);
-      final totalClicks = row.read(novels.clickNum.sum()) ?? 0;
-      if (authorId != null) {
-        authorClicks[authorId] = totalClicks;
-      }
-    }
-
-    // Get all authors and sort by total clicks
-    final authorList = await select(authors).get();
-    authorList.sort((a, b) {
-      final clicksA = authorClicks[a.id] ?? 0;
-      final clicksB = authorClicks[b.id] ?? 0;
-      return clicksB.compareTo(clicksA); // Descending
-    });
-
-    // Apply offset and limit after sorting
-    final end = offset + limit;
-    final limitedAuthors = authorList.length > offset
-        ? authorList.sublist(
-            offset,
-            end > authorList.length ? authorList.length : end,
-          )
-        : <Author>[];
-
-    // Get novel counts per author
-    final novelCounts = <int, int>{};
+    // Get all authors
+    final allAuthors = await select(authors).get();
+    
+    // Get novel counts for each author using a single query
     final novelCountQuery = selectOnly(novels)
-      ..where(novels.authorId.isNotNull())
-      ..addColumns([novels.authorId, countAll()])
-      ..groupBy([novels.authorId]);
+      ..addColumns([novels.author, novels.id.count()])
+      ..where(novels.author.isNotNull())
+      ..groupBy([novels.author]);
     final novelCountResults = await novelCountQuery.get();
+    
+    final novelCountMap = <String, int>{};
     for (final row in novelCountResults) {
-      final authorId = row.read(novels.authorId);
-      final count = row.read(countAll()) ?? 0;
-      if (authorId != null) {
-        novelCounts[authorId] = count;
+      final authorName = row.read(novels.author);
+      if (authorName != null) {
+        novelCountMap[authorName] = row.read(novels.id.count()) ?? 0;
       }
     }
-
-    // Get banner counts per author
-    final bannerCounts = <int, int>{};
-    final bannerQuery = selectOnly(novels)
-      ..where(novels.hasBanner.equals(true) & novels.authorId.isNotNull())
-      ..addColumns([novels.authorId, countAll()])
-      ..groupBy([novels.authorId]);
-    final bannerResults = await bannerQuery.get();
-    for (final row in bannerResults) {
-      final authorId = row.read(novels.authorId);
-      final count = row.read(countAll()) ?? 0;
-      if (authorId != null) {
-        bannerCounts[authorId] = count;
+    
+    // Get top novel for each author (by click_num)
+    final topNovelMap = <String, String>{};
+    for (final author in allAuthors) {
+      final topNovel = await (select(novels)
+        ..where((t) => t.author.equals(author.name))
+        ..orderBy([(t) => OrderingTerm.desc(t.clickNum)])
+        ..limit(1)
+      ).getSingleOrNull();
+      if (topNovel != null) {
+        topNovelMap[author.name] = topNovel.title;
       }
     }
-
-    // Get top novels (by click_num per author)
-    final topNovels = <int, String>{};
-    final allNovels =
-        await (select(novels)
-              ..where((t) => t.authorId.isNotNull())
-              ..orderBy([(t) => OrderingTerm.desc(t.clickNum)]))
-            .get();
-    for (final novel in allNovels) {
-      if (novel.authorId != null && !topNovels.containsKey(novel.authorId)) {
-        topNovels[novel.authorId!] = novel.title;
+    
+    // Get banner counts
+    final bannerCountQuery = selectOnly(novels)
+      ..addColumns([novels.author, novels.id.count()])
+      ..where(novels.author.isNotNull() & novels.hasBanner.equals(true))
+      ..groupBy([novels.author]);
+    final bannerCountResults = await bannerCountQuery.get();
+    
+    final bannerCountMap = <String, int>{};
+    for (final row in bannerCountResults) {
+      final authorName = row.read(novels.author);
+      if (authorName != null) {
+        bannerCountMap[authorName] = row.read(novels.id.count()) ?? 0;
       }
     }
-
-    // Build result
-    return limitedAuthors.map((author) {
+    
+    // Build results
+    final results = allAuthors.map((author) {
       return AuthorWithStats(
         id: author.id,
         name: author.name,
-        topNovelTitle: topNovels[author.id],
-        novelCount: novelCounts[author.id] ?? 0,
-        bannerCount: bannerCounts[author.id] ?? 0,
+        topNovelTitle: topNovelMap[author.name],
+        novelCount: novelCountMap[author.name] ?? 0,
+        bannerCount: bannerCountMap[author.name] ?? 0,
       );
     }).toList();
+    
+    // Sort by novel count (descending)
+    results.sort((a, b) => b.novelCount.compareTo(a.novelCount));
+    
+    // Apply offset and limit
+    final end = offset + limit;
+    return results.sublist(
+      offset,
+      end > results.length ? results.length : end,
+    );
   }
 
   // ===== Tag queries =====
@@ -704,31 +742,83 @@ class AppDatabase extends _$AppDatabase {
     int contestId, {
     int limit = 50,
     int offset = 0,
+    String sortBy = 'click_num',
+    bool descending = true,
   }) async {
     final query = select(novels)
-      ..where((t) => t.contestId.equals(contestId))
-      ..orderBy([(t) => OrderingTerm.desc(t.lastUpdate)])
-      ..limit(limit, offset: offset);
+      ..where((t) => t.contestId.equals(contestId));
+
+    switch (sortBy) {
+      case 'click_num':
+        query.orderBy([
+          (t) => OrderingTerm(
+            expression: t.clickNum,
+            mode: descending ? OrderingMode.desc : OrderingMode.asc,
+          ),
+        ]);
+        break;
+      case 'word_num':
+        query.orderBy([
+          (t) => OrderingTerm(
+            expression: t.wordNum,
+            mode: descending ? OrderingMode.desc : OrderingMode.asc,
+          ),
+        ]);
+        break;
+      case 'like_num':
+        query.orderBy([
+          (t) => OrderingTerm(
+            expression: t.likeNum,
+            mode: descending ? OrderingMode.desc : OrderingMode.asc,
+          ),
+        ]);
+        break;
+      case 'praise_num':
+        query.orderBy([
+          (t) => OrderingTerm(
+            expression: t.praiseNum,
+            mode: descending ? OrderingMode.desc : OrderingMode.asc,
+          ),
+        ]);
+        break;
+      case 'review_num':
+        query.orderBy([
+          (t) => OrderingTerm(
+            expression: t.reviewNum,
+            mode: descending ? OrderingMode.desc : OrderingMode.asc,
+          ),
+        ]);
+        break;
+      case 'comment_num':
+        query.orderBy([
+          (t) => OrderingTerm(
+            expression: t.commentNum,
+            mode: descending ? OrderingMode.desc : OrderingMode.asc,
+          ),
+        ]);
+        break;
+      default:
+        query.orderBy([(t) => OrderingTerm.desc(t.lastUpdate)]);
+    }
+
+    query.limit(limit, offset: offset);
     return query.get();
   }
 
   // ===== Banner novels =====
 
   Future<List<BannerNovel>> getBannerNovels({int limit = 12}) async {
-    final query =
-        select(
-            novels,
-          ).join([innerJoin(authors, authors.id.equalsExp(novels.authorId))])
-          ..where(novels.hasBanner.equals(true))
-          ..orderBy([OrderingTerm.desc(novels.clickNum)])
-          ..limit(limit);
+    final query = select(novels)
+      ..where((t) => t.hasBanner.equals(true))
+      ..orderBy([(t) => OrderingTerm.desc(t.clickNum)])
+      ..limit(limit);
 
     final results = await query.get();
-    return results.map((row) {
+    return results.map((novel) {
       return BannerNovel(
-        id: row.readTable(novels).id,
-        title: row.readTable(novels).title,
-        author: row.readTable(authors).name,
+        id: novel.id,
+        title: novel.title,
+        author: novel.author ?? '',
       );
     }).toList();
   }
@@ -737,20 +827,17 @@ class AppDatabase extends _$AppDatabase {
     required int offset,
     required int limit,
   }) async {
-    final query =
-        select(
-            novels,
-          ).join([innerJoin(authors, authors.id.equalsExp(novels.authorId))])
-          ..where(novels.hasBanner.equals(true))
-          ..orderBy([OrderingTerm.desc(novels.clickNum)])
-          ..limit(limit, offset: offset);
+    final query = select(novels)
+      ..where((t) => t.hasBanner.equals(true))
+      ..orderBy([(t) => OrderingTerm.desc(t.clickNum)])
+      ..limit(limit, offset: offset);
 
     final results = await query.get();
-    return results.map((row) {
+    return results.map((novel) {
       return BannerNovel(
-        id: row.readTable(novels).id,
-        title: row.readTable(novels).title,
-        author: row.readTable(authors).name,
+        id: novel.id,
+        title: novel.title,
+        author: novel.author ?? '',
       );
     }).toList();
   }
@@ -783,35 +870,27 @@ class AppDatabase extends _$AppDatabase {
     final contestResult = await contestQuery.getSingle();
     final contestCount = contestResult.read(contestCountQuery) ?? 0;
 
-    // Count distinct genres (excluding 其他=1)
+    // Use COUNT(DISTINCT) instead of loading all values into memory
+    final genreCountQuery = countAll();
     final genreQuery = selectOnly(novels)
       ..where(novels.genre.isBiggerThanValue(1))
-      ..addColumns([novels.genre]);
-    final genreResults = await genreQuery.get();
-    final genreCount = genreResults
-        .map((r) => r.read(novels.genre))
-        .toSet()
-        .length;
+      ..addColumns([genreCountQuery]);
+    final genreResult = await genreQuery.getSingle();
+    final genreCount = genreResult.read(genreCountQuery) ?? 0;
 
-    // Count distinct statuses (excluding 其他=1)
+    final statusCountQuery = countAll();
     final statusQuery = selectOnly(novels)
       ..where(novels.status.isBiggerThanValue(1))
-      ..addColumns([novels.status]);
-    final statusResults = await statusQuery.get();
-    final statusCount = statusResults
-        .map((r) => r.read(novels.status))
-        .toSet()
-        .length;
+      ..addColumns([statusCountQuery]);
+    final statusResult = await statusQuery.getSingle();
+    final statusCount = statusResult.read(statusCountQuery) ?? 0;
 
-    // Count distinct ptypes (excluding 其他=1)
+    final ptypeCountQuery = countAll();
     final ptypeQuery = selectOnly(novels)
       ..where(novels.ptype.isBiggerThanValue(1))
-      ..addColumns([novels.ptype]);
-    final ptypeResults = await ptypeQuery.get();
-    final ptypeCount = ptypeResults
-        .map((r) => r.read(novels.ptype))
-        .toSet()
-        .length;
+      ..addColumns([ptypeCountQuery]);
+    final ptypeResult = await ptypeQuery.getSingle();
+    final ptypeCount = ptypeResult.read(ptypeCountQuery) ?? 0;
 
     return {
       'novels': novelCount,
@@ -831,26 +910,19 @@ class AppDatabase extends _$AppDatabase {
     if (novel == null) return {};
 
     final rankings = <String, int>{};
+    
+    // Single query to get all rankings at once
+    // Count how many novels have higher values for each field
     final fields = [
-      ('word_num', novels.wordNum),
-      ('click_num', novels.clickNum),
-      ('like_num', novels.likeNum),
-      ('praise_num', novels.praiseNum),
-      ('review_num', novels.reviewNum),
-      ('comment_num', novels.commentNum),
+      ('word_num', novels.wordNum, novel.wordNum),
+      ('click_num', novels.clickNum, novel.clickNum),
+      ('like_num', novels.likeNum, novel.likeNum),
+      ('praise_num', novels.praiseNum, novel.praiseNum),
+      ('review_num', novels.reviewNum, novel.reviewNum),
+      ('comment_num', novels.commentNum, novel.commentNum),
     ];
 
-    for (final (name, column) in fields) {
-      final value = switch (name) {
-        'word_num' => novel.wordNum,
-        'click_num' => novel.clickNum,
-        'like_num' => novel.likeNum,
-        'praise_num' => novel.praiseNum,
-        'review_num' => novel.reviewNum,
-        'comment_num' => novel.commentNum,
-        _ => null,
-      };
-
+    for (final (name, column, value) in fields) {
       if (value != null && value > 0) {
         final query = selectOnly(novels)
           ..where(column.isBiggerThanValue(value))
@@ -920,31 +992,76 @@ class AppDatabase extends _$AppDatabase {
       await file.delete();
     }
 
-    // Recreate from chunks
+    // 从assets重新复制chunk并合并
+    final chunksDir = p.join(dbFolder.path, 'chunks');
+    for (final chunkName in ['cold', 'warm', 'hot']) {
+      await _copyBundledChunk(chunkName, p.join(chunksDir, '${chunkName}_chunk.sqlite'));
+    }
     await _createMergedDatabase(dbPath);
   }
+}
+
+bool _dbInitialized = false;
+const _dbVersionKey = 'novel_hub_db_version';
+const _currentDbVersion = '1.0.0'; // Update this when bundled chunks change
+
+/// Initialize the database from bundled chunks. Call this in main() before runApp().
+/// Only copies and merges chunks on first launch or when version changes.
+Future<void> initDatabase() async {
+  if (_dbInitialized) return;
+  
+  final dbFolder = await getApplicationDocumentsDirectory();
+  final dbPath = p.join(dbFolder.path, 'novel_hub.sqlite');
+  final chunksDir = p.join(dbFolder.path, 'chunks');
+  final versionFile = File(p.join(dbFolder.path, _dbVersionKey));
+  
+  // Check if database already exists and version matches
+  final dbFile = File(dbPath);
+  final dbExists = await dbFile.exists();
+  String? storedVersion;
+  if (await versionFile.exists()) {
+    storedVersion = await versionFile.readAsString();
+  }
+  
+  // Only copy and merge if DB doesn't exist or version changed
+  if (!dbExists || storedVersion != _currentDbVersion) {
+    // Copy chunks from assets
+    for (final chunkName in ['cold', 'warm', 'hot']) {
+      await _copyBundledChunk(chunkName, p.join(chunksDir, '${chunkName}_chunk.sqlite'));
+    }
+    
+    // Merge chunks into main database
+    await _createMergedDatabase(dbPath);
+    
+    // Store version
+    await versionFile.writeAsString(_currentDbVersion);
+  }
+  
+  _dbInitialized = true;
+}
+
+/// 获取数据库合并时间（基于merged数据库文件的修改时间）
+Future<DateTime?> getDbMergeTime() async {
+  final dbFolder = await getApplicationDocumentsDirectory();
+  final dbPath = p.join(dbFolder.path, 'novel_hub.sqlite');
+  final dbFile = File(dbPath);
+  if (await dbFile.exists()) {
+    final stat = await dbFile.stat();
+    return stat.modified;
+  }
+  return null;
 }
 
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
     final dbPath = p.join(dbFolder.path, 'novel_hub.sqlite');
-    final chunksDir = p.join(dbFolder.path, 'chunks');
-    
-    // Copy chunks from assets if needed
-    for (final chunkName in ['cold', 'warm', 'hot']) {
-      final chunkPath = p.join(chunksDir, '${chunkName}_chunk.sqlite');
-      if (!await File(chunkPath).exists()) {
-        await _copyBundledChunk(chunkName, chunkPath);
-      }
-    }
-    
-    // Always recreate from chunks to ensure fresh data
     final file = File(dbPath);
-    if (await file.exists()) {
-      await file.delete();
+    
+    // If DB doesn't exist (initDatabase wasn't called), create it now
+    if (!await file.exists()) {
+      await initDatabase();
     }
-    await _createMergedDatabase(dbPath);
     
     return NativeDatabase.createInBackground(file);
   });
@@ -969,53 +1086,36 @@ Future<void> _createMergedDatabase(String targetPath) async {
   // Copy cold chunk as the main database
   await File(coldPath).copy(targetPath);
   
-  // Open the database and merge data from warm and hot chunks
-  final db = NativeDatabase.createInBackground(File(targetPath));
+  // Open the database directly with sqlite3 and merge data
+  final db = sqlite3.open(targetPath);
   
   try {
+    // Enable WAL mode for better performance
+    db.execute('PRAGMA journal_mode=WAL');
+    
     // Attach warm and hot chunks
-    await db.runCustom("ATTACH '${warmPath}' AS warm");
-    await db.runCustom("ATTACH '${hotPath}' AS hot");
+    db.execute("ATTACH '${warmPath}' AS warm");
+    db.execute("ATTACH '${hotPath}' AS hot");
     
-    // Insert data from warm chunk (ignore duplicates)
-    await db.runCustom('''
-      INSERT OR IGNORE INTO novels SELECT * FROM warm.novels
-    ''');
-    await db.runCustom('''
-      INSERT OR IGNORE INTO authors SELECT * FROM warm.authors
-    ''');
-    await db.runCustom('''
-      INSERT OR IGNORE INTO tags SELECT * FROM warm.tags
-    ''');
-    await db.runCustom('''
-      INSERT OR IGNORE INTO contests SELECT * FROM warm.contests
-    ''');
-    await db.runCustom('''
-      INSERT OR IGNORE INTO novel_tags SELECT * FROM warm.novel_tags
-    ''');
+    // Insert data from warm chunk (replace if exists - warm has newer data)
+    db.execute('INSERT OR REPLACE INTO novels SELECT * FROM warm.novels');
+    db.execute('INSERT OR REPLACE INTO authors SELECT * FROM warm.authors');
+    db.execute('INSERT OR REPLACE INTO tags SELECT * FROM warm.tags');
+    db.execute('INSERT OR REPLACE INTO contests SELECT * FROM warm.contests');
+    db.execute('INSERT OR REPLACE INTO novel_tags SELECT * FROM warm.novel_tags');
     
-    // Insert data from hot chunk (ignore duplicates)
-    await db.runCustom('''
-      INSERT OR IGNORE INTO novels SELECT * FROM hot.novels
-    ''');
-    await db.runCustom('''
-      INSERT OR IGNORE INTO authors SELECT * FROM hot.authors
-    ''');
-    await db.runCustom('''
-      INSERT OR IGNORE INTO tags SELECT * FROM hot.tags
-    ''');
-    await db.runCustom('''
-      INSERT OR IGNORE INTO contests SELECT * FROM hot.contests
-    ''');
-    await db.runCustom('''
-      INSERT OR IGNORE INTO novel_tags SELECT * FROM hot.novel_tags
-    ''');
+    // Insert data from hot chunk (replace if exists - hot has newest data)
+    db.execute('INSERT OR REPLACE INTO novels SELECT * FROM hot.novels');
+    db.execute('INSERT OR REPLACE INTO authors SELECT * FROM hot.authors');
+    db.execute('INSERT OR REPLACE INTO tags SELECT * FROM hot.tags');
+    db.execute('INSERT OR REPLACE INTO contests SELECT * FROM hot.contests');
+    db.execute('INSERT OR REPLACE INTO novel_tags SELECT * FROM hot.novel_tags');
     
     // Detach chunks
-    await db.runCustom("DETACH warm");
-    await db.runCustom("DETACH hot");
+    db.execute("DETACH warm");
+    db.execute("DETACH hot");
   } finally {
-    await db.close();
+    db.dispose();
   }
 }
 
@@ -1040,4 +1140,20 @@ class NovelTagPair {
   final int tagId;
 
   const NovelTagPair({required this.novelId, required this.tagId});
+}
+
+class _AuthorStats {
+  String? topNovelTitle;
+  int topNovelClicks;
+  int totalClicks;
+  int novelCount;
+  int bannerCount;
+
+  _AuthorStats({
+    this.topNovelTitle,
+    this.topNovelClicks = 0,
+    this.totalClicks = 0,
+    this.novelCount = 0,
+    this.bannerCount = 0,
+  });
 }
