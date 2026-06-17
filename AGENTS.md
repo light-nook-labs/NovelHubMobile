@@ -88,7 +88,7 @@ flutter build linux --debug                          # Build for testing
 Matching novel_hub web defaults:
 - **Novel list**: `click_num` DESC
 - **Rankings**: `click_num` DESC (default tab)
-- **Authors**: Total `click_num` DESC
+- **Authors**: Top novel `click_num` DESC (pre-computed `top_novel_clicks`)
 - **Home latest**: `click_num` DESC
 
 ## Enum Mappings
@@ -184,14 +184,19 @@ Data is split into chunks based on activity level:
 
 ## Database
 
-**Bundled database**: `assets/db/novel_hub.sqlite`
-- Contains ~8,362 novels (real data from meta_13.jsonl)
-- Auto-copied to app documents on first launch
-- "Reset data" restores to bundled default
+**Chunked database**: `assets/chunks/`
+- `cold_chunk.sqlite.gz` (~58MB compressed) - 断更, 已完结
+- `warm_chunk.sqlite` (~1.4MB) - 完结A, 断更A
+- `hot_chunk.sqlite` (~2.1MB) - 连载中
 
-**Runtime path**: `~/.local/share/novel_hub_mobile/novel_hub.sqlite`
+**Runtime path**: `~/.local/share/novel_hub_mobile/chunks/`
 
 **Database provider**: KeepAlive singleton (no multiple instances)
+
+**Pre-computed data** (built into chunks, read-only):
+- Authors table: `novel_count`, `banner_count`, `top_novel_id`, `top_novel_title`, `top_novel_clicks`
+- All indexes created at build time for fast queries
+- Authors sorted by `top_novel_clicks DESC` (no runtime aggregation)
 
 ## UI Conventions
 
