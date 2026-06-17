@@ -62,12 +62,20 @@ class ChunkedSyncService {
       final chunkPath = p.join(chunkDir, '${chunkName}_chunk.sqlite');
       if (!await File(chunkPath).exists()) {
         try {
-          // Load from Flutter assets
-          final data = await rootBundle.load('assets/chunks/${chunkName}_chunk.sqlite');
-          final bytes = data.buffer.asUint8List();
-          await File(chunkPath).writeAsBytes(bytes);
+          // Try loading compressed .gz file first (smaller app size)
+          final gzData = await rootBundle.load('assets/chunks/${chunkName}_chunk.sqlite.gz');
+          final compressedBytes = gzData.buffer.asUint8List();
+          final decompressedBytes = _gzipDecode(compressedBytes);
+          await File(chunkPath).writeAsBytes(decompressedBytes);
         } catch (e) {
-          // If asset doesn't exist, that's okay
+          try {
+            // Fall back to uncompressed .sqlite file
+            final data = await rootBundle.load('assets/chunks/${chunkName}_chunk.sqlite');
+            final bytes = data.buffer.asUint8List();
+            await File(chunkPath).writeAsBytes(bytes);
+          } catch (e) {
+            // If asset doesn't exist, that's okay
+          }
         }
       }
     }

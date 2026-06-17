@@ -63,6 +63,8 @@ app.*.map.json
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+!assets/chunks/*.sqlite
+!assets/chunks/*.gz
 
 # Build
 build/
