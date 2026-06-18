@@ -157,6 +157,18 @@ class SettingsScreen extends ConsumerWidget {
                   title: Text('技术栈'),
                   subtitle: Text('Flutter, Riverpod, drift, dio, go_router'),
                 ),
+                const Divider(height: 1),
+                const ListTile(
+                  leading: Icon(Icons.balance, color: AppColors.primary),
+                  title: Text('开源许可'),
+                  subtitle: Text('MIT License - 免费开源软件'),
+                ),
+                const Divider(height: 1),
+                const ListTile(
+                  leading: Icon(Icons.favorite_border, color: AppColors.primary),
+                  title: Text('Novel Hub Mobile'),
+                  subtitle: Text('本软件完全免费，禁止任何商业倒卖行为'),
+                ),
               ],
             ),
           ),
