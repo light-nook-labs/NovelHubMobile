@@ -16,15 +16,16 @@ Mobile app for [Novel Hub](https://github.com/light-nook-labs/novel_hub) — off
 | Novel list + filter | ✅ | ✅ | List view with header tabs for ptype |
 | Novel detail | ✅ | ✅ | Cover right, info left, copy title, SFACG link |
 | Rankings (6 dimensions) | ✅ | ✅ | Rank-style list with tabs |
-| Search | ✅ | ✅ | Full screen, debounced (300ms Timer) |
-| Banner showcase | ✅ | ✅ | Hero carousel (5) + dedicated tab |
-| Author list + detail | ✅ | ✅ | Sorted by total clicks |
+| Search | ✅ | ✅ | Full screen, debounced (300ms), pagination |
+| Banner showcase | ✅ | ✅ | Hero carousel (5) + dedicated tab with search/reverse |
+| Author list + detail | ✅ | ✅ | Sorted by total clicks, search by name/representative work |
 | Tag list + detail | ✅ | ✅ | 3-column grid with novel count + full filter |
-| Contest list + detail | ✅ | ✅ | 2-column grid with novel count + full filter |
+| Contest list + detail | ✅ | ✅ | List view with novel count + full filter |
 | Genre/Status/Ptype browse | ✅ | ✅ | List pages + filtered novels |
 | Dark mode | ✅ | ✅ | Manual theme switching |
-| Load more | ✅ | ✅ | 48 per page, back-to-top button |
+| Load more | ✅ | ✅ | 10 per page, back-to-top button |
 | Word count filter | ✅ | ✅ | Range-based filter with breakpoints |
+| Bookshelf | ❌ | ✅ | Persistent storage, swipe to delete |
 
 ## Tech Stack
 
@@ -46,6 +47,7 @@ dart run build_runner build --delete-conflicting-outputs  # Codegen
 flutter analyze                                      # Lint
 dart format .                                        # Format
 flutter build linux --debug                          # Build for testing
+flutter build apk --release                          # Build Android APK
 ```
 
 ## Navigation Structure
@@ -55,14 +57,14 @@ flutter build linux --debug                          # Build for testing
 - Novels - `/novels`
 - Banners - `/banners`
 - Rankings - `/rankings`
-- Settings - `/settings`
+- Bookshelf - `/bookshelf`
 
 **Header Nav:**
 - Search bar in AppBar → opens full screen search page
+- Settings icon → opens settings page
 
 **Novels Screen Header Tabs:**
 - All/Free/Signed/VIP (ptype filter)
-- "Other" tab: hidden by default, shown last with smaller font when enabled
 
 **Rankings Screen Header Tabs:**
 - Clicks/Words/Likes/Praises/Reviews/Comments
@@ -81,6 +83,7 @@ flutter build linux --debug                          # Build for testing
 - Ptype list - `/ptypes`
 - Novels by genre - `/novels-by-genre`
 - Novels by status - `/novels-by-status`
+- Settings - `/settings`
 
 ## Default Sorting
 
@@ -153,9 +156,9 @@ Data is split into chunks based on activity level:
 **下架 (removed) and 其他 (other) data is excluded** as it has no value.
 
 **App bundling:**
-- App includes: Cold chunk (~58MB compressed .gz)
-- First launch download: Warm + Hot chunks (~3.5MB)
-- Monthly update: Hot chunk (~1.9MB)
+- App includes: All chunks (~61MB compressed .gz)
+- Database merged on first launch only
+- Subsequent launches use merged database directly
 
 ### Novel Data Schema (JSONL)
 
@@ -185,12 +188,14 @@ Data is split into chunks based on activity level:
 
 **Chunked database**: `assets/chunks/`
 - `cold_chunk.sqlite.gz` (~58MB compressed) - 断更, 已完结
-- `warm_chunk.sqlite` (~1.6MB) - 完结A, 断更A
-- `hot_chunk.sqlite` (~1.9MB) - 连载中
+- `warm_chunk.sqlite.gz` (~718KB compressed) - 完结A, 断更A
+- `hot_chunk.sqlite.gz` (~869KB compressed) - 连载中
 
 **Runtime path**: `~/.local/share/novel_hub_mobile/chunks/`
 
 **Database provider**: KeepAlive singleton (no multiple instances)
+
+**Initialization**: Merges chunks on first launch only, uses `.db_merged_v1` marker file
 
 **Pre-computed data** (built into chunks, read-only):
 - Authors table: `top_novel_id`, `top_novel_title`, `top_novel_clicks`
@@ -271,9 +276,10 @@ lib/
 │   ├── tags/               # list, detail with filter
 │   ├── contests/           # list, detail with filter
 │   ├── banner/             # banner tab (dedicated)
+│   ├── bookshelf/          # bookshelf with persistent storage
 │   ├── browse/             # enum list screens
 │   ├── rankings/           # 6 tabs, rank-style list
-│   ├── search/             # full screen search
+│   ├── search/             # full screen search with pagination
 │   └── settings/           # sync, reset, theme, stats
 └── shared/
     ├── widgets/
