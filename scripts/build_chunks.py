@@ -297,42 +297,66 @@ def process_jsonl_files(jsonl_dir: str, output_dir: str) -> dict:
                     print(f'  Warning: Error processing line {line_num}: {e}')
                     continue
     
-    # Pre-compute author stats for each chunk
+    # Compute GLOBAL author stats across all chunks
     print()
-    print('Pre-computing author statistics...')
+    print('Computing global author statistics...')
+    
+    # Collect all novels from all chunks into memory for global stats
+    all_novels = []
+    for chunk_name, conn in connections.items():
+        cursor = conn.cursor()
+        cursor.execute('SELECT id, author, has_banner, click_num, title FROM novels WHERE author IS NOT NULL')
+        all_novels.extend(cursor.fetchall())
+    
+    print(f'  Total novels for stats: {len(all_novels):,}')
+    
+    # Compute global author stats
+    author_stats = {}  # name -> {novel_count, banner_count, top_novel_id, top_novel_title, top_novel_clicks}
+    for novel_id, author, has_banner, click_num, title in all_novels:
+        if author not in author_stats:
+            author_stats[author] = {
+                'novel_count': 0,
+                'banner_count': 0,
+                'top_novel_id': novel_id,
+                'top_novel_title': title,
+                'top_novel_clicks': click_num or 0,
+            }
+        author_stat = author_stats[author]
+        author_stat['novel_count'] += 1
+        if has_banner:
+            author_stat['banner_count'] += 1
+        if (click_num or 0) > author_stat['top_novel_clicks']:
+            author_stat['top_novel_clicks'] = click_num or 0
+            author_stat['top_novel_id'] = novel_id
+            author_stat['top_novel_title'] = title
+    
+    print(f'  Unique authors: {len(author_stats):,}')
+    
+    # Write global stats to each chunk
+    print()
+    print('Writing global author stats to chunks...')
     for chunk_name, conn in connections.items():
         cursor = conn.cursor()
         
-        # Update author stats
-        cursor.execute('''
-            UPDATE authors SET 
-                novel_count = (
-                    SELECT COUNT(*) FROM novels WHERE novels.author = authors.name
-                ),
-                banner_count = (
-                    SELECT COUNT(*) FROM novels WHERE novels.author = authors.name AND has_banner = 1
-                ),
-                top_novel_id = (
-                    SELECT id FROM novels 
-                    WHERE novels.author = authors.name 
-                    ORDER BY click_num DESC LIMIT 1
-                ),
-                top_novel_title = (
-                    SELECT title FROM novels 
-                    WHERE novels.author = authors.name 
-                    ORDER BY click_num DESC LIMIT 1
-                ),
-                top_novel_clicks = (
-                    SELECT COALESCE(MAX(click_num), 0) FROM novels 
-                    WHERE novels.author = authors.name
-                )
-        ''')
+        # Clear existing authors
+        cursor.execute('DELETE FROM authors')
         
-        # Delete authors with no novels
-        cursor.execute('DELETE FROM authors WHERE novel_count = 0 OR novel_count IS NULL')
+        # Insert all authors with global stats
+        for author_name, author_stat in author_stats.items():
+            cursor.execute('''
+                INSERT INTO authors (name, novel_count, banner_count, top_novel_id, top_novel_title, top_novel_clicks)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (
+                author_name,
+                author_stat['novel_count'],
+                author_stat['banner_count'],
+                author_stat['top_novel_id'],
+                author_stat['top_novel_title'],
+                author_stat['top_novel_clicks'],
+            ))
         
         conn.commit()
-        print(f'  {chunk_name}: {cursor.rowcount} authors cleaned')
+        print(f'  {chunk_name}: {len(author_stats)} authors written')
     
     # Commit and close connections
     for chunk_name, conn in connections.items():
