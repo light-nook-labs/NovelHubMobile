@@ -1066,18 +1066,17 @@ LazyDatabase _openConnection() {
     final dbPath = p.join(dbFolder.path, 'novel_hub.sqlite');
     final chunksDir = p.join(dbFolder.path, 'chunks');
     
-    // Copy chunks from assets if needed
+    // Always copy chunks from assets to ensure they're up to date
     for (final chunkName in ['cold', 'warm', 'hot']) {
       final chunkPath = p.join(chunksDir, '${chunkName}_chunk.sqlite');
-      if (!await File(chunkPath).exists()) {
-        await _copyBundledChunk(chunkName, chunkPath);
-      }
+      await _copyBundledChunk(chunkName, chunkPath);
     }
     
-    // Create merged database if it doesn't exist
-    if (!await File(dbPath).exists()) {
-      await _createMergedDatabase(dbPath);
+    // Always recreate merged database from fresh chunks
+    if (await File(dbPath).exists()) {
+      await File(dbPath).delete();
     }
+    await _createMergedDatabase(dbPath);
     
     return NativeDatabase.createInBackground(File(dbPath));
   });
