@@ -223,9 +223,9 @@ Data is split into chunks based on activity level:
 - Value (clicks/words/etc.)
 
 **Colors:**
-- No cold colors (blue, indigo, cyan, purple, fuchsia)
-- Primary: Orange/Amber
+- Primary: Material 3 colorScheme seed-based theming
 - Status colors: Green(ongoing), Grey(stopped), Blue(completed)
+- Badge colors: Primary for status, Secondary for genre, Tertiary for ptype
 
 **Typography:**
 - Title: 14px bold
