@@ -46,20 +46,48 @@ def merge_chunks(chunks_dir: str, output_path: str) -> None:
         conn.execute('INSERT OR REPLACE INTO novels SELECT * FROM warm.novels')
         conn.execute('INSERT OR REPLACE INTO novels SELECT * FROM hot.novels')
         
-        # Insert other tables
+        # Merge tags: map chunk tag IDs to cold tag IDs
         print('  Merging tags...')
-        conn.execute('INSERT OR REPLACE INTO tags SELECT * FROM warm.tags')
-        conn.execute('INSERT OR REPLACE INTO tags SELECT * FROM hot.tags')
         
+        # Build tag name -> cold ID mapping
+        cursor = conn.execute('SELECT name, id FROM tags')
+        tag_name_to_id = {row[0]: row[1] for row in cursor}
+        
+        # For each chunk, build old_id -> cold_id mapping
+        for chunk_alias in ['warm', 'hot']:
+            # Get chunk's tag mapping
+            chunk_cursor = conn.execute(f'SELECT id, name FROM {chunk_alias}.tags')
+            old_to_new = {}
+            for old_id, name in chunk_cursor:
+                if name in tag_name_to_id:
+                    old_to_new[old_id] = tag_name_to_id[name]
+                else:
+                    # New tag not in cold, insert it
+                    conn.execute('INSERT OR IGNORE INTO tags (name) VALUES (?)', (name,))
+                    new_id = conn.execute('SELECT id FROM tags WHERE name = ?', (name,)).fetchone()[0]
+                    tag_name_to_id[name] = new_id
+                    old_to_new[old_id] = new_id
+            
+            # Insert novel_tags with remapped tag IDs
+            print(f'  Remapping novel_tags from {chunk_alias}...')
+            chunk_novel_tags = conn.execute(
+                f'SELECT novel_id, tag_id FROM {chunk_alias}.novel_tags'
+            ).fetchall()
+            
+            for novel_id, old_tag_id in chunk_novel_tags:
+                new_tag_id = old_to_new.get(old_tag_id)
+                if new_tag_id is not None:
+                    conn.execute(
+                        'INSERT OR IGNORE INTO novel_tags (novel_id, tag_id) VALUES (?, ?)',
+                        (novel_id, new_tag_id)
+                    )
+        
+        # Merge contests
         print('  Merging contests...')
         conn.execute('INSERT OR REPLACE INTO contests SELECT * FROM warm.contests')
         conn.execute('INSERT OR REPLACE INTO contests SELECT * FROM hot.contests')
         
-        print('  Merging novel_tags...')
-        conn.execute('INSERT OR REPLACE INTO novel_tags SELECT * FROM warm.novel_tags')
-        conn.execute('INSERT OR REPLACE INTO novel_tags SELECT * FROM hot.novel_tags')
-        
-        # Merge authors: collect from all chunks, keep best top_novel per author
+        # Merge authors
         print('  Merging authors...')
         
         # Collect all authors from all chunks

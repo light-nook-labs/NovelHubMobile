@@ -1137,13 +1137,57 @@ Future<void> _createMergedDatabase(String targetPath) async {
     db.execute('INSERT OR REPLACE INTO novels SELECT * FROM warm.novels');
     db.execute('INSERT OR REPLACE INTO novels SELECT * FROM hot.novels');
     
-    // Insert other tables
-    db.execute('INSERT OR REPLACE INTO tags SELECT * FROM warm.tags');
-    db.execute('INSERT OR REPLACE INTO tags SELECT * FROM hot.tags');
+    // Merge contests
     db.execute('INSERT OR REPLACE INTO contests SELECT * FROM warm.contests');
     db.execute('INSERT OR REPLACE INTO contests SELECT * FROM hot.contests');
-    db.execute('INSERT OR REPLACE INTO novel_tags SELECT * FROM warm.novel_tags');
-    db.execute('INSERT OR REPLACE INTO novel_tags SELECT * FROM hot.novel_tags');
+    
+    // Merge tags with ID remapping
+    // Build tag name -> cold ID mapping
+    final tagRows = db.select('SELECT name, id FROM tags');
+    final tagNameToId = <String, int>{};
+    for (final row in tagRows) {
+      tagNameToId[row[0] as String] = row[1] as int;
+    }
+    
+    // For each chunk, remap tag IDs
+    for (final chunkAlias in ['warm', 'hot']) {
+      // Get chunk's tag mapping
+      final chunkTags = db.select('SELECT id, name FROM $chunkAlias.tags');
+      final oldToNew = <int, int>{};
+      
+      for (final row in chunkTags) {
+        final oldId = row[0] as int;
+        final name = row[1] as String;
+        
+        if (tagNameToId.containsKey(name)) {
+          oldToNew[oldId] = tagNameToId[name]!;
+        } else {
+          // New tag not in cold, insert it
+          db.execute('INSERT OR IGNORE INTO tags (name) VALUES (?)', [name]);
+          final newId = db.select('SELECT id FROM tags WHERE name = ?', [name])[0][0] as int;
+          tagNameToId[name] = newId;
+          oldToNew[oldId] = newId;
+        }
+      }
+      
+      // Insert novel_tags with remapped tag IDs
+      final chunkNovelTags = db.select(
+        'SELECT novel_id, tag_id FROM $chunkAlias.novel_tags'
+      );
+      
+      for (final row in chunkNovelTags) {
+        final novelId = row[0] as int;
+        final oldTagId = row[1] as int;
+        final newTagId = oldToNew[oldTagId];
+        
+        if (newTagId != null) {
+          db.execute(
+            'INSERT OR IGNORE INTO novel_tags (novel_id, tag_id) VALUES (?, ?)',
+            [novelId, newTagId],
+          );
+        }
+      }
+    }
     
     // Merge authors: update existing if better, insert new ones
     // Update existing authors if warm/hot has better stats
