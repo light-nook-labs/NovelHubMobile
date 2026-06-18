@@ -266,25 +266,14 @@ class NovelRankRow extends StatelessWidget {
   }
 
   Widget _buildTitle(BuildContext context) {
-    return RichText(
+    return Text(
+      novel.title,
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
-      text: TextSpan(
-        children: [
-          TextSpan(
-            text: novel.title,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Theme.of(context).textTheme.bodyLarge?.color,
-              height: 1.3,
-            ),
-          ),
-          TextSpan(
-            text: ' #${novel.id}',
-            style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-          ),
-        ],
+      style: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        height: 1.3,
       ),
     );
   }
