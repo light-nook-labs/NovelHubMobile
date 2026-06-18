@@ -242,6 +242,7 @@ class _TagDetailScreenState extends ConsumerState<TagDetailScreen> {
         ],
       ),
       body: NovelRankList(
+        key: ValueKey('tag_${widget.tagId}_${_selectedGenre}_${_selectedStatus}_$_selectedYear'),
         loadNovels: (offset, limit) => db.getNovelsByTag(
           widget.tagId,
           limit: limit,

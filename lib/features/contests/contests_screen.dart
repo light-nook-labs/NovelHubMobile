@@ -242,6 +242,7 @@ class _ContestDetailScreenState extends ConsumerState<ContestDetailScreen> {
         ],
       ),
       body: NovelRankList(
+        key: ValueKey('contest_${widget.contestId}_${_selectedGenre}_${_selectedStatus}_$_selectedYear'),
         loadNovels: (offset, limit) => db.getNovelsByContest(
           widget.contestId,
           limit: limit,

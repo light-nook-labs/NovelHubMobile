@@ -141,6 +141,7 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
         ),
       ),
       body: NovelRankList(
+        key: ValueKey('novels_$_selectedPtype'),
         loadNovels: (offset, limit) async {
           final db = ref.read(databaseProvider);
           return db.getNovelsFiltered(

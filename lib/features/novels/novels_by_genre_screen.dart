@@ -152,6 +152,7 @@ class _NovelsByGenreScreenState extends ConsumerState<NovelsByGenreScreen>
         ),
       ),
       body: NovelRankList(
+        key: ValueKey('genre_${_selectedGenre}_${_selectedStatus}_$_selectedYear'),
         loadNovels: (offset, limit) async {
           final db = ref.read(databaseProvider);
           return db.getNovelsFiltered(
