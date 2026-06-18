@@ -23,7 +23,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   bool _showBackToTop = false;
 
   // Pagination state
-  final _pageSize = 48;
+  final _pageSize = 10;
   int _currentPage = 0;
   bool _hasMore = true;
   bool _isLoadingMore = false;
