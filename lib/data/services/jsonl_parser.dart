@@ -67,7 +67,7 @@ class NovelData {
       commentNum: json['comment_num'] as int?,
       reviewNum: json['review_num'] as int?,
       contest: json['contest'] as String?,
-      tags: (json['tags'] as List<dynamic>?)?.cast<String>() ?? [],
+      tags: ((json['tags'] as List<dynamic>?)?.whereType<String>().toList()) ?? [],
       cover: _compressCover(json['cover'] as String?),
       lastUpdate: _parseDateTime(json['last_update'] as String?),
     );

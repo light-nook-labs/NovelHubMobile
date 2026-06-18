@@ -82,15 +82,15 @@ def get_ptype_id(ptype: str) -> int:
 
 
 def normalize_tags(tags) -> list[str]:
-    """Normalize tags, handling nested lists.
+    """Normalize tags, skipping non-string items.
     
-    Handles:
-    - Normal list: ["tag1", "tag2"] -> ["tag1", "tag2"]
-    - Nested list: [["tag1", "tag2"]] -> ["tag1", "tag2"]
+    Only keeps string items, skips nested lists and other types.
+    - Normal: ["tag1", "tag2"] -> ["tag1", "tag2"]
+    - Malformed: ["tag1", ["tag2", "tag3"]] -> ["tag1"]
     - Invalid types -> empty list
     
     Returns:
-        Flat list of tag strings
+        List of tag strings
     """
     if not tags:
         return []
@@ -98,17 +98,7 @@ def normalize_tags(tags) -> list[str]:
     if not isinstance(tags, list):
         return []
     
-    result = []
-    for item in tags:
-        if isinstance(item, str):
-            result.append(item)
-        elif isinstance(item, list):
-            # Flatten nested list
-            for sub_item in item:
-                if isinstance(sub_item, str):
-                    result.append(sub_item)
-    
-    return result
+    return [item for item in tags if isinstance(item, str)]
 
 
 def validate_tags(tags) -> tuple[list[str], bool]:
