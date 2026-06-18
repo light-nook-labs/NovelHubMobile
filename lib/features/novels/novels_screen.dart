@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../data/repositories/providers.dart';
 import '../../data/models/database.dart';
@@ -8,8 +7,6 @@ import '../../shared/widgets/novel_rank_list.dart';
 import '../../app/theme.dart';
 import '../../app/settings_provider.dart';
 import '../../shared/widgets/common_widgets.dart';
-
-part 'novels_screen.g.dart';
 
 class NovelsScreen extends ConsumerStatefulWidget {
   final int? initialGenre;
@@ -102,19 +99,6 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
     _ensureTabController();
     final ptypeTabs = _getPtypeTabs();
 
-    final novelsAsync = ref.watch(
-      filteredNovelsProvider(
-        genre: _selectedGenre,
-        status: _selectedStatus,
-        ptype: _selectedPtype,
-        year: _selectedYear,
-        minWordNum: _selectedMinWordNum,
-        maxWordNum: _selectedMaxWordNum,
-        sortBy: _sortBy,
-        descending: _descending,
-      ),
-    );
-
     final hasFilters =
         _selectedGenre != null ||
         _selectedStatus != null ||
@@ -156,19 +140,24 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
           }).toList(),
         ),
       ),
-      body: novelsAsync.when(
-        loading: () => const NovelGridShimmer(),
-        error: (err, stack) => Center(child: Text('Error: $err')),
-        data: (novels) {
-          if (novels.isEmpty) {
-            return const EmptyState(
-              icon: Icons.book,
-              message: '暂无数据',
-              subtitle: '尝试调整筛选条件',
-            );
-          }
-          return _buildNovelGrid(novels);
+      body: NovelRankList(
+        loadNovels: (offset, limit) async {
+          final db = ref.read(databaseProvider);
+          return db.getNovelsFiltered(
+            genre: _selectedGenre,
+            status: _selectedStatus,
+            ptype: _selectedPtype,
+            year: _selectedYear,
+            minWordNum: _selectedMinWordNum,
+            maxWordNum: _selectedMaxWordNum,
+            sortBy: _sortBy,
+            descending: _descending,
+            limit: limit,
+            offset: offset,
+          );
         },
+        showRank: false,
+        valueLabel: '点击',
       ),
     );
   }
@@ -207,45 +196,4 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
       ),
     );
   }
-
-  Widget _buildNovelGrid(List<Novel> novels) {
-    return ListView.builder(
-      itemCount: novels.length,
-      itemBuilder: (context, index) {
-        final novel = novels[index];
-        return NovelRankRow(
-          novel: novel,
-          rank: index + 1,
-          showRank: false,
-          valueLabel: '点击',
-        );
-      },
-    );
-  }
-}
-
-@riverpod
-Future<List<Novel>> filteredNovels(
-  FilteredNovelsRef ref, {
-  int? genre,
-  int? status,
-  int? ptype,
-  int? year,
-  int? minWordNum,
-  int? maxWordNum,
-  String sortBy = 'click_num',
-  bool descending = true,
-}) async {
-  final db = ref.watch(databaseProvider);
-  return db.getNovelsFiltered(
-    genre: genre,
-    status: status,
-    ptype: ptype,
-    year: year,
-    minWordNum: minWordNum,
-    maxWordNum: maxWordNum,
-    sortBy: sortBy,
-    descending: descending,
-    limit: 48,
-  );
 }

@@ -4,12 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../data/models/database.dart';
 import '../../data/repositories/providers.dart';
-import '../../shared/widgets/novel_card.dart';
 import '../../shared/widgets/novel_rank_list.dart';
 import '../../shared/utils/mappings.dart';
 import '../../app/theme.dart';
 import '../../app/settings_provider.dart';
-import 'novels_screen.dart';
 
 class NovelsByStatusScreen extends ConsumerStatefulWidget {
   final int? initialStatus;
@@ -74,16 +72,6 @@ class _NovelsByStatusScreenState extends ConsumerState<NovelsByStatusScreen>
 
   @override
   Widget build(BuildContext context) {
-    final novelsAsync = ref.watch(
-      filteredNovelsProvider(
-        genre: _selectedGenre,
-        status: _selectedStatus,
-        year: _selectedYear,
-        sortBy: _sortBy,
-        descending: _descending,
-      ),
-    );
-
     final hasFilters = _selectedGenre != null || _selectedYear != null;
 
     return Scaffold(
@@ -140,24 +128,21 @@ class _NovelsByStatusScreenState extends ConsumerState<NovelsByStatusScreen>
           }).toList(),
         ),
       ),
-      body: novelsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
-        data: (novels) {
-          if (novels.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.book, size: 48, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text('暂无数据'),
-                ],
-              ),
-            );
-          }
-          return _buildNovelGrid(novels);
+      body: NovelRankList(
+        loadNovels: (offset, limit) async {
+          final db = ref.read(databaseProvider);
+          return db.getNovelsFiltered(
+            genre: _selectedGenre,
+            status: _selectedStatus,
+            year: _selectedYear,
+            sortBy: _sortBy,
+            descending: _descending,
+            limit: limit,
+            offset: offset,
+          );
         },
+        showRank: false,
+        valueLabel: '点击',
       ),
     );
   }
@@ -187,21 +172,6 @@ class _NovelsByStatusScreenState extends ConsumerState<NovelsByStatusScreen>
           });
         },
       ),
-    );
-  }
-
-  Widget _buildNovelGrid(List<Novel> novels) {
-    return ListView.builder(
-      itemCount: novels.length,
-      itemBuilder: (context, index) {
-        final novel = novels[index];
-        return NovelRankRow(
-          novel: novel,
-          rank: index + 1,
-          showRank: false,
-          valueLabel: '点击',
-        );
-      },
     );
   }
 }

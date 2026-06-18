@@ -4,7 +4,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../data/models/database.dart';
-import '../../data/repositories/providers.dart';
 import '../../app/theme.dart';
 import 'common_widgets.dart';
 
@@ -96,10 +95,6 @@ class _NovelRankListState extends ConsumerState<NovelRankList> {
       return const Center(child: Text('暂无数据'));
     }
 
-    // Batch load tags for all visible novels
-    final novelIds = _novels.map((n) => n.id).toList();
-    final tagsAsync = ref.watch(novelTagsBatchProvider(novelIds));
-
     return Stack(
       children: [
         ListView.builder(
@@ -114,13 +109,11 @@ class _NovelRankListState extends ConsumerState<NovelRankList> {
               );
             }
             final novel = _novels[index];
-            final tags = tagsAsync.valueOrNull?[novel.id];
             return NovelRankRow(
               novel: novel,
               rank: index + 1,
               showRank: widget.showRank,
               valueLabel: widget.valueLabel,
-              tags: tags,
             );
           },
         ),
@@ -149,7 +142,6 @@ class NovelRankRow extends StatelessWidget {
   final int rank;
   final bool showRank;
   final String valueLabel;
-  final List<Tag>? tags; // Optional pre-loaded tags
 
   const NovelRankRow({
     super.key,
@@ -157,7 +149,6 @@ class NovelRankRow extends StatelessWidget {
     required this.rank,
     this.showRank = true,
     this.valueLabel = '点击',
-    this.tags,
   });
 
   @override
@@ -194,9 +185,6 @@ class NovelRankRow extends StatelessWidget {
                   const SizedBox(height: 4),
                   // Badges
                   _buildBadges(),
-                  const SizedBox(height: 4),
-                  // Tags (only if pre-loaded)
-                  if (tags != null && tags!.isNotEmpty) _buildTags(tags!),
                 ],
               ),
             ),
@@ -334,29 +322,6 @@ class NovelRankRow extends StatelessWidget {
         GenreBadge(genre: novel.genre),
         PtypeBadge(ptype: novel.ptype),
       ],
-    );
-  }
-
-  Widget _buildTags(List<Tag> tags) {
-    if (tags.isEmpty) return const SizedBox.shrink();
-    return Wrap(
-      spacing: 4,
-      runSpacing: 2,
-      children: tags.take(3).map((tag) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
-        ),
-        child: Text(
-          tag.name,
-          style: TextStyle(
-            fontSize: 10,
-            color: AppColors.primary,
-          ),
-        ),
-      )).toList(),
     );
   }
 
