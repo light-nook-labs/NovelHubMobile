@@ -35,8 +35,7 @@ class _GenreListScreenState extends ConsumerState<GenreListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final hideOther = ref.watch(hideOtherNotifierProvider);
-    final items = genreMapping.getAllZh(hideOther: hideOther);
+    final items = genreMapping.getAllZh();
     
     return Scaffold(
       appBar: AppBar(
@@ -94,8 +93,7 @@ class _StatusListScreenState extends ConsumerState<StatusListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final hideOther = ref.watch(hideOtherNotifierProvider);
-    final items = statusMapping.getAllZh(hideOther: hideOther);
+    final items = statusMapping.getAllZh();
     
     return Scaffold(
       appBar: AppBar(
@@ -153,8 +151,7 @@ class _PtypeListScreenState extends ConsumerState<PtypeListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final hideOther = ref.watch(hideOtherNotifierProvider);
-    final items = ptypeMapping.getAllZh(hideOther: hideOther);
+    final items = ptypeMapping.getAllZh();
     
     return Scaffold(
       appBar: AppBar(

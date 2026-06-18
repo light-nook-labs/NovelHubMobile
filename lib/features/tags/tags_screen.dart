@@ -212,7 +212,6 @@ class _TagDetailScreenState extends ConsumerState<TagDetailScreen> {
   Widget build(BuildContext context) {
     final tagAsync = ref.watch(tagProvider(widget.tagId));
     final db = ref.read(databaseProvider);
-    final hideOther = ref.watch(hideOtherNotifierProvider);
 
     final hasFilters =
         _selectedGenre != null ||
@@ -238,7 +237,7 @@ class _TagDetailScreenState extends ConsumerState<TagDetailScreen> {
               Icons.tune,
               color: hasFilters ? AppColors.primary : null,
             ),
-            onPressed: () => _showFilterBottomSheet(context, hideOther),
+            onPressed: () => _showFilterBottomSheet(context),
           ),
         ],
       ),
@@ -267,8 +266,9 @@ class _TagDetailScreenState extends ConsumerState<TagDetailScreen> {
     };
   }
 
-  void _showFilterBottomSheet(BuildContext context, bool hideOther) {
-    final availableYearsAsync = ref.read(availableYearsProvider);
+  void _showFilterBottomSheet(BuildContext context) {
+    // Watch to ensure years are loaded before showing filter
+    final availableYearsAsync = ref.watch(availableYearsProvider);
     final availableYears = availableYearsAsync.valueOrNull ?? [];
     showModalBottomSheet(
       context: context,
@@ -284,7 +284,6 @@ class _TagDetailScreenState extends ConsumerState<TagDetailScreen> {
         selectedMaxWordNum: _selectedMaxWordNum,
         sortBy: _sortBy,
         descending: _descending,
-        hideOther: hideOther,
         availableYears: availableYears,
         onApply: (genre, status, year, minWordNum, maxWordNum, sortBy, descending) {
           setState(() {

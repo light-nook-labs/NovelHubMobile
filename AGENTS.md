@@ -25,7 +25,6 @@ Mobile app for [Novel Hub](https://github.com/light-nook-labs/novel_hub) — off
 | Dark mode | ✅ | ✅ | Manual theme switching |
 | Load more | ✅ | ✅ | 48 per page, back-to-top button |
 | Word count filter | ✅ | ✅ | Range-based filter with breakpoints |
-| Hide "Other" option | ✅ | ✅ | Configurable in settings |
 
 ## Tech Stack
 
@@ -148,15 +147,15 @@ Data is split into chunks based on activity level:
 | Chunk | Status | Records | Size (compressed) | Update Frequency |
 |-------|--------|---------|-------------------|------------------|
 | Cold | 断更, 已完结 | ~241k | ~58MB | Never |
-| Warm | 完结A, 断更A | ~2k | ~1.4MB | Quarterly |
-| Hot | 连载中 | ~3k | ~2.1MB | Monthly |
+| Warm | 完结A, 断更A | ~2.5k | ~1.6MB | Quarterly |
+| Hot | 连载中 | ~2.8k | ~1.9MB | Monthly |
 
 **下架 (removed) and 其他 (other) data is excluded** as it has no value.
 
 **App bundling:**
 - App includes: Cold chunk (~58MB compressed .gz)
 - First launch download: Warm + Hot chunks (~3.5MB)
-- Monthly update: Hot chunk (~2.1MB)
+- Monthly update: Hot chunk (~1.9MB)
 
 ### Novel Data Schema (JSONL)
 
@@ -186,15 +185,16 @@ Data is split into chunks based on activity level:
 
 **Chunked database**: `assets/chunks/`
 - `cold_chunk.sqlite.gz` (~58MB compressed) - 断更, 已完结
-- `warm_chunk.sqlite` (~1.4MB) - 完结A, 断更A
-- `hot_chunk.sqlite` (~2.1MB) - 连载中
+- `warm_chunk.sqlite` (~1.6MB) - 完结A, 断更A
+- `hot_chunk.sqlite` (~1.9MB) - 连载中
 
 **Runtime path**: `~/.local/share/novel_hub_mobile/chunks/`
 
 **Database provider**: KeepAlive singleton (no multiple instances)
 
 **Pre-computed data** (built into chunks, read-only):
-- Authors table: `novel_count`, `banner_count`, `top_novel_id`, `top_novel_title`, `top_novel_clicks`
+- Authors table: `top_novel_id`, `top_novel_title`, `top_novel_clicks`
+- Each chunk contains only authors that appear in that chunk's novels
 - All indexes created at build time for fast queries
 - Authors sorted by `top_novel_clicks DESC` (no runtime aggregation)
 
@@ -204,8 +204,6 @@ Data is split into chunks based on activity level:
 |--------|------|-------------|
 | id | INTEGER PK | Auto-increment |
 | name | TEXT UNIQUE | Author name |
-| novel_count | INTEGER | Total novels by this author |
-| banner_count | INTEGER | Novels with banner |
 | top_novel_id | INTEGER | ID of top novel (by clicks) |
 | top_novel_title | TEXT | Title of top novel |
 | top_novel_clicks | INTEGER | Clicks of top novel |
@@ -217,6 +215,13 @@ Data is split into chunks based on activity level:
 - Novel card: 4:5 cover ratio, title + status badge
 - Detail page: Info left, cover right
 - Novel rank list: Reusable component for consistent layout
+
+**NovelRankRow:**
+- Title with novel ID
+- Author with person icon
+- Status/Genre/Ptype badges
+- Tags (max 3, theme colored)
+- Value (clicks/words/etc.)
 
 **Colors:**
 - No cold colors (blue, indigo, cyan, purple, fuchsia)

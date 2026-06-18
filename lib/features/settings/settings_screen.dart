@@ -2,14 +2,12 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dio/dio.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../data/repositories/providers.dart';
-import '../../data/services/chunked_sync_service.dart';
 import '../../app/theme.dart';
 import '../../app/theme_provider.dart';
 import '../../app/settings_provider.dart';
@@ -20,7 +18,6 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeNotifierProvider);
-    final hideOther = ref.watch(hideOtherNotifierProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('设置')),
@@ -40,42 +37,16 @@ class SettingsScreen extends ConsumerWidget {
                         .setThemeMode(mode);
                   },
                 ),
-                const Divider(height: 1),
-                SwitchListTile(
-                  secondary: const Icon(
-                    Icons.visibility_off,
-                    color: AppColors.primary,
-                  ),
-                  title: const Text('隐藏"其他"选项'),
-                  subtitle: const Text('隐藏分类、状态、类型中的"其他"选项'),
-                  value: hideOther,
-                  onChanged: (value) {
-                    ref
-                        .read(hideOtherNotifierProvider.notifier)
-                        .setHideOther(value);
-                  },
-                ),
               ],
             ),
           ),
 
           // Sync section
-          _SectionHeader(title: '数据同步'),
+          _SectionHeader(title: '数据管理'),
           Card(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Column(
               children: [
-                ListTile(
-                  leading: const Icon(
-                    Icons.cloud_download,
-                    color: AppColors.primary,
-                  ),
-                  title: const Text('同步数据'),
-                  subtitle: const Text('从 GitHub 下载最新数据'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _startSync(context, ref),
-                ),
-                const Divider(height: 1),
                 ListTile(
                   leading: const Icon(
                     Icons.upload_file,
@@ -202,75 +173,6 @@ class SettingsScreen extends ConsumerWidget {
     }
   }
 
-  void _startSync(BuildContext context, WidgetRef ref) async {
-    final dio = ref.read(dioProvider);
-    final syncService = ChunkedSyncService(dio);
-
-    if (!context.mounted) return;
-
-    // Show dialog and get navigator to pop later
-    final navigator = Navigator.of(context);
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const _SyncProgressDialog(),
-    );
-
-    try {
-      // Check for updates
-      final chunksToUpdate = await syncService.checkForUpdates();
-
-      if (chunksToUpdate.isEmpty) {
-        if (!context.mounted) return;
-        navigator.pop();
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('数据已是最新')));
-        return;
-      }
-
-      // Download each chunk
-      for (final chunk in chunksToUpdate) {
-        final result = await syncService.downloadChunk(
-          chunk,
-          onProgress: (progress) {
-            // Update progress dialog
-          },
-        );
-
-        if (!result.success) {
-          if (!context.mounted) return;
-          navigator.pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('同步失败: ${result.error}')),
-          );
-          return;
-        }
-      }
-
-      if (!context.mounted) return;
-      navigator.pop();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('同步成功: ${chunksToUpdate.length} 个数据块')),
-      );
-
-      // Refresh statistics
-      Future.microtask(() {
-        ref.invalidate(statisticsProvider);
-        ref.invalidate(dbMergeTimeProvider);
-      });
-    } catch (e) {
-      if (!context.mounted) return;
-      try {
-        navigator.pop();
-      } catch (_) {}
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('错误: $e')));
-    }
-  }
-
   void _importDatabase(BuildContext context, WidgetRef ref) async {
     try {
       // Pick SQLite file
@@ -293,23 +195,17 @@ class SettingsScreen extends ConsumerWidget {
 
       if (!context.mounted) return;
 
-      // Show dialog and get navigator to pop later
-      final navigator = Navigator.of(context);
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const _SyncProgressDialog(),
-      );
-
-      // Copy file to chunks directory
-      final dio = ref.read(dioProvider);
-      final syncService = ChunkedSyncService(dio);
-      final chunkPath = await syncService.getChunkPath('hot');
-
+      // Copy file to app documents directory
+      final appDir = await getApplicationDocumentsDirectory();
+      final chunksDir = Directory('${appDir.path}/chunks');
+      if (!await chunksDir.exists()) {
+        await chunksDir.create(recursive: true);
+      }
+      
+      final chunkPath = '${chunksDir.path}/hot_chunk.sqlite';
       await file.copy(chunkPath);
 
       if (!context.mounted) return;
-      navigator.pop();
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('导入成功')),
@@ -349,18 +245,17 @@ class SettingsScreen extends ConsumerWidget {
               Navigator.pop(dialogContext);
 
               // Delete all chunks
-              final dio = ref.read(dioProvider);
-              final syncService = ChunkedSyncService(dio);
-              for (final chunkName in ['cold', 'warm', 'hot']) {
-                final path = await syncService.getChunkPath(chunkName);
-                final file = File(path);
-                if (await file.exists()) {
-                  await file.delete();
-                }
+              final appDir = await getApplicationDocumentsDirectory();
+              final chunksDir = Directory('${appDir.path}/chunks');
+              if (await chunksDir.exists()) {
+                await chunksDir.delete(recursive: true);
               }
 
-              // Copy bundled chunks
-              await syncService.copyBundledChunks();
+              // Delete merged database
+              final dbFile = File('${appDir.path}/novel_hub.sqlite');
+              if (await dbFile.exists()) {
+                await dbFile.delete();
+              }
 
               if (context.mounted) {
                 Future.microtask(() {
@@ -532,24 +427,6 @@ class _ThemeOption extends StatelessWidget {
           ? const Icon(Icons.check, color: AppColors.primary)
           : null,
       onTap: onTap,
-    );
-  }
-}
-
-class _SyncProgressDialog extends StatelessWidget {
-  const _SyncProgressDialog();
-
-  @override
-  Widget build(BuildContext context) {
-    return const AlertDialog(
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          CircularProgressIndicator(),
-          SizedBox(height: 16),
-          Text('正在同步数据...'),
-        ],
-      ),
     );
   }
 }

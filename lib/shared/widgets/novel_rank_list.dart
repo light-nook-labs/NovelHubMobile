@@ -188,6 +188,10 @@ class NovelRankRow extends StatelessWidget {
                   // Title + ID
                   _buildTitle(context),
                   const SizedBox(height: 4),
+                  // Author with avatar icon
+                  if (novel.author != null && novel.author!.isNotEmpty)
+                    _buildAuthor(),
+                  const SizedBox(height: 4),
                   // Badges
                   _buildBadges(),
                   const SizedBox(height: 4),
@@ -297,6 +301,30 @@ class NovelRankRow extends StatelessWidget {
     );
   }
 
+  Widget _buildAuthor() {
+    return Row(
+      children: [
+        Icon(
+          Icons.person,
+          size: 14,
+          color: Colors.grey[500],
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            novel.author!,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildBadges() {
     return Wrap(
       spacing: 4,
@@ -314,17 +342,18 @@ class NovelRankRow extends StatelessWidget {
     return Wrap(
       spacing: 4,
       runSpacing: 2,
-      children: tags.take(5).map((tag) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      children: tags.take(3).map((tag) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         decoration: BoxDecoration(
-          color: Colors.grey.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(3),
+          color: AppColors.primary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
         ),
         child: Text(
           tag.name,
           style: TextStyle(
-            fontSize: 9,
-            color: Colors.grey[600],
+            fontSize: 10,
+            color: AppColors.primary,
           ),
         ),
       )).toList(),

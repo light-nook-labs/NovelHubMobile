@@ -59,42 +59,45 @@ def merge_chunks(chunks_dir: str, output_path: str) -> None:
         conn.execute('INSERT OR REPLACE INTO novel_tags SELECT * FROM warm.novel_tags')
         conn.execute('INSERT OR REPLACE INTO novel_tags SELECT * FROM hot.novel_tags')
         
+        # Merge authors: collect from all chunks, keep best top_novel per author
+        print('  Merging authors...')
+        
+        # Collect all authors from all chunks
+        all_authors = {}  # name -> {top_novel_id, top_novel_title, top_novel_clicks}
+        
+        for chunk_alias in ['main', 'warm', 'hot']:
+            if chunk_alias == 'main':
+                cursor = conn.execute('SELECT name, top_novel_id, top_novel_title, top_novel_clicks FROM authors')
+            else:
+                cursor = conn.execute(f'SELECT name, top_novel_id, top_novel_title, top_novel_clicks FROM {chunk_alias}.authors')
+            
+            for row in cursor:
+                name, top_novel_id, top_novel_title, top_novel_clicks = row
+                if name not in all_authors or top_novel_clicks > all_authors[name]['top_novel_clicks']:
+                    all_authors[name] = {
+                        'top_novel_id': top_novel_id,
+                        'top_novel_title': top_novel_title,
+                        'top_novel_clicks': top_novel_clicks,
+                    }
+        
+        # Clear and repopulate authors table
+        conn.execute('DELETE FROM authors')
+        for author_name, author_stat in all_authors.items():
+            conn.execute('''
+                INSERT INTO authors (name, top_novel_id, top_novel_title, top_novel_clicks)
+                VALUES (?, ?, ?, ?)
+            ''', (
+                author_name,
+                author_stat['top_novel_id'],
+                author_stat['top_novel_title'],
+                author_stat['top_novel_clicks'],
+            ))
+        
+        conn.commit()
+        
         # Detach chunks
         conn.execute("DETACH warm")
         conn.execute("DETACH hot")
-        
-        conn.commit()
-        
-        # Recompute author stats
-        print('  Recomputing author stats...')
-        conn.execute('''
-            UPDATE authors SET 
-                novel_count = (
-                    SELECT COUNT(*) FROM novels WHERE novels.author = authors.name
-                ),
-                banner_count = (
-                    SELECT COUNT(*) FROM novels WHERE novels.author = authors.name AND has_banner = 1
-                ),
-                top_novel_id = (
-                    SELECT id FROM novels 
-                    WHERE novels.author = authors.name 
-                    ORDER BY click_num DESC LIMIT 1
-                ),
-                top_novel_title = (
-                    SELECT title FROM novels 
-                    WHERE novels.author = authors.name 
-                    ORDER BY click_num DESC LIMIT 1
-                ),
-                top_novel_clicks = (
-                    SELECT COALESCE(MAX(click_num), 0) FROM novels 
-                    WHERE novels.author = authors.name
-                )
-        ''')
-        
-        # Delete authors with no novels
-        conn.execute('DELETE FROM authors WHERE novel_count = 0 OR novel_count IS NULL')
-        
-        conn.commit()
         
         # Get stats
         cursor = conn.cursor()

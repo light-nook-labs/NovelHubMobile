@@ -30,6 +30,7 @@ class _NovelsByStatusScreenState extends ConsumerState<NovelsByStatusScreen>
 
   late TabController _tabController;
 
+  // 其他 is always filtered in DB, so never show it
   static const _statusTabs = [
     {'label': '全部', 'value': null},
     {'label': '已完结', 'value': 2},
@@ -37,7 +38,6 @@ class _NovelsByStatusScreenState extends ConsumerState<NovelsByStatusScreen>
     {'label': '断更', 'value': 4},
     {'label': '断更A', 'value': 5},
     {'label': '完结A', 'value': 6},
-    {'label': '其他', 'value': 1},
   ];
 
   @override
@@ -163,8 +163,8 @@ class _NovelsByStatusScreenState extends ConsumerState<NovelsByStatusScreen>
   }
 
   void _showFilterBottomSheet(BuildContext context) {
-    final hideOther = ref.read(hideOtherNotifierProvider);
-    final availableYearsAsync = ref.read(availableYearsProvider);
+    // Watch to ensure years are loaded before showing filter
+    final availableYearsAsync = ref.watch(availableYearsProvider);
     final availableYears = availableYearsAsync.valueOrNull ?? [];
     showModalBottomSheet(
       context: context,
@@ -177,7 +177,6 @@ class _NovelsByStatusScreenState extends ConsumerState<NovelsByStatusScreen>
         selectedYear: _selectedYear,
         sortBy: _sortBy,
         descending: _descending,
-        hideOther: hideOther,
         availableYears: availableYears,
         onApply: (genre, year, sortBy, descending) {
           setState(() {
@@ -212,7 +211,6 @@ class _FilterBottomSheet extends StatefulWidget {
   final int? selectedYear;
   final String sortBy;
   final bool descending;
-  final bool hideOther;
   final List<int> availableYears;
   final Function(int?, int?, String, bool) onApply;
 
@@ -221,7 +219,6 @@ class _FilterBottomSheet extends StatefulWidget {
     required this.selectedYear,
     required this.sortBy,
     required this.descending,
-    required this.hideOther,
     required this.availableYears,
     required this.onApply,
   });
@@ -294,7 +291,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                 children: [
                   _buildSection(
                     title: '分类',
-                    options: genreMapping.getAllZh(hideOther: widget.hideOther).map((zh) {
+                    options: genreMapping.getAllZh().map((zh) {
                       final value = genreMapping.getValue(zh);
                       return _Option(label: zh, value: value);
                     }).toList(),

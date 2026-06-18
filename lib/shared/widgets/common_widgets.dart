@@ -551,7 +551,6 @@ class NovelFilterBottomSheet extends StatefulWidget {
   final int? selectedMaxWordNum;
   final String sortBy;
   final bool descending;
-  final bool hideOther;
   final List<int> availableYears;
   final Function(int?, int?, int?, int?, int?, String, bool) onApply;
 
@@ -564,7 +563,6 @@ class NovelFilterBottomSheet extends StatefulWidget {
     this.selectedMaxWordNum,
     required this.sortBy,
     required this.descending,
-    required this.hideOther,
     required this.availableYears,
     required this.onApply,
   });
@@ -661,7 +659,7 @@ class _NovelFilterBottomSheetState extends State<NovelFilterBottomSheet> {
                 children: [
                   _buildSection(
                     title: '分类',
-                    options: genreMapping.getAllZh(hideOther: widget.hideOther).map((zh) {
+                    options: genreMapping.getAllZh().map((zh) {
                       final value = genreMapping.getValue(zh);
                       return _Option(label: zh, value: value);
                     }).toList(),
@@ -671,7 +669,7 @@ class _NovelFilterBottomSheetState extends State<NovelFilterBottomSheet> {
                   const SizedBox(height: 24),
                   _buildSection(
                     title: '状态',
-                    options: statusMapping.getAllZh(hideOther: widget.hideOther).map((zh) {
+                    options: statusMapping.getAllZh().map((zh) {
                       final value = statusMapping.getValue(zh);
                       return _Option(label: zh, value: value);
                     }).toList(),

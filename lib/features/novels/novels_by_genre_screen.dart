@@ -29,10 +29,10 @@ class _NovelsByGenreScreenState extends ConsumerState<NovelsByGenreScreen>
   bool _descending = true;
 
   TabController? _tabController;
-  bool _lastHideOther = true;
 
-  List<Map<String, dynamic>> _getGenreTabs(bool hideOther) {
-    final tabs = [
+  List<Map<String, dynamic>> _getGenreTabs() {
+    // 其他 is always filtered in DB, so never show it
+    return [
       {'label': '全部', 'value': null},
       {'label': '魔幻', 'value': 2},
       {'label': '玄幻', 'value': 3},
@@ -44,16 +44,12 @@ class _NovelsByGenreScreenState extends ConsumerState<NovelsByGenreScreen>
       {'label': '同人', 'value': 9},
       {'label': '悬疑', 'value': 10},
     ];
-    if (!hideOther) {
-      tabs.add({'label': '其他', 'value': 1});
-    }
-    return tabs;
   }
 
-  void _ensureTabController(bool hideOther) {
-    if (_tabController != null && hideOther == _lastHideOther) return;
+  void _ensureTabController() {
+    if (_tabController != null) return;
 
-    final genreTabs = _getGenreTabs(hideOther);
+    final genreTabs = _getGenreTabs();
 
     int initialTabIndex = 0;
     if (widget.initialGenre != null) {
@@ -74,7 +70,6 @@ class _NovelsByGenreScreenState extends ConsumerState<NovelsByGenreScreen>
         setState(() {});
       }
     });
-    _lastHideOther = hideOther;
   }
 
   @override
@@ -89,8 +84,7 @@ class _NovelsByGenreScreenState extends ConsumerState<NovelsByGenreScreen>
   }
 
   int? get _selectedGenre {
-    final hideOther = ref.read(hideOtherNotifierProvider);
-    final genreTabs = _getGenreTabs(hideOther);
+    final genreTabs = _getGenreTabs();
     final index = _tabController?.index ?? 0;
     if (index < genreTabs.length) {
       return genreTabs[index]['value'] as int?;
@@ -100,9 +94,8 @@ class _NovelsByGenreScreenState extends ConsumerState<NovelsByGenreScreen>
 
   @override
   Widget build(BuildContext context) {
-    final hideOther = ref.watch(hideOtherNotifierProvider);
-    _ensureTabController(hideOther);
-    final genreTabs = _getGenreTabs(hideOther);
+    _ensureTabController();
+    final genreTabs = _getGenreTabs();
 
     final novelsAsync = ref.watch(
       filteredNovelsProvider(
@@ -193,8 +186,8 @@ class _NovelsByGenreScreenState extends ConsumerState<NovelsByGenreScreen>
   }
 
   void _showFilterBottomSheet(BuildContext context) {
-    final hideOther = ref.read(hideOtherNotifierProvider);
-    final availableYearsAsync = ref.read(availableYearsProvider);
+    // Watch to ensure years are loaded before showing filter
+    final availableYearsAsync = ref.watch(availableYearsProvider);
     final availableYears = availableYearsAsync.valueOrNull ?? [];
     showModalBottomSheet(
       context: context,
@@ -207,7 +200,6 @@ class _NovelsByGenreScreenState extends ConsumerState<NovelsByGenreScreen>
         selectedYear: _selectedYear,
         sortBy: _sortBy,
         descending: _descending,
-        hideOther: hideOther,
         availableYears: availableYears,
         onApply: (status, year, sortBy, descending) {
           setState(() {
@@ -242,7 +234,6 @@ class _FilterBottomSheet extends StatefulWidget {
   final int? selectedYear;
   final String sortBy;
   final bool descending;
-  final bool hideOther;
   final List<int> availableYears;
   final Function(int?, int?, String, bool) onApply;
 
@@ -251,7 +242,6 @@ class _FilterBottomSheet extends StatefulWidget {
     required this.selectedYear,
     required this.sortBy,
     required this.descending,
-    required this.hideOther,
     required this.availableYears,
     required this.onApply,
   });
@@ -324,7 +314,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                 children: [
                   _buildSection(
                     title: '状态',
-                    options: statusMapping.getAllZh(hideOther: widget.hideOther).map((zh) {
+                    options: statusMapping.getAllZh().map((zh) {
                       final value = statusMapping.getValue(zh);
                       return _Option(label: zh, value: value);
                     }).toList(),

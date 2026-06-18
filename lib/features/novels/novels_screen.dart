@@ -38,25 +38,21 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
   bool _descending = true;
 
   TabController? _tabController;
-  bool _lastHideOther = true;
 
-  List<Map<String, dynamic>> _getPtypeTabs(bool hideOther) {
-    final tabs = [
+  List<Map<String, dynamic>> _getPtypeTabs() {
+    // 其他 is always filtered in DB, so never show it
+    return [
       {'label': '全部', 'value': null},
       {'label': '免费', 'value': 2},
       {'label': '签约', 'value': 3},
       {'label': 'VIP', 'value': 4},
     ];
-    if (!hideOther) {
-      tabs.add({'label': '其他', 'value': 1});
-    }
-    return tabs;
   }
 
-  void _ensureTabController(bool hideOther) {
-    if (_tabController != null && hideOther == _lastHideOther) return;
+  void _ensureTabController() {
+    if (_tabController != null) return;
 
-    final ptypeTabs = _getPtypeTabs(hideOther);
+    final ptypeTabs = _getPtypeTabs();
 
     int initialTabIndex = 0;
     if (widget.initialPtype != null) {
@@ -77,7 +73,6 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
         setState(() {});
       }
     });
-    _lastHideOther = hideOther;
   }
 
   @override
@@ -94,8 +89,7 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
   }
 
   int? get _selectedPtype {
-    final hideOther = ref.read(hideOtherNotifierProvider);
-    final ptypeTabs = _getPtypeTabs(hideOther);
+    final ptypeTabs = _getPtypeTabs();
     final index = _tabController?.index ?? 0;
     if (index < ptypeTabs.length) {
       return ptypeTabs[index]['value'] as int?;
@@ -105,9 +99,8 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final hideOther = ref.watch(hideOtherNotifierProvider);
-    _ensureTabController(hideOther);
-    final ptypeTabs = _getPtypeTabs(hideOther);
+    _ensureTabController();
+    final ptypeTabs = _getPtypeTabs();
 
     final novelsAsync = ref.watch(
       filteredNovelsProvider(
@@ -181,8 +174,8 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
   }
 
   void _showFilterBottomSheet(BuildContext context) {
-    final hideOther = ref.read(hideOtherNotifierProvider);
-    final availableYearsAsync = ref.read(availableYearsProvider);
+    // Watch to ensure years are loaded before showing filter
+    final availableYearsAsync = ref.watch(availableYearsProvider);
     final availableYears = availableYearsAsync.valueOrNull ?? [];
     showModalBottomSheet(
       context: context,
@@ -198,7 +191,6 @@ class _NovelsScreenState extends ConsumerState<NovelsScreen>
         selectedMaxWordNum: _selectedMaxWordNum,
         sortBy: _sortBy,
         descending: _descending,
-        hideOther: hideOther,
         availableYears: availableYears,
         onApply:
             (genre, status, year, minWordNum, maxWordNum, sortBy, descending) {

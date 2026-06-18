@@ -11,8 +11,6 @@ part 'database.g.dart';
 class Authors extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text().withLength(min: 1, max: 200)();
-  IntColumn get novelCount => integer().withDefault(const Constant(0))();
-  IntColumn get bannerCount => integer().withDefault(const Constant(0))();
   IntColumn get topNovelId => integer().nullable()();
   TextColumn get topNovelTitle => text().nullable()();
   IntColumn get topNovelClicks => integer().withDefault(const Constant(0))();
@@ -71,16 +69,12 @@ class AuthorWithStats {
   final int id;
   final String name;
   final String? topNovelTitle;
-  final int novelCount;
-  final int bannerCount;
   final int topNovelClicks;
 
   AuthorWithStats({
     required this.id,
     required this.name,
     this.topNovelTitle,
-    required this.novelCount,
-    required this.bannerCount,
     required this.topNovelClicks,
   });
 }
@@ -112,6 +106,26 @@ class ContestWithCount {
 @DriftDatabase(tables: [Authors, Tags, Contests, Novels, NovelTags])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
+
+  // Cache for static data that only changes when DB is rebuilt
+  List<int>? _cachedYears;
+  Map<String, int>? _cachedStatistics;
+  Map<int, int>? _cachedGenreCounts;
+  Map<int, int>? _cachedStatusCounts;
+  Map<int, int>? _cachedPtypeCounts;
+  List<Tag>? _cachedAllTags;
+  List<Contest>? _cachedAllContests;
+
+  /// Clear all caches (call when DB is reset/rebuilt)
+  void clearCaches() {
+    _cachedYears = null;
+    _cachedStatistics = null;
+    _cachedGenreCounts = null;
+    _cachedStatusCounts = null;
+    _cachedPtypeCounts = null;
+    _cachedAllTags = null;
+    _cachedAllContests = null;
+  }
 
   @override
   int get schemaVersion => 1;
@@ -547,7 +561,7 @@ class AppDatabase extends _$AppDatabase {
     int limit = 1000,
     int offset = 0,
   }) async {
-    // Use pre-computed stats from authors table (built into the database)
+    // Use pre-computed stats from authors table
     final query = select(authors)
       ..orderBy([(t) => OrderingTerm.desc(t.topNovelClicks)])
       ..limit(limit, offset: offset);
@@ -559,8 +573,6 @@ class AppDatabase extends _$AppDatabase {
         id: author.id,
         name: author.name,
         topNovelTitle: author.topNovelTitle,
-        novelCount: author.novelCount,
-        bannerCount: author.bannerCount,
         topNovelClicks: author.topNovelClicks,
       );
     }).toList();
@@ -569,10 +581,21 @@ class AppDatabase extends _$AppDatabase {
   // ===== Tag queries =====
 
   Future<List<Tag>> getAllTags({int limit = 100, int offset = 0}) async {
+    // Only cache when using default parameters
+    if (limit == 100 && offset == 0 && _cachedAllTags != null) {
+      return _cachedAllTags!;
+    }
+    
     final query = select(tags)
       ..orderBy([(t) => OrderingTerm.asc(t.name)])
       ..limit(limit, offset: offset);
-    return query.get();
+    final result = await query.get();
+    
+    // Cache only default query
+    if (limit == 100 && offset == 0) {
+      _cachedAllTags = result;
+    }
+    return result;
   }
 
   Future<List<TagWithCount>> getTagsWithCount({
@@ -662,10 +685,21 @@ class AppDatabase extends _$AppDatabase {
     int limit = 100,
     int offset = 0,
   }) async {
+    // Only cache when using default parameters
+    if (limit == 100 && offset == 0 && _cachedAllContests != null) {
+      return _cachedAllContests!;
+    }
+    
     final query = select(contests)
       ..orderBy([(t) => OrderingTerm.asc(t.name)])
       ..limit(limit, offset: offset);
-    return query.get();
+    final result = await query.get();
+    
+    // Cache only default query
+    if (limit == 100 && offset == 0) {
+      _cachedAllContests = result;
+    }
+    return result;
   }
 
   Future<List<ContestWithCount>> getContestsWithCount({
@@ -811,6 +845,9 @@ class AppDatabase extends _$AppDatabase {
   // ===== Statistics =====
 
   Future<Map<String, int>> getStatistics() async {
+    // Return cached data if available
+    if (_cachedStatistics != null) return _cachedStatistics!;
+    
     final novelCount = await getNovelCount();
 
     final authorCountQuery = countAll();
@@ -828,29 +865,26 @@ class AppDatabase extends _$AppDatabase {
     final contestResult = await contestQuery.getSingle();
     final contestCount = contestResult.read(contestCountQuery) ?? 0;
 
-    // Use COUNT(DISTINCT) instead of loading all values into memory
+    // 其他 is filtered in DB, so count all genres/statuses/ptypes
     final genreCountQuery = countAll();
     final genreQuery = selectOnly(novels)
-      ..where(novels.genre.isBiggerThanValue(1))
       ..addColumns([genreCountQuery]);
     final genreResult = await genreQuery.getSingle();
     final genreCount = genreResult.read(genreCountQuery) ?? 0;
 
     final statusCountQuery = countAll();
     final statusQuery = selectOnly(novels)
-      ..where(novels.status.isBiggerThanValue(1))
       ..addColumns([statusCountQuery]);
     final statusResult = await statusQuery.getSingle();
     final statusCount = statusResult.read(statusCountQuery) ?? 0;
 
     final ptypeCountQuery = countAll();
     final ptypeQuery = selectOnly(novels)
-      ..where(novels.ptype.isBiggerThanValue(1))
       ..addColumns([ptypeCountQuery]);
     final ptypeResult = await ptypeQuery.getSingle();
     final ptypeCount = ptypeResult.read(ptypeCountQuery) ?? 0;
 
-    return {
+    final stats = {
       'novels': novelCount,
       'authors': authorCount,
       'tags': tagCount,
@@ -859,6 +893,10 @@ class AppDatabase extends _$AppDatabase {
       'statuses': statusCount,
       'ptypes': ptypeCount,
     };
+    
+    // Cache the result
+    _cachedStatistics = stats;
+    return stats;
   }
 
   // ===== Novel rankings =====
@@ -897,25 +935,33 @@ class AppDatabase extends _$AppDatabase {
   // ===== Enum count queries =====
 
   Future<List<int>> getAvailableYears() async {
-    final query = selectOnly(novels)
-      ..addColumns([novels.lastUpdate])
-      ..where(novels.lastUpdate.isNotNull());
-    final results = await query.get();
-    final years = <int>{};
-    for (final row in results) {
-      final lastUpdate = row.read(novels.lastUpdate);
-      if (lastUpdate != null && lastUpdate.length >= 4) {
-        final year = int.tryParse(lastUpdate.substring(0, 4));
-        if (year != null) {
-          years.add(year);
-        }
+    // Return cached data if available
+    if (_cachedYears != null) return _cachedYears!;
+    
+    // Use raw SQL to extract distinct years efficiently
+    final result = await customSelect(
+      "SELECT DISTINCT SUBSTR(last_update, 1, 4) as year FROM novels WHERE last_update IS NOT NULL ORDER BY year DESC",
+      readsFrom: {novels},
+    ).get();
+    
+    final years = <int>[];
+    for (final row in result) {
+      final yearStr = row.read<String>('year');
+      final year = int.tryParse(yearStr);
+      if (year != null) {
+        years.add(year);
       }
     }
-    final sortedYears = years.toList()..sort((a, b) => b.compareTo(a));
-    return sortedYears;
+    
+    // Cache the result
+    _cachedYears = years;
+    return years;
   }
 
   Future<Map<int, int>> getGenreCounts() async {
+    // Return cached data if available
+    if (_cachedGenreCounts != null) return _cachedGenreCounts!;
+    
     final query = selectOnly(novels)
       ..addColumns([novels.genre, countAll()])
       ..groupBy([novels.genre]);
@@ -926,10 +972,16 @@ class AppDatabase extends _$AppDatabase {
       final count = row.read(countAll()) ?? 0;
       counts[genre] = count;
     }
+    
+    // Cache the result
+    _cachedGenreCounts = counts;
     return counts;
   }
 
   Future<Map<int, int>> getStatusCounts() async {
+    // Return cached data if available
+    if (_cachedStatusCounts != null) return _cachedStatusCounts!;
+    
     final query = selectOnly(novels)
       ..addColumns([novels.status, countAll()])
       ..groupBy([novels.status]);
@@ -940,10 +992,16 @@ class AppDatabase extends _$AppDatabase {
       final count = row.read(countAll()) ?? 0;
       counts[status] = count;
     }
+    
+    // Cache the result
+    _cachedStatusCounts = counts;
     return counts;
   }
 
   Future<Map<int, int>> getPtypeCounts() async {
+    // Return cached data if available
+    if (_cachedPtypeCounts != null) return _cachedPtypeCounts!;
+    
     final query = selectOnly(novels)
       ..addColumns([novels.ptype, countAll()])
       ..groupBy([novels.ptype]);
@@ -954,6 +1012,9 @@ class AppDatabase extends _$AppDatabase {
       final count = row.read(countAll()) ?? 0;
       counts[ptype] = count;
     }
+    
+    // Cache the result
+    _cachedPtypeCounts = counts;
     return counts;
   }
 
@@ -975,6 +1036,9 @@ class AppDatabase extends _$AppDatabase {
       await _copyBundledChunk(chunkName, p.join(chunksDir, '${chunkName}_chunk.sqlite'));
     }
     await _createMergedDatabase(dbPath);
+    
+    // Clear caches after reset
+    clearCaches();
   }
 }
 
@@ -1066,11 +1130,14 @@ Future<void> _createMergedDatabase(String targetPath) async {
     db.execute("ATTACH '${warmPath}' AS warm");
     db.execute("ATTACH '${hotPath}' AS hot");
     
+    // Begin transaction
+    db.execute('BEGIN TRANSACTION');
+    
     // Insert novels from warm and hot chunks (novels are unique by id)
     db.execute('INSERT OR REPLACE INTO novels SELECT * FROM warm.novels');
     db.execute('INSERT OR REPLACE INTO novels SELECT * FROM hot.novels');
     
-    // Insert other tables (authors already have global stats from Python)
+    // Insert other tables
     db.execute('INSERT OR REPLACE INTO tags SELECT * FROM warm.tags');
     db.execute('INSERT OR REPLACE INTO tags SELECT * FROM hot.tags');
     db.execute('INSERT OR REPLACE INTO contests SELECT * FROM warm.contests');
@@ -1078,9 +1145,47 @@ Future<void> _createMergedDatabase(String targetPath) async {
     db.execute('INSERT OR REPLACE INTO novel_tags SELECT * FROM warm.novel_tags');
     db.execute('INSERT OR REPLACE INTO novel_tags SELECT * FROM hot.novel_tags');
     
+    // Merge authors: update existing if better, insert new ones
+    // Update existing authors if warm/hot has better stats
+    db.execute('''
+      UPDATE authors SET 
+        top_novel_id = warm_authors.top_novel_id,
+        top_novel_title = warm_authors.top_novel_title,
+        top_novel_clicks = warm_authors.top_novel_clicks
+      FROM warm.authors AS warm_authors
+      WHERE authors.name = warm_authors.name 
+        AND warm_authors.top_novel_clicks > authors.top_novel_clicks
+    ''');
+    db.execute('''
+      UPDATE authors SET 
+        top_novel_id = hot_authors.top_novel_id,
+        top_novel_title = hot_authors.top_novel_title,
+        top_novel_clicks = hot_authors.top_novel_clicks
+      FROM hot.authors AS hot_authors
+      WHERE authors.name = hot_authors.name 
+        AND hot_authors.top_novel_clicks > authors.top_novel_clicks
+    ''');
+    
+    // Insert new authors from warm and hot
+    db.execute('''
+      INSERT OR IGNORE INTO authors (name, top_novel_id, top_novel_title, top_novel_clicks)
+      SELECT name, top_novel_id, top_novel_title, top_novel_clicks FROM warm.authors
+    ''');
+    db.execute('''
+      INSERT OR IGNORE INTO authors (name, top_novel_id, top_novel_title, top_novel_clicks)
+      SELECT name, top_novel_id, top_novel_title, top_novel_clicks FROM hot.authors
+    ''');
+    
+    // Commit transaction
+    db.execute('COMMIT');
+    
     // Detach chunks
     db.execute("DETACH warm");
     db.execute("DETACH hot");
+  } catch (e) {
+    // Rollback on error
+    db.execute('ROLLBACK');
+    rethrow;
   } finally {
     db.dispose();
   }

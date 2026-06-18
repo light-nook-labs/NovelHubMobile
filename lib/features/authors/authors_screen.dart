@@ -141,13 +141,13 @@ class _AuthorsScreenState extends ConsumerState<AuthorsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  '${author.bannerCount}/${author.novelCount}',
+                                  formatNumber(author.topNovelClicks),
                                   style: AppTextStyles.labelLarge.copyWith(
                                     color: AppColors.primary,
                                   ),
                                 ),
                                 Text(
-                                  '背投/作品',
+                                  '点击',
                                   style: AppTextStyles.labelSmall.copyWith(
                                     color: Colors.grey[500],
                                   ),

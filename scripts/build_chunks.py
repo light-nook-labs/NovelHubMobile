@@ -84,8 +84,6 @@ def create_database(db_path: str, is_hot: bool = False) -> sqlite3.Connection:
         CREATE TABLE IF NOT EXISTS authors (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE,
-            novel_count INTEGER DEFAULT 0,
-            banner_count INTEGER DEFAULT 0,
             top_novel_id INTEGER,
             top_novel_title TEXT,
             top_novel_clicks INTEGER DEFAULT 0
@@ -136,7 +134,6 @@ def create_database(db_path: str, is_hot: bool = False) -> sqlite3.Connection:
     # Author indexes
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_authors_name ON authors(name)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_authors_clicks ON authors(top_novel_clicks DESC)')
-    cursor.execute('CREATE INDEX IF NOT EXISTS idx_authors_novel_count ON authors(novel_count DESC)')
     
     conn.commit()
     return conn
@@ -155,8 +152,6 @@ def insert_novel(conn: sqlite3.Connection, novel: dict) -> None:
     author_name = novel.get('author')
     if author_name:
         cursor.execute('INSERT OR IGNORE INTO authors (name) VALUES (?)', (author_name,))
-        cursor.execute('SELECT id FROM authors WHERE name = ?', (author_name,))
-        cursor.fetchone()  # Just to ensure it exists
     
     # Handle contest
     contest_name = novel.get('contest')
@@ -297,66 +292,49 @@ def process_jsonl_files(jsonl_dir: str, output_dir: str) -> dict:
                     print(f'  Warning: Error processing line {line_num}: {e}')
                     continue
     
-    # Compute GLOBAL author stats across all chunks
+    # Compute author stats for each chunk
     print()
-    print('Computing global author statistics...')
+    print('Computing author statistics for each chunk...')
     
-    # Collect all novels from all chunks into memory for global stats
-    all_novels = []
     for chunk_name, conn in connections.items():
         cursor = conn.cursor()
-        cursor.execute('SELECT id, author, has_banner, click_num, title FROM novels WHERE author IS NOT NULL')
-        all_novels.extend(cursor.fetchall())
-    
-    print(f'  Total novels for stats: {len(all_novels):,}')
-    
-    # Compute global author stats
-    author_stats = {}  # name -> {novel_count, banner_count, top_novel_id, top_novel_title, top_novel_clicks}
-    for novel_id, author, has_banner, click_num, title in all_novels:
-        if author not in author_stats:
-            author_stats[author] = {
-                'novel_count': 0,
-                'banner_count': 0,
-                'top_novel_id': novel_id,
-                'top_novel_title': title,
-                'top_novel_clicks': click_num or 0,
-            }
-        author_stat = author_stats[author]
-        author_stat['novel_count'] += 1
-        if has_banner:
-            author_stat['banner_count'] += 1
-        if (click_num or 0) > author_stat['top_novel_clicks']:
-            author_stat['top_novel_clicks'] = click_num or 0
-            author_stat['top_novel_id'] = novel_id
-            author_stat['top_novel_title'] = title
-    
-    print(f'  Unique authors: {len(author_stats):,}')
-    
-    # Write global stats to each chunk
-    print()
-    print('Writing global author stats to chunks...')
-    for chunk_name, conn in connections.items():
-        cursor = conn.cursor()
+        
+        # Get all novels from this chunk
+        cursor.execute('SELECT id, author, click_num, title FROM novels WHERE author IS NOT NULL')
+        chunk_novels = cursor.fetchall()
+        
+        # Compute author stats for this chunk
+        author_stats = {}  # name -> {top_novel_id, top_novel_clicks, top_novel_title}
+        for novel_id, author, click_num, title in chunk_novels:
+            if author not in author_stats:
+                author_stats[author] = {
+                    'top_novel_id': novel_id,
+                    'top_novel_clicks': click_num or 0,
+                    'top_novel_title': title,
+                }
+            author_stat = author_stats[author]
+            if (click_num or 0) > author_stat['top_novel_clicks']:
+                author_stat['top_novel_clicks'] = click_num or 0
+                author_stat['top_novel_id'] = novel_id
+                author_stat['top_novel_title'] = title
         
         # Clear existing authors
         cursor.execute('DELETE FROM authors')
         
-        # Insert all authors with global stats
+        # Insert authors with stats for this chunk
         for author_name, author_stat in author_stats.items():
             cursor.execute('''
-                INSERT INTO authors (name, novel_count, banner_count, top_novel_id, top_novel_title, top_novel_clicks)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO authors (name, top_novel_id, top_novel_title, top_novel_clicks)
+                VALUES (?, ?, ?, ?)
             ''', (
                 author_name,
-                author_stat['novel_count'],
-                author_stat['banner_count'],
                 author_stat['top_novel_id'],
                 author_stat['top_novel_title'],
                 author_stat['top_novel_clicks'],
             ))
         
         conn.commit()
-        print(f'  {chunk_name}: {len(author_stats)} authors written')
+        print(f'  {chunk_name}: {len(author_stats)} authors')
     
     # Commit and close connections
     for chunk_name, conn in connections.items():
