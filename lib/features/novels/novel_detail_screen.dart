@@ -66,28 +66,40 @@ class NovelDetailScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Breadcrumb
-          _Breadcrumb(novelTitle: novel.title),
-          AppSpacing.gapHeightL,
-
-          // Main: info + cover
+          // Hero: cover + title/author/badges
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Info (left)
+              // Cover (left)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: CoverImage(
+                  cover: novel.cover,
+                  width: 110,
+                  height: 147,
+                  borderRadius: 8,
+                ),
+              ),
+              AppSpacing.gapWidthL,
+
+              // Info (right)
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Title with copy button
+                    // Title + copy
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           child: Text(
                             novel.title,
                             style: AppTextStyles.titleLarge,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        const SizedBox(width: 8),
                         GestureDetector(
                           onTap: () {
                             Clipboard.setData(ClipboardData(text: novel.title));
@@ -100,21 +112,25 @@ class NovelDetailScreen extends ConsumerWidget {
                           },
                           child: Icon(
                             Icons.copy,
-                            size: 18,
+                            size: 16,
                             color: Colors.grey[500],
                           ),
                         ),
                       ],
                     ),
+                    AppSpacing.gapHeightXS,
+
+                    // Novel ID
                     Text(
                       '#${novel.id}',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey[500],
+                        fontSize: 11,
+                      ),
                     ),
                     AppSpacing.gapHeightS,
 
-                    // Author
+                    // Author with icon
                     authorAsync.when(
                       loading: () => const SizedBox.shrink(),
                       error: (_, __) => const SizedBox.shrink(),
@@ -124,11 +140,21 @@ class NovelDetailScreen extends ConsumerWidget {
                           onTap: () {
                             // Navigate to author detail
                           },
-                          child: Text(
-                            author.name,
-                            style: AppTextStyles.labelLarge.copyWith(
-                              color: AppColors.primary,
-                            ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.person, size: 15, color: AppColors.primary),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  author.name,
+                                  style: AppTextStyles.labelLarge.copyWith(
+                                    color: AppColors.primary,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         );
                       },
@@ -152,40 +178,29 @@ class NovelDetailScreen extends ConsumerWidget {
                     ),
                     AppSpacing.gapHeightS,
 
-                    // Tags (directly below badges)
-                    tagsAsync.when(
-                      loading: () => const SizedBox.shrink(),
-                      error: (_, __) => const SizedBox.shrink(),
-                      data: (tags) {
-                        if (tags.isEmpty) return const SizedBox.shrink();
-                        return Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: tags
-                              .map((tag) => _TagChip(name: tag.name))
-                              .toList(),
-                        );
-                      },
-                    ),
+                    // SFACG button
+                    _ViewOnSfacgButton(novelId: novel.id),
                   ],
                 ),
               ),
-              AppSpacing.gapWidthL,
-
-              // Cover (right)
-              Column(
-                children: [
-                  CoverImage(
-                    cover: novel.cover,
-                    width: 120,
-                    height: 160,
-                    borderRadius: 8,
-                  ),
-                  AppSpacing.gapHeightS,
-                  _ViewOnSfacgButton(novelId: novel.id),
-                ],
-              ),
             ],
+          ),
+          AppSpacing.gapHeightL,
+
+          // Tags
+          tagsAsync.when(
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+            data: (tags) {
+              if (tags.isEmpty) return const SizedBox.shrink();
+              return Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: tags
+                    .map((tag) => _TagChip(name: tag.name))
+                    .toList(),
+              );
+            },
           ),
           AppSpacing.gapHeightL,
 
@@ -232,42 +247,6 @@ class _ViewOnSfacgButton extends StatelessWidget {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
         ),
       ),
-    );
-  }
-}
-
-class _Breadcrumb extends StatelessWidget {
-  final String novelTitle;
-
-  const _Breadcrumb({required this.novelTitle});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        GestureDetector(
-          onTap: () => Navigator.of(context).pop(),
-          child: Text(
-            '首页',
-            style: TextStyle(color: Colors.grey[500], fontSize: 13),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Text('/', style: TextStyle(color: Colors.grey[400])),
-        ),
-        Expanded(
-          child: Text(
-            novelTitle,
-            style: TextStyle(
-              color: Theme.of(context).textTheme.bodyLarge?.color,
-              fontSize: 13,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
     );
   }
 }
