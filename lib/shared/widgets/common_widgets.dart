@@ -325,17 +325,19 @@ class BadgeWidget extends StatelessWidget {
   final String label;
   final Color color;
   final bool outlined;
+  final VoidCallback? onTap;
 
   const BadgeWidget({
     super.key,
     required this.label,
     required this.color,
     this.outlined = true,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final badge = Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
@@ -353,14 +355,23 @@ class BadgeWidget extends StatelessWidget {
         ),
       ),
     );
+
+    if (onTap != null) {
+      return GestureDetector(
+        onTap: onTap,
+        child: badge,
+      );
+    }
+    return badge;
   }
 }
 
 /// Reusable status badge
 class StatusBadge extends StatelessWidget {
   final int status;
+  final VoidCallback? onTap;
 
-  const StatusBadge({super.key, required this.status});
+  const StatusBadge({super.key, required this.status, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -373,21 +384,23 @@ class StatusBadge extends StatelessWidget {
       _ => Colors.grey,
     };
 
-    return BadgeWidget(label: statusMapping.getZh(status), color: color);
+    return BadgeWidget(label: statusMapping.getZh(status), color: color, onTap: onTap);
   }
 }
 
 /// Reusable genre badge
 class GenreBadge extends StatelessWidget {
   final int genre;
+  final VoidCallback? onTap;
 
-  const GenreBadge({super.key, required this.genre});
+  const GenreBadge({super.key, required this.genre, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return BadgeWidget(
       label: genreMapping.getZh(genre),
       color: AppColors.primary,
+      onTap: onTap,
     );
   }
 }
@@ -395,14 +408,16 @@ class GenreBadge extends StatelessWidget {
 /// Reusable ptype badge
 class PtypeBadge extends StatelessWidget {
   final int ptype;
+  final VoidCallback? onTap;
 
-  const PtypeBadge({super.key, required this.ptype});
+  const PtypeBadge({super.key, required this.ptype, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return BadgeWidget(
       label: ptypeMapping.getZh(ptype),
       color: AppColors.secondary,
+      onTap: onTap,
     );
   }
 }

@@ -5,6 +5,7 @@ import 'app/router.dart';
 import 'app/theme.dart';
 import 'app/theme_provider.dart';
 import 'data/models/database.dart';
+import 'data/repositories/providers.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,6 +33,9 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeNotifierProvider);
+
+    // Preload available years for filter
+    ref.watch(availableYearsProvider);
 
     return MaterialApp.router(
       title: 'Novel Hub',

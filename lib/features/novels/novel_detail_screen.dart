@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../data/repositories/providers.dart';
 import '../../data/models/database.dart';
 import '../../app/theme.dart';
 import '../../shared/widgets/common_widgets.dart';
 import '../../shared/utils/spacing.dart';
+import '../contests/contests_screen.dart';
+import '../bookshelf/bookshelf_provider.dart';
 
 const _sfacgUrlPattern = 'https://book.sfacg.com/Novel/{nid}/';
 
@@ -22,6 +25,7 @@ class NovelDetailScreen extends ConsumerWidget {
     final tagsAsync = ref.watch(novelTagsProvider(novelId));
     final authorAsync = ref.watch(novelAuthorProvider(novelId));
     final rankingsAsync = ref.watch(novelRankingsProvider(novelId));
+    final bookshelfAsync = ref.watch(bookshelfProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -30,6 +34,31 @@ class NovelDetailScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        actions: [
+          novelAsync.when(
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+            data: (novel) {
+              if (novel == null) return const SizedBox.shrink();
+              final isInBookshelf = bookshelfAsync.valueOrNull?.contains(novel.id) ?? false;
+              return IconButton(
+                icon: Icon(
+                  isInBookshelf ? Icons.bookmark : Icons.bookmark_border,
+                  color: isInBookshelf ? AppColors.primary : null,
+                ),
+                onPressed: () {
+                  ref.read(bookshelfProvider.notifier).toggle(novel.id);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(isInBookshelf ? '已从书架移除' : '已添加到书架'),
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ],
       ),
       body: novelAsync.when(
         loading: () => const LoadingState(message: '加载小说详情...'),
@@ -42,12 +71,16 @@ class NovelDetailScreen extends ConsumerWidget {
           if (novel == null) {
             return const EmptyState(icon: Icons.book, message: '小说不存在');
           }
+          final contestAsync = novel.contestId != null
+              ? ref.watch(contestProvider(novel.contestId!))
+              : null;
           return _buildContent(
             context,
             novel,
             tagsAsync,
             authorAsync,
             rankingsAsync,
+            contestAsync,
           );
         },
       ),
@@ -60,6 +93,7 @@ class NovelDetailScreen extends ConsumerWidget {
     AsyncValue<List<Tag>> tagsAsync,
     AsyncValue<Author?> authorAsync,
     AsyncValue<Map<String, int>> rankingsAsync,
+    AsyncValue<Contest?>? contestAsync,
   ) {
     return SingleChildScrollView(
       padding: AppSpacing.paddingL,
@@ -87,14 +121,27 @@ class NovelDetailScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Title + copy
+                    // Title + ID + copy
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          child: Text(
-                            novel.title,
-                            style: AppTextStyles.titleLarge,
+                          child: Text.rich(
+                            TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: novel.title,
+                                  style: AppTextStyles.titleLarge,
+                                ),
+                                TextSpan(
+                                  text: '  #${novel.id}',
+                                  style: TextStyle(
+                                    color: Colors.grey[400],
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
                             maxLines: 3,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -118,16 +165,6 @@ class NovelDetailScreen extends ConsumerWidget {
                         ),
                       ],
                     ),
-                    AppSpacing.gapHeightXS,
-
-                    // Novel ID
-                    Text(
-                      '#${novel.id}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[500],
-                        fontSize: 11,
-                      ),
-                    ),
                     AppSpacing.gapHeightS,
 
                     // Author with icon
@@ -137,9 +174,7 @@ class NovelDetailScreen extends ConsumerWidget {
                       data: (author) {
                         if (author == null) return const SizedBox.shrink();
                         return GestureDetector(
-                          onTap: () {
-                            // Navigate to author detail
-                          },
+                          onTap: () => context.push('/author/${author.id}'),
                           child: Row(
                             children: [
                               Icon(Icons.person, size: 15, color: AppColors.primary),
@@ -171,9 +206,18 @@ class NovelDetailScreen extends ConsumerWidget {
                             label: '背投',
                             color: AppColors.accent,
                           ),
-                        StatusBadge(status: novel.status),
-                        GenreBadge(genre: novel.genre),
-                        PtypeBadge(ptype: novel.ptype),
+                        StatusBadge(
+                          status: novel.status,
+                          onTap: () => context.push('/novels-by-status?status=${novel.status}'),
+                        ),
+                        GenreBadge(
+                          genre: novel.genre,
+                          onTap: () => context.push('/novels-by-genre?genre=${novel.genre}'),
+                        ),
+                        PtypeBadge(
+                          ptype: novel.ptype,
+                          onTap: () => context.go('/novels?ptype=${novel.ptype}'),
+                        ),
                       ],
                     ),
                     AppSpacing.gapHeightS,
@@ -197,12 +241,24 @@ class NovelDetailScreen extends ConsumerWidget {
                 spacing: 6,
                 runSpacing: 6,
                 children: tags
-                    .map((tag) => _TagChip(name: tag.name))
+                    .map((tag) => _TagChip(id: tag.id, name: tag.name))
                     .toList(),
               );
             },
           ),
           AppSpacing.gapHeightL,
+
+          // Contest
+          if (contestAsync != null)
+            contestAsync.when(
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+              data: (contest) {
+                if (contest == null) return const SizedBox.shrink();
+                return _ContestCard(contest: contest);
+              },
+            ),
+          if (contestAsync != null) AppSpacing.gapHeightL,
 
           // Stats grid (2 cols)
           rankingsAsync.when(
@@ -252,28 +308,32 @@ class _ViewOnSfacgButton extends StatelessWidget {
 }
 
 class _TagChip extends StatelessWidget {
+  final int id;
   final String name;
 
-  const _TagChip({required this.name});
+  const _TagChip({required this.id, required this.name});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.label, size: 13, color: AppColors.primary),
-          const SizedBox(width: 4),
-          Text(
-            name,
-            style: TextStyle(color: AppColors.primaryDark, fontSize: 12),
-          ),
-        ],
+    return GestureDetector(
+      onTap: () => context.push('/tag/$id'),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.label, size: 13, color: AppColors.primary),
+            const SizedBox(width: 4),
+            Text(
+              name,
+              style: TextStyle(color: AppColors.primaryDark, fontSize: 12),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -356,13 +416,7 @@ class _DatesSection extends StatelessWidget {
         color: colorScheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Column(
-        children: [
-          _DateRow(icon: Icons.update, label: '最后更新', date: novel.lastUpdate),
-          const SizedBox(height: 8),
-          _DateRow(icon: Icons.sync, label: '同步时间', date: novel.dbUpdate),
-        ],
-      ),
+      child: _DateRow(icon: Icons.update, label: '最后更新', date: novel.lastUpdate),
     );
   }
 }
@@ -406,5 +460,60 @@ class _DateRow extends StatelessWidget {
     } catch (_) {
       return dateStr;
     }
+  }
+}
+
+class _ContestCard extends StatelessWidget {
+  final Contest contest;
+
+  const _ContestCard({required this.contest});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.push('/contest/${contest.id}'),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.accent.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: AppColors.accent.withValues(alpha: 0.2),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.emoji_events, size: 20, color: AppColors.accent),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '比赛',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    contest.name,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.accent,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, size: 20, color: Colors.grey[400]),
+          ],
+        ),
+      ),
+    );
   }
 }

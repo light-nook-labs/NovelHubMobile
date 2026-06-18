@@ -233,7 +233,6 @@ class NovelRow {
   final int? contestId;
   final String? cover;
   final String? lastUpdate;
-  final String? dbUpdate;
 
   NovelRow({
     required this.id,
@@ -252,7 +251,6 @@ class NovelRow {
     this.contestId,
     this.cover,
     this.lastUpdate,
-    required this.dbUpdate,
   });
 
   factory NovelRow.fromMap(Map<String, dynamic> map) {
@@ -273,7 +271,6 @@ class NovelRow {
       contestId: map['contest_id'] as int?,
       cover: map['cover'] as String?,
       lastUpdate: map['last_update'] as String?,
-      dbUpdate: map['db_update'] as String?,
     );
   }
 }

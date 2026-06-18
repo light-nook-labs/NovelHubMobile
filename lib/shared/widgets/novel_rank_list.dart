@@ -167,7 +167,7 @@ class NovelRankRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Rank
-            if (showRank) ...[_buildRank(rank), const SizedBox(width: 10)],
+            if (showRank) ...[_buildRank(context, rank), const SizedBox(width: 10)],
             // Cover
             _buildCover(url),
             const SizedBox(width: 10),
@@ -197,7 +197,7 @@ class NovelRankRow extends StatelessWidget {
     );
   }
 
-  Widget _buildRank(int rank) {
+  Widget _buildRank(BuildContext context, int rank) {
     final isTop3 = rank <= 3;
     final color = switch (rank) {
       1 => const Color(0xFFFFD700), // Gold
@@ -233,7 +233,9 @@ class NovelRankRow extends StatelessWidget {
       child: Text(
         '$rank',
         style: TextStyle(
-          color: Colors.grey[400],
+          color: Theme.of(context).brightness == Brightness.light
+              ? Colors.black
+              : Colors.white,
           fontSize: 14,
           fontWeight: FontWeight.w500,
         ),

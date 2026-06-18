@@ -19,14 +19,30 @@ class SearchScreen extends ConsumerStatefulWidget {
 
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _controller = TextEditingController();
+  final _scrollController = ScrollController();
   String _keyword = '';
   Timer? _debounceTimer;
+  bool _showBackToTop = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
 
   @override
   void dispose() {
     _debounceTimer?.cancel();
+    _scrollController.dispose();
     _controller.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    final shouldShow = _scrollController.offset > 500;
+    if (shouldShow != _showBackToTop) {
+      setState(() => _showBackToTop = shouldShow);
+    }
   }
 
   @override
@@ -101,17 +117,37 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Widget _buildResults(BuildContext context, List<Novel> novels) {
-    return ListView.builder(
-      itemCount: novels.length,
-      itemBuilder: (context, index) {
-        final novel = novels[index];
-        return NovelRankRow(
-          novel: novel,
-          rank: index + 1,
-          showRank: false,
-          valueLabel: '点击',
-        );
-      },
+    return Stack(
+      children: [
+        ListView.builder(
+          controller: _scrollController,
+          itemCount: novels.length,
+          itemBuilder: (context, index) {
+            final novel = novels[index];
+            return NovelRankRow(
+              novel: novel,
+              rank: index + 1,
+              showRank: false,
+              valueLabel: '点击',
+            );
+          },
+        ),
+        if (_showBackToTop)
+          Positioned(
+            right: 16,
+            bottom: 16,
+            child: FloatingActionButton.small(
+              onPressed: () {
+                _scrollController.animateTo(
+                  0,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                );
+              },
+              child: const Icon(Icons.arrow_upward),
+            ),
+          ),
+      ],
     );
   }
 }

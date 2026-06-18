@@ -115,7 +115,7 @@ class SettingsScreen extends ConsumerWidget {
           ),
 
           // About section
-          _SectionHeader(title: '关于'),
+          _SectionHeader(title: 'About'),
           Card(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Column(
@@ -123,13 +123,7 @@ class SettingsScreen extends ConsumerWidget {
                 const ListTile(
                   leading: Icon(Icons.info, color: AppColors.primary),
                   title: Text('Novel Hub Mobile'),
-                  subtitle: Text('离线优先的小说元数据浏览器'),
-                ),
-                const Divider(height: 1),
-                const ListTile(
-                  leading: Icon(Icons.tag, color: AppColors.primary),
-                  title: Text('版本'),
-                  subtitle: Text('0.1.0'),
+                  subtitle: Text('v0.2.0 · Offline-first novel metadata browser'),
                 ),
                 const Divider(height: 1),
                 ListTile(
@@ -144,7 +138,7 @@ class SettingsScreen extends ConsumerWidget {
                 const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.storage, color: AppColors.primary),
-                  title: const Text('数据来源'),
+                  title: const Text('Data Source'),
                   subtitle: const Text('light-nook-labs/novel_hub'),
                   trailing: const Icon(Icons.open_in_new),
                   onTap: () => _launchUrl(
@@ -153,21 +147,9 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const Divider(height: 1),
                 const ListTile(
-                  leading: Icon(Icons.description, color: AppColors.primary),
-                  title: Text('技术栈'),
-                  subtitle: Text('Flutter, Riverpod, drift, dio, go_router'),
-                ),
-                const Divider(height: 1),
-                const ListTile(
                   leading: Icon(Icons.balance, color: AppColors.primary),
-                  title: Text('开源许可'),
-                  subtitle: Text('MIT License - 免费开源软件'),
-                ),
-                const Divider(height: 1),
-                const ListTile(
-                  leading: Icon(Icons.favorite_border, color: AppColors.primary),
-                  title: Text('Novel Hub Mobile'),
-                  subtitle: Text('本软件完全免费，禁止任何商业倒卖行为'),
+                  title: Text('MIT License · Free Software'),
+                  subtitle: Text('Contributions welcome · Flutter, Riverpod, drift'),
                 ),
               ],
             ),

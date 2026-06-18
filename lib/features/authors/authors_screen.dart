@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,12 +23,21 @@ class AuthorsScreen extends ConsumerStatefulWidget {
 
 class _AuthorsScreenState extends ConsumerState<AuthorsScreen> {
   final _scrollController = ScrollController();
+  final _searchController = TextEditingController();
+  String _searchKeyword = '';
+  Timer? _debounceTimer;
+
+  // For browsing mode
   final _pageSize = 48;
   int _currentPage = 0;
   bool _hasMore = true;
   bool _isLoadingMore = false;
   List<AuthorWithStats> _authors = [];
   bool _showBackToTop = false;
+
+  // For search mode
+  bool _isSearching = false;
+  List<Author> _searchResults = [];
 
   @override
   void initState() {
@@ -37,25 +48,53 @@ class _AuthorsScreenState extends ConsumerState<AuthorsScreen> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
   void _onScroll() {
-    // Show back to top button when scrolled down
     if (mounted) {
       setState(() {
         _showBackToTop = _scrollController.offset > 500;
       });
     }
 
-    // Load more when near bottom
-    if (_scrollController.position.pixels >=
+    if (!_isSearching &&
+        _scrollController.position.pixels >=
             _scrollController.position.maxScrollExtent - 200 &&
         !_isLoadingMore &&
         _hasMore) {
       _loadMore();
     }
+  }
+
+  void _onSearchChanged(String keyword) {
+    _debounceTimer?.cancel();
+    if (keyword.isEmpty) {
+      setState(() {
+        _isSearching = false;
+        _searchKeyword = '';
+        _searchResults = [];
+      });
+      return;
+    }
+
+    setState(() {
+      _searchKeyword = keyword;
+      _isSearching = true;
+    });
+
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () async {
+      final db = ref.read(databaseProvider);
+      final results = await db.searchAuthors(keyword);
+      if (mounted && _searchKeyword == keyword) {
+        setState(() {
+          _searchResults = results;
+        });
+      }
+    });
   }
 
   Future<void> _loadMore() async {
@@ -88,85 +127,196 @@ class _AuthorsScreenState extends ConsumerState<AuthorsScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      body: _authors.isEmpty && _isLoadingMore
-          ? const LoadingState(message: '加载作者列表...')
-          : _authors.isEmpty
-          ? const EmptyState(icon: Icons.person, message: '暂无作者数据')
-          : Stack(
-              children: [
-                ListView.separated(
-                  controller: _scrollController,
-                  itemCount: _authors.length + (_hasMore ? 1 : 0),
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    if (index == _authors.length) {
-                      return const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Center(child: CircularProgressIndicator()),
-                      );
-                    }
-                    final author = _authors[index];
-                    return InkWell(
-                      onTap: () => context.push('/author/${author.id}'),
-                      child: Padding(
-                        padding: AppSpacing.listItemPadding,
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    author.name,
-                                    style: AppTextStyles.labelLarge,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  if (author.topNovelTitle != null) ...[
-                                    AppSpacing.gapHeightXS,
-                                    Text(
-                                      author.topNovelTitle!,
-                                      style: AppTextStyles.bodySmall.copyWith(
-                                        color: Colors.grey[500],
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                            AppSpacing.gapWidthM,
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  formatNumber(author.topNovelClicks),
-                                  style: AppTextStyles.labelLarge.copyWith(
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                                Text(
-                                  '点击',
-                                  style: AppTextStyles.labelSmall.copyWith(
-                                    color: Colors.grey[500],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
+      body: Column(
+        children: [
+          // Search bar
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: TextField(
+              controller: _searchController,
+              onChanged: _onSearchChanged,
+              decoration: InputDecoration(
+                hintText: '搜索作者名或代表作...',
+                prefixIcon: const Icon(Icons.search, size: 20),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 20),
+                        onPressed: () {
+                          _searchController.clear();
+                          _onSearchChanged('');
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
                 ),
-                // Back to top button
-                BackToTopButton(
-                  scrollController: _scrollController,
-                  show: _showBackToTop,
+                filled: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+            ),
+          ),
+          // Content
+          Expanded(
+            child: _isSearching
+                ? _buildSearchResults()
+                : _buildBrowseList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchResults() {
+    if (_searchResults.isEmpty) {
+      return const EmptyState(icon: Icons.search_off, message: '未找到匹配的作者');
+    }
+
+    return ListView.separated(
+      itemCount: _searchResults.length,
+      separatorBuilder: (_, __) => const Divider(height: 1),
+      itemBuilder: (context, index) {
+        final author = _searchResults[index];
+        return InkWell(
+          onTap: () => context.push('/author/${author.id}'),
+          child: Padding(
+            padding: AppSpacing.listItemPadding,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        author.name,
+                        style: AppTextStyles.labelLarge,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (author.topNovelTitle != null && author.topNovelTitle!.isNotEmpty) ...[
+                        AppSpacing.gapHeightXS,
+                        Text(
+                          author.topNovelTitle!,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: Colors.grey[500],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                AppSpacing.gapWidthM,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      formatNumber(author.topNovelClicks),
+                      style: AppTextStyles.labelLarge.copyWith(
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    Text(
+                      '点击',
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBrowseList() {
+    if (_authors.isEmpty && _isLoadingMore) {
+      return const LoadingState(message: '加载作者列表...');
+    }
+    if (_authors.isEmpty) {
+      return const EmptyState(icon: Icons.person, message: '暂无作者数据');
+    }
+
+    return Stack(
+      children: [
+        ListView.separated(
+          controller: _scrollController,
+          itemCount: _authors.length + (_hasMore ? 1 : 0),
+          separatorBuilder: (_, __) => const Divider(height: 1),
+          itemBuilder: (context, index) {
+            if (index == _authors.length) {
+              return const Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            final author = _authors[index];
+            return InkWell(
+              onTap: () => context.push('/author/${author.id}'),
+              child: Padding(
+                padding: AppSpacing.listItemPadding,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            author.name,
+                            style: AppTextStyles.labelLarge,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (author.topNovelTitle != null) ...[
+                            AppSpacing.gapHeightXS,
+                            Text(
+                              author.topNovelTitle!,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: Colors.grey[500],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    AppSpacing.gapWidthM,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          formatNumber(author.topNovelClicks),
+                          style: AppTextStyles.labelLarge.copyWith(
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        Text(
+                          '点击',
+                          style: AppTextStyles.labelSmall.copyWith(
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+        BackToTopButton(
+          scrollController: _scrollController,
+          show: _showBackToTop,
+        ),
+      ],
     );
   }
 }

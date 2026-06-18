@@ -1,7 +1,7 @@
 name: novel_hub_mobile
 description: "Novel Hub - Offline-first novel metadata browser for sfacg.com novels"
 publish_to: 'none'
-version: 0.1.0+1
+version: 0.2.0+2
 
 environment:
   sdk: ^3.11.4
@@ -62,6 +62,14 @@ dev_dependencies:
   # Lint
   custom_lint: ^0.7.5
   riverpod_lint: ^2.6.3
+  
+  # App Icon
+  flutter_launcher_icons: ^0.14.2
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon.png"
 
 flutter:
   uses-material-design: true

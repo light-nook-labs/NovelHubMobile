@@ -107,6 +107,17 @@ Future<List<Novel>> searchNovels(
   return db.searchNovels(keyword, limit: limit);
 }
 
+/// Search authors by name or top novel title.
+@riverpod
+Future<List<Author>> searchAuthors(
+  SearchAuthorsRef ref,
+  String keyword, {
+  int limit = 20,
+}) async {
+  final db = ref.watch(databaseProvider);
+  return db.searchAuthors(keyword, limit: limit);
+}
+
 /// Single novel.
 @riverpod
 Future<Novel?> novel(NovelRef ref, int id) async {

@@ -14,6 +14,7 @@ import '../features/banner/banner_screen.dart';
 import '../features/browse/enum_list_screen.dart';
 import '../features/search/search_screen.dart';
 import '../features/settings/settings_screen.dart';
+import '../features/bookshelf/bookshelf_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -57,9 +58,9 @@ final router = GoRouter(
               const NoTransitionPage(child: RankingsScreen()),
         ),
         GoRoute(
-          path: '/settings',
+          path: '/bookshelf',
           pageBuilder: (context, state) =>
-              const NoTransitionPage(child: SettingsScreen()),
+              const NoTransitionPage(child: BookshelfScreen()),
         ),
       ],
     ),
@@ -163,6 +164,11 @@ final router = GoRouter(
         return ContestDetailScreen(contestId: id);
       },
     ),
+    GoRoute(
+      path: '/settings',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const SettingsScreen(),
+    ),
   ],
 );
 
@@ -202,9 +208,9 @@ class MainShell extends StatelessWidget {
               label: '排行',
             ),
             NavigationDestination(
-              icon: Icon(Icons.settings_outlined),
-              selectedIcon: Icon(Icons.settings),
-              label: '设置',
+              icon: Icon(Icons.bookmark_border),
+              selectedIcon: Icon(Icons.bookmark),
+              label: '书架',
             ),
           ],
         ),
@@ -217,7 +223,7 @@ class MainShell extends StatelessWidget {
     if (location.startsWith('/novels')) return 1;
     if (location.startsWith('/banners')) return 2;
     if (location.startsWith('/rankings')) return 3;
-    if (location.startsWith('/settings')) return 4;
+    if (location.startsWith('/bookshelf')) return 4;
     return 0;
   }
 
@@ -232,7 +238,7 @@ class MainShell extends StatelessWidget {
       case 3:
         context.go('/rankings');
       case 4:
-        context.go('/settings');
+        context.go('/bookshelf');
     }
   }
 }

@@ -120,55 +120,54 @@ class _ContestsScreenState extends ConsumerState<ContestsScreen> {
                     ),
                   ),
                 ),
-                // Grid
+                // List
                 Expanded(
                   child: _filteredContests.isEmpty
                       ? const EmptyState(icon: Icons.search_off, message: '未找到匹配的比赛')
                       : Stack(
                           children: [
-                            GridView.builder(
+                            ListView.builder(
                               controller: _scrollController,
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                childAspectRatio: 2.5,
-                                crossAxisSpacing: 8,
-                                mainAxisSpacing: 8,
-                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                               itemCount: _filteredContests.length,
                               itemBuilder: (context, index) {
                                 final contest = _filteredContests[index];
                                 return Card(
+                                  margin: const EdgeInsets.only(bottom: 8),
                                   child: InkWell(
                                     onTap: () => context.push('/contest/${contest.id}'),
                                     borderRadius: BorderRadius.circular(12),
                                     child: Padding(
                                       padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 6,
+                                        horizontal: 16,
+                                        vertical: 12,
                                       ),
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                      child: Row(
                                         children: [
-                                          Flexible(
+                                          Expanded(
                                             child: Text(
                                               contest.name,
                                               style: const TextStyle(
-                                                fontSize: 13,
+                                                fontSize: 14,
                                                 fontWeight: FontWeight.w500,
                                               ),
                                               maxLines: 2,
                                               overflow: TextOverflow.ellipsis,
-                                              textAlign: TextAlign.center,
                                             ),
                                           ),
-                                          const SizedBox(height: 2),
+                                          const SizedBox(width: 12),
                                           Text(
                                             '${contest.novelCount} 本',
                                             style: TextStyle(
-                                              fontSize: 11,
+                                              fontSize: 13,
                                               color: Colors.grey[600],
                                             ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Icon(
+                                            Icons.chevron_right,
+                                            size: 20,
+                                            color: Colors.grey[400],
                                           ),
                                         ],
                                       ),

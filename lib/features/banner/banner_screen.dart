@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +9,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../data/models/database.dart';
 import '../../data/repositories/providers.dart';
 import '../../app/theme.dart';
+import '../../shared/widgets/common_widgets.dart';
 
 part 'banner_screen.g.dart';
 
@@ -48,11 +51,15 @@ class BannerScreen extends ConsumerStatefulWidget {
 
 class _BannerScreenState extends ConsumerState<BannerScreen> {
   final _scrollController = ScrollController();
+  final _searchController = TextEditingController();
   int _currentPage = 0;
   static const int _pageSize = 20;
   bool _hasMore = true;
   List<BannerNovel> _novels = [];
   bool _isLoadingMore = false;
+  bool _showBackToTop = false;
+  bool _isReversed = false;
+  String _searchKeyword = '';
 
   @override
   void initState() {
@@ -67,16 +74,39 @@ class _BannerScreenState extends ConsumerState<BannerScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >=
+    final shouldShow = _scrollController.offset > 500;
+    if (shouldShow != _showBackToTop) {
+      setState(() => _showBackToTop = shouldShow);
+    }
+
+    if (_searchKeyword.isEmpty &&
+        _scrollController.position.pixels >=
             _scrollController.position.maxScrollExtent - 200 &&
         !_isLoadingMore &&
         _hasMore) {
       _loadMore();
     }
+  }
+
+  void _filterNovels(String keyword) {
+    setState(() {
+      _searchKeyword = keyword;
+    });
+  }
+
+  void _toggleReverse() {
+    setState(() {
+      _isReversed = !_isReversed;
+      _currentPage = 0;
+      _novels = [];
+      _hasMore = true;
+    });
+    _loadMore();
   }
 
   Future<void> _loadMore() async {
@@ -87,6 +117,7 @@ class _BannerScreenState extends ConsumerState<BannerScreen> {
     final newNovels = await db.getBannerNovelsPaginated(
       offset: _currentPage * _pageSize,
       limit: _pageSize,
+      reverse: _isReversed,
     );
 
     if (!mounted) return;
@@ -96,6 +127,16 @@ class _BannerScreenState extends ConsumerState<BannerScreen> {
       _hasMore = newNovels.length == _pageSize;
       _isLoadingMore = false;
     });
+  }
+
+  List<BannerNovel> get _displayNovels {
+    if (_searchKeyword.isEmpty) {
+      return _novels;
+    }
+    final lowerKeyword = _searchKeyword.toLowerCase();
+    return _novels.where((novel) {
+      return novel.title.toLowerCase().contains(lowerKeyword);
+    }).toList();
   }
 
   @override
@@ -109,46 +150,114 @@ class _BannerScreenState extends ConsumerState<BannerScreen> {
           error: (_, __) => const Text('背投'),
           data: (count) => Text('背投 ($count)'),
         ),
+        actions: [
+          IconButton(
+            icon: Icon(
+              Icons.swap_vert,
+              color: _isReversed ? AppColors.primary : null,
+            ),
+            onPressed: _toggleReverse,
+            tooltip: _isReversed ? '正序' : '逆序',
+          ),
+        ],
       ),
-      body: _novels.isEmpty && _isLoadingMore
-          ? const Center(child: CircularProgressIndicator())
-          : _novels.isEmpty
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.book, size: 64, color: AppColors.primary),
-                  SizedBox(height: 16),
-                  Text('暂无背投数据'),
-                ],
-              ),
-            )
-          : RefreshIndicator(
-              onRefresh: () async {
-                setState(() {
-                  _currentPage = 0;
-                  _novels = [];
-                  _hasMore = true;
-                });
-                await _loadMore();
-              },
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.all(12),
-                itemCount: _novels.length + (_hasMore ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (index == _novels.length) {
-                    return const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: CircularProgressIndicator(),
-                      ),
-                    );
-                  }
-                  return _BannerCard(novel: _novels[index]);
-                },
+      body: Column(
+        children: [
+          // Search bar
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: TextField(
+              controller: _searchController,
+              onChanged: _filterNovels,
+              decoration: InputDecoration(
+                hintText: '搜索背投标题...',
+                prefixIcon: const Icon(Icons.search, size: 20),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 20),
+                        onPressed: () {
+                          _searchController.clear();
+                          _filterNovels('');
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
             ),
+          ),
+          // Content
+          Expanded(
+            child: _novels.isEmpty && _isLoadingMore
+                ? const Center(child: CircularProgressIndicator())
+                : _novels.isEmpty
+                    ? const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.book, size: 64, color: AppColors.primary),
+                            SizedBox(height: 16),
+                            Text('暂无背投数据'),
+                          ],
+                        ),
+                      )
+                    : _displayNovels.isEmpty
+                        ? const EmptyState(icon: Icons.search_off, message: '未找到匹配的背投')
+                        : Stack(
+                            children: [
+                              RefreshIndicator(
+                                onRefresh: () async {
+                                  setState(() {
+                                    _currentPage = 0;
+                                    _novels = [];
+                                    _hasMore = true;
+                                  });
+                                  await _loadMore();
+                                },
+                                child: ListView.builder(
+                                  controller: _scrollController,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                                  itemCount: _displayNovels.length + (_hasMore && _searchKeyword.isEmpty ? 1 : 0),
+                                  itemBuilder: (context, index) {
+                                    if (index == _displayNovels.length) {
+                                      return const Center(
+                                        child: Padding(
+                                          padding: EdgeInsets.all(16),
+                                          child: CircularProgressIndicator(),
+                                        ),
+                                      );
+                                    }
+                                    return _BannerCard(novel: _displayNovels[index]);
+                                  },
+                                ),
+                              ),
+                              if (_showBackToTop)
+                                Positioned(
+                                  right: 16,
+                                  bottom: 16,
+                                  child: FloatingActionButton.small(
+                                    onPressed: () {
+                                      _scrollController.animateTo(
+                                        0,
+                                        duration: const Duration(milliseconds: 300),
+                                        curve: Curves.easeOut,
+                                      );
+                                    },
+                                    child: const Icon(Icons.arrow_upward),
+                                  ),
+                                ),
+                            ],
+                          ),
+          ),
+        ],
+      ),
     );
   }
 }

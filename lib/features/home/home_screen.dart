@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -34,8 +35,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         title: const SearchBarWidget(),
         actions: [
           IconButton(
-            icon: const Icon(Icons.sync),
-            onPressed: () => _showSyncDialog(context, ref),
+            icon: const Icon(Icons.settings),
+            onPressed: () => context.push('/settings'),
           ),
         ],
       ),
@@ -167,11 +168,43 @@ class _HeroBannerCarousel extends StatefulWidget {
 class _HeroBannerCarouselState extends State<_HeroBannerCarousel> {
   final _controller = PageController(viewportFraction: 0.92);
   int _currentPage = 0;
+  Timer? _autoPlayTimer;
+  // Large base offset to allow circular scrolling in both directions
+  static const int _kInitialPage = 10000;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_controller.hasClients) {
+        _controller.jumpToPage(_kInitialPage);
+      }
+      _startAutoPlay();
+    });
+  }
 
   @override
   void dispose() {
+    _autoPlayTimer?.cancel();
     _controller.dispose();
     super.dispose();
+  }
+
+  int get _realPageCount => widget.novels.length;
+
+  int _toRealIndex(int page) => page % _realPageCount;
+
+  void _startAutoPlay() {
+    _autoPlayTimer?.cancel();
+    if (_realPageCount <= 1) return;
+    _autoPlayTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!_controller.hasClients) return;
+      _controller.animateToPage(
+        _currentPage + 1,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
+    });
   }
 
   @override
@@ -183,10 +216,11 @@ class _HeroBannerCarouselState extends State<_HeroBannerCarousel> {
           height: 170,
           child: PageView.builder(
             controller: _controller,
-            itemCount: widget.novels.length,
+            itemCount: _realPageCount > 1 ? null : 1,
             onPageChanged: (index) => setState(() => _currentPage = index),
             itemBuilder: (context, index) {
-              final novel = widget.novels[index];
+              final realIndex = _toRealIndex(index);
+              final novel = widget.novels[realIndex];
               final bannerUrl =
                   'https://rs.sfacg.com/web/novel/images/images/beitouNew/${novel.id}.jpg';
 
@@ -262,7 +296,7 @@ class _HeroBannerCarouselState extends State<_HeroBannerCarousel> {
                 margin: const EdgeInsets.symmetric(horizontal: 2),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _currentPage == index
+                  color: _toRealIndex(_currentPage) == index
                       ? AppColors.primary
                       : Colors.grey[300],
                 ),

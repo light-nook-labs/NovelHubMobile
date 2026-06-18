@@ -74,8 +74,7 @@ def create_database(db_path: str, is_hot: bool = False) -> sqlite3.Connection:
             review_num INTEGER,
             contest_id INTEGER,
             cover TEXT,
-            last_update DATETIME,
-            db_update DATETIME DEFAULT CURRENT_TIMESTAMP
+            last_update DATETIME
         )
     ''')
     

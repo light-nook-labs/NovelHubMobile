@@ -45,7 +45,6 @@ class Novels extends Table {
   IntColumn get reviewNum => integer().nullable()();
   TextColumn get cover => text().nullable()();
   TextColumn get lastUpdate => text().nullable()();
-  TextColumn get dbUpdate => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -302,6 +301,15 @@ class AppDatabase extends _$AppDatabase {
   Future<List<Novel>> searchNovels(String keyword, {int limit = 50}) async {
     final query = select(novels)
       ..where((t) => t.title.like('%$keyword%'))
+      ..orderBy([(t) => OrderingTerm.desc(t.clickNum)])
+      ..limit(limit);
+    return query.get();
+  }
+
+  Future<List<Author>> searchAuthors(String keyword, {int limit = 20}) async {
+    final query = select(authors)
+      ..where((t) => t.name.like('%$keyword%') | t.topNovelTitle.like('%$keyword%'))
+      ..orderBy([(t) => OrderingTerm.desc(t.topNovelClicks)])
       ..limit(limit);
     return query.get();
   }
@@ -820,10 +828,11 @@ class AppDatabase extends _$AppDatabase {
   Future<List<BannerNovel>> getBannerNovelsPaginated({
     required int offset,
     required int limit,
+    bool reverse = false,
   }) async {
     final query = select(novels)
       ..where((t) => t.hasBanner.equals(true))
-      ..orderBy([(t) => OrderingTerm.desc(t.clickNum)])
+      ..orderBy([(t) => reverse ? OrderingTerm.asc(t.clickNum) : OrderingTerm.desc(t.clickNum)])
       ..limit(limit, offset: offset);
 
     final results = await query.get();
@@ -1062,23 +1071,43 @@ Future<DateTime?> getDbMergeTime() async {
 
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
-    final dbFolder = await getApplicationDocumentsDirectory();
-    final dbPath = p.join(dbFolder.path, 'novel_hub.sqlite');
-    final chunksDir = p.join(dbFolder.path, 'chunks');
-    
-    // Always copy chunks from assets to ensure they're up to date
-    for (final chunkName in ['cold', 'warm', 'hot']) {
-      final chunkPath = p.join(chunksDir, '${chunkName}_chunk.sqlite');
-      await _copyBundledChunk(chunkName, chunkPath);
+    try {
+      final dbFolder = await getApplicationDocumentsDirectory();
+      final dbPath = p.join(dbFolder.path, 'novel_hub.sqlite');
+      final chunksDir = p.join(dbFolder.path, 'chunks');
+      final mergedMarkerPath = p.join(dbFolder.path, '.db_merged_v1');
+      
+      // Check if merged database already exists and is valid
+      final dbExists = await File(dbPath).exists();
+      final markerExists = await File(mergedMarkerPath).exists();
+      
+      if (dbExists && markerExists) {
+        // Database already merged, use it directly
+        return NativeDatabase.createInBackground(File(dbPath));
+      }
+      
+      // First time: copy chunks and merge
+      for (final chunkName in ['cold', 'warm', 'hot']) {
+        final chunkPath = p.join(chunksDir, '${chunkName}_chunk.sqlite');
+        await _copyBundledChunk(chunkName, chunkPath);
+      }
+      
+      if (await File(dbPath).exists()) {
+        await File(dbPath).delete();
+      }
+      await _createMergedDatabase(dbPath);
+      
+      // Create marker file to indicate merge is complete
+      await File(mergedMarkerPath).writeAsString('1');
+      
+      return NativeDatabase.createInBackground(File(dbPath));
+    } catch (e) {
+      print('Error initializing database: $e');
+      // Fallback: create empty database
+      final dbFolder = await getApplicationDocumentsDirectory();
+      final dbPath = p.join(dbFolder.path, 'novel_hub_fallback.sqlite');
+      return NativeDatabase.createInBackground(File(dbPath));
     }
-    
-    // Always recreate merged database from fresh chunks
-    if (await File(dbPath).exists()) {
-      await File(dbPath).delete();
-    }
-    await _createMergedDatabase(dbPath);
-    
-    return NativeDatabase.createInBackground(File(dbPath));
   });
 }
 
@@ -1119,9 +1148,45 @@ Future<void> _createMergedDatabase(String targetPath) async {
     db.execute('INSERT OR REPLACE INTO novels SELECT * FROM warm.novels');
     db.execute('INSERT OR REPLACE INTO novels SELECT * FROM hot.novels');
     
-    // Merge contests
-    db.execute('INSERT OR REPLACE INTO contests SELECT * FROM warm.contests');
-    db.execute('INSERT OR REPLACE INTO contests SELECT * FROM hot.contests');
+    // Merge contests with name-based deduplication
+    // Build contest name -> cold ID mapping
+    final contestRows = db.select('SELECT name, id FROM contests');
+    final contestNameToId = <String, int>{};
+    for (final row in contestRows) {
+      contestNameToId[row[0] as String] = row[1] as int;
+    }
+    
+    // For each chunk, remap contest IDs in novels table
+    for (final chunkAlias in ['warm', 'hot']) {
+      // Get chunk's contest mapping
+      final chunkContests = db.select('SELECT id, name FROM $chunkAlias.contests');
+      final contestOldToNew = <int, int>{};
+      
+      for (final row in chunkContests) {
+        final oldId = row[0] as int;
+        final name = row[1] as String;
+        
+        if (contestNameToId.containsKey(name)) {
+          contestOldToNew[oldId] = contestNameToId[name]!;
+        } else {
+          // New contest not in cold, insert it
+          db.execute('INSERT OR IGNORE INTO contests (name) VALUES (?)', [name]);
+          final newId = db.select('SELECT id FROM contests WHERE name = ?', [name])[0][0] as int;
+          contestNameToId[name] = newId;
+          contestOldToNew[oldId] = newId;
+        }
+      }
+      
+      // Update contest_id in novels from this chunk
+      for (final entry in contestOldToNew.entries) {
+        if (entry.key != entry.value) {
+          db.execute(
+            'UPDATE novels SET contest_id = ? WHERE contest_id = ? AND id IN (SELECT id FROM $chunkAlias.novels)',
+            [entry.value, entry.key],
+          );
+        }
+      }
+    }
     
     // Merge tags with ID remapping
     // Build tag name -> cold ID mapping
@@ -1210,7 +1275,9 @@ Future<void> _createMergedDatabase(String targetPath) async {
     db.execute("DETACH hot");
   } catch (e) {
     // Rollback on error
-    db.execute('ROLLBACK');
+    try {
+      db.execute('ROLLBACK');
+    } catch (_) {}
     rethrow;
   } finally {
     db.dispose();
@@ -1235,10 +1302,20 @@ Future<void> _copyBundledChunk(String chunkName, String targetPath) async {
   } catch (_) {}
   
   // Fall back to uncompressed .sqlite file
-  final data = await rootBundle.load('assets/chunks/${chunkName}_chunk.sqlite');
-  final bytes = data.buffer.asUint8List();
+  try {
+    final data = await rootBundle.load('assets/chunks/${chunkName}_chunk.sqlite');
+    final bytes = data.buffer.asUint8List();
+    final file = File(targetPath);
+    await file.writeAsBytes(bytes, flush: true);
+    return;
+  } catch (_) {}
+  
+  // If both fail, create empty database file
+  print('Warning: Could not load chunk $chunkName from assets, creating empty file');
   final file = File(targetPath);
-  await file.writeAsBytes(bytes, flush: true);
+  if (!await file.exists()) {
+    await file.create(recursive: true);
+  }
 }
 
 class NovelTagPair {
