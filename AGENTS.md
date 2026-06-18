@@ -220,7 +220,6 @@ Data is split into chunks based on activity level:
 - Title with novel ID
 - Author with person icon
 - Status/Genre/Ptype badges
-- Tags (max 3, theme colored)
 - Value (clicks/words/etc.)
 
 **Colors:**
