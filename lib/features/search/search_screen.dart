@@ -2,13 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../data/repositories/providers.dart';
 import '../../data/models/database.dart';
 import '../../shared/widgets/novel_rank_list.dart';
-
-part 'search_screen.g.dart';
+import '../../shared/widgets/common_widgets.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -23,6 +21,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   String _keyword = '';
   Timer? _debounceTimer;
   bool _showBackToTop = false;
+
+  // Pagination state
+  final _pageSize = 48;
+  int _currentPage = 0;
+  bool _hasMore = true;
+  bool _isLoadingMore = false;
+  List<Novel> _novels = [];
 
   @override
   void initState() {
@@ -43,12 +48,54 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     if (shouldShow != _showBackToTop) {
       setState(() => _showBackToTop = shouldShow);
     }
+
+    if (_scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 200 &&
+        !_isLoadingMore &&
+        _hasMore) {
+      _loadMore();
+    }
+  }
+
+  void _onSearchChanged(String value) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        setState(() {
+          _keyword = value;
+          _currentPage = 0;
+          _novels = [];
+          _hasMore = true;
+        });
+        if (_keyword.isNotEmpty) {
+          _loadMore();
+        }
+      }
+    });
+  }
+
+  Future<void> _loadMore() async {
+    if (_isLoadingMore || _keyword.isEmpty) return;
+    setState(() => _isLoadingMore = true);
+
+    final db = ref.read(databaseProvider);
+    final newNovels = await db.searchNovels(
+      _keyword,
+      limit: _pageSize,
+      offset: _currentPage * _pageSize,
+    );
+
+    if (!mounted) return;
+    setState(() {
+      _currentPage++;
+      _novels.addAll(newNovels);
+      _hasMore = newNovels.length == _pageSize;
+      _isLoadingMore = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final resultsAsync = ref.watch(searchResultsProvider(_keyword));
-
     return Scaffold(
       appBar: AppBar(
         title: TextField(
@@ -63,33 +110,24 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     onPressed: () {
                       _controller.clear();
                       _debounceTimer?.cancel();
-                      setState(() => _keyword = '');
+                      setState(() {
+                        _keyword = '';
+                        _novels = [];
+                      });
                     },
                   )
                 : null,
           ),
-          onChanged: (value) {
-            _debounceTimer?.cancel();
-            _debounceTimer = Timer(const Duration(milliseconds: 300), () {
-              if (mounted) {
-                setState(() => _keyword = value);
-              }
-            });
-          },
+          onChanged: _onSearchChanged,
         ),
       ),
       body: _keyword.isEmpty
           ? _buildEmptyState()
-          : resultsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('Error: $err')),
-              data: (novels) {
-                if (novels.isEmpty) {
-                  return Center(child: Text('未找到 "$_keyword" 相关小说'));
-                }
-                return _buildResults(context, novels);
-              },
-            ),
+          : _novels.isEmpty && _isLoadingMore
+              ? const Center(child: CircularProgressIndicator())
+              : _novels.isEmpty
+                  ? Center(child: Text('未找到 "$_keyword" 相关小说'))
+                  : _buildResults(context),
     );
   }
 
@@ -116,14 +154,20 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     );
   }
 
-  Widget _buildResults(BuildContext context, List<Novel> novels) {
+  Widget _buildResults(BuildContext context) {
     return Stack(
       children: [
         ListView.builder(
           controller: _scrollController,
-          itemCount: novels.length,
+          itemCount: _novels.length + (_hasMore ? 1 : 0),
           itemBuilder: (context, index) {
-            final novel = novels[index];
+            if (index == _novels.length) {
+              return const Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            final novel = _novels[index];
             return NovelRankRow(
               novel: novel,
               rank: index + 1,
@@ -150,13 +194,4 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       ],
     );
   }
-}
-
-@riverpod
-Future<List<Novel>> searchResults(SearchResultsRef ref, String keyword) async {
-  if (keyword.isEmpty) return [];
-  // Debounce
-  await Future.delayed(const Duration(milliseconds: 300));
-  final db = ref.watch(databaseProvider);
-  return db.searchNovels(keyword);
 }

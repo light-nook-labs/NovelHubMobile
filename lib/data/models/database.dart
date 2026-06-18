@@ -298,19 +298,19 @@ class AppDatabase extends _$AppDatabase {
     return query.get();
   }
 
-  Future<List<Novel>> searchNovels(String keyword, {int limit = 50}) async {
+  Future<List<Novel>> searchNovels(String keyword, {int limit = 48, int offset = 0}) async {
     final query = select(novels)
       ..where((t) => t.title.like('%$keyword%'))
       ..orderBy([(t) => OrderingTerm.desc(t.clickNum)])
-      ..limit(limit);
+      ..limit(limit, offset: offset);
     return query.get();
   }
 
-  Future<List<Author>> searchAuthors(String keyword, {int limit = 20}) async {
+  Future<List<Author>> searchAuthors(String keyword, {int limit = 48, int offset = 0}) async {
     final query = select(authors)
       ..where((t) => t.name.like('%$keyword%') | t.topNovelTitle.like('%$keyword%'))
       ..orderBy([(t) => OrderingTerm.desc(t.topNovelClicks)])
-      ..limit(limit);
+      ..limit(limit, offset: offset);
     return query.get();
   }
 
