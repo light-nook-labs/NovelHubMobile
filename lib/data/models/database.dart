@@ -6,6 +6,8 @@ import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart';
 import 'dart:io';
 
+import '../../shared/utils/mappings.dart';
+
 part 'database.g.dart';
 
 class Authors extends Table {
@@ -865,33 +867,14 @@ class AppDatabase extends _$AppDatabase {
     final contestResult = await contestQuery.getSingle();
     final contestCount = contestResult.read(contestCountQuery) ?? 0;
 
-    // 其他 is filtered in DB, so count all genres/statuses/ptypes
-    final genreCountQuery = countAll();
-    final genreQuery = selectOnly(novels)
-      ..addColumns([genreCountQuery]);
-    final genreResult = await genreQuery.getSingle();
-    final genreCount = genreResult.read(genreCountQuery) ?? 0;
-
-    final statusCountQuery = countAll();
-    final statusQuery = selectOnly(novels)
-      ..addColumns([statusCountQuery]);
-    final statusResult = await statusQuery.getSingle();
-    final statusCount = statusResult.read(statusCountQuery) ?? 0;
-
-    final ptypeCountQuery = countAll();
-    final ptypeQuery = selectOnly(novels)
-      ..addColumns([ptypeCountQuery]);
-    final ptypeResult = await ptypeQuery.getSingle();
-    final ptypeCount = ptypeResult.read(ptypeCountQuery) ?? 0;
-
     final stats = {
       'novels': novelCount,
       'authors': authorCount,
       'tags': tagCount,
       'contests': contestCount,
-      'genres': genreCount,
-      'statuses': statusCount,
-      'ptypes': ptypeCount,
+      'genres': genreMapping.allZh.length,
+      'statuses': statusMapping.allZh.length,
+      'ptypes': ptypeMapping.allZh.length,
     };
     
     // Cache the result

@@ -329,10 +329,7 @@ class _QuickNavCard extends StatelessWidget {
           ),
           const Divider(height: 1),
           ListTile(
-            leading: const Icon(
-              Icons.signal_wifi_statusbar_4_bar,
-              color: AppColors.primary,
-            ),
+            leading: const Icon(Icons.trending_up, color: AppColors.primary),
             title: Text(
               '状态${stats != null ? '（${stats!['statuses'] ?? 0}）' : ''}',
             ),
@@ -341,7 +338,7 @@ class _QuickNavCard extends StatelessWidget {
           ),
           const Divider(height: 1),
           ListTile(
-            leading: const Icon(Icons.vpn_key, color: AppColors.primary),
+            leading: const Icon(Icons.workspace_premium, color: AppColors.primary),
             title: Text(
               '类型${stats != null ? '（${stats!['ptypes'] ?? 0}）' : ''}',
             ),

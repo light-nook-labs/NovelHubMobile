@@ -6,6 +6,42 @@ import '../../data/repositories/providers.dart';
 import '../../shared/utils/mappings.dart';
 import '../../shared/widgets/common_widgets.dart';
 import '../../app/settings_provider.dart';
+import '../../app/theme.dart';
+
+IconData _genreIcon(int value) {
+  return switch (value) {
+    2 => Icons.auto_awesome,      // 魔幻
+    3 => Icons.local_fire_department, // 玄幻
+    4 => Icons.castle,            // 古风
+    5 => Icons.rocket_launch,     // 科幻
+    6 => Icons.school,            // 校园
+    7 => Icons.location_city,     // 都市
+    8 => Icons.sports_esports,    // 游戏
+    9 => Icons.people,            // 同人
+    10 => Icons.search,           // 悬疑
+    _ => Icons.category,
+  };
+}
+
+IconData _statusIcon(int value) {
+  return switch (value) {
+    2 => Icons.check_circle,      // 已完结
+    3 => Icons.sync,              // 连载中
+    4 => Icons.pause_circle,      // 断更
+    5 => Icons.pause_circle,      // 断更A
+    6 => Icons.check_circle,      // 完结A
+    _ => Icons.help,
+  };
+}
+
+IconData _ptypeIcon(int value) {
+  return switch (value) {
+    2 => Icons.lock_open,         // 免费
+    3 => Icons.verified,          // 签约
+    4 => Icons.workspace_premium, // VIP
+    _ => Icons.category,
+  };
+}
 
 class GenreListScreen extends ConsumerStatefulWidget {
   const GenreListScreen({super.key});
@@ -54,6 +90,7 @@ class _GenreListScreenState extends ConsumerState<GenreListScreen> {
                 final value = genreMapping.getValue(zh);
                 final count = _counts[value] ?? 0;
                 return ListTile(
+                  leading: Icon(_genreIcon(value), color: AppColors.primary),
                   title: Text(zh),
                   subtitle: Text('$count 本'),
                   trailing: const Icon(Icons.chevron_right),
@@ -112,6 +149,7 @@ class _StatusListScreenState extends ConsumerState<StatusListScreen> {
                 final value = statusMapping.getValue(zh);
                 final count = _counts[value] ?? 0;
                 return ListTile(
+                  leading: Icon(_statusIcon(value), color: AppColors.primary),
                   title: Text(zh),
                   subtitle: Text('$count 本'),
                   trailing: const Icon(Icons.chevron_right),
@@ -170,6 +208,7 @@ class _PtypeListScreenState extends ConsumerState<PtypeListScreen> {
                 final value = ptypeMapping.getValue(zh);
                 final count = _counts[value] ?? 0;
                 return ListTile(
+                  leading: Icon(_ptypeIcon(value), color: AppColors.primary),
                   title: Text(zh),
                   subtitle: Text('$count 本'),
                   trailing: const Icon(Icons.chevron_right),
