@@ -82,12 +82,11 @@ def get_ptype_id(ptype: str) -> int:
 
 
 def normalize_tags(tags) -> list[str]:
-    """Normalize tags, skipping non-string items.
+    """Normalize tags, skipping non-string items and malformed strings.
     
-    Only keeps string items, skips nested lists and other types.
-    - Normal: ["tag1", "tag2"] -> ["tag1", "tag2"]
-    - Malformed: ["tag1", ["tag2", "tag3"]] -> ["tag1"]
-    - Invalid types -> empty list
+    Only keeps valid string items, skips:
+    - Nested lists
+    - Strings that are JSON arrays like '["tag1", "tag2"]'
     
     Returns:
         List of tag strings
@@ -98,7 +97,14 @@ def normalize_tags(tags) -> list[str]:
     if not isinstance(tags, list):
         return []
     
-    return [item for item in tags if isinstance(item, str)]
+    result = []
+    for item in tags:
+        if isinstance(item, str):
+            # Skip strings that look like JSON arrays
+            if item.startswith('[') and item.endswith(']'):
+                continue
+            result.append(item)
+    return result
 
 
 def validate_tags(tags) -> tuple[list[str], bool]:
